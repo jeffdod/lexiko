@@ -3,9 +3,9 @@
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards, studiedCount } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { explain } from './stem.js';
+import { breakdown } from './stem.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton } from './util.js';
-import { chartsButton } from './charts.js';
+import { chartsButton, openCharts, chartRowForSlots } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
@@ -141,9 +141,14 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
   }
 
   function prompt(c, it) {
-    const f = it.form, L = D.lexByN.get(it.strongs);
-    return h('div.qcard.pcard', h('div.qgreek', { lang: 'grc' }, f.plain), h('div.qmeta', L.head + ' · ' + L.brief), formContext(c.id));
+    const f = it.form, L = D.lexByN.get(it.strongs), ctx = formContext(c.id);
+    return h('div.qcard.pcard', h('div.qask', 'Parse this word'), h('div.qgreek', { lang: 'grc' }, f.plain), h('div.qmeta', L.head + ' · ' + L.brief),
+      ctx ? h('details.ctxfold', h('summary', 'See it in a verse'), ctx) : null);
   }
+  const chartLink = (it, d) => (it.group === 'V' ? h('button.btn.sm', { onclick: () => openCharts({ highlight: chartRowForSlots(d.slots) }) }, icon('table', 18), 'Verb chart') : null);
+  const buildRow = (pieces, labels) => h('div.build', pieces.map((p) => h('span.bp.' + p.kind, h('b', { lang: 'grc' }, p.text), labels ? h('small', p.role) : null)));
+
+  const hintFor = (L, it, d) => { const b = breakdown(L.head, it.form.plain, d); return b.pieces.length > 1 ? 'Try splitting ' + it.form.plain + ' into ' + b.pieces.map((p) => p.text).join(' + ') + '. What does each part tell you?' : 'Look at the ending of ' + it.form.plain + ' first — it carries most of the information.'; };
 
   /* feedback shared by both modes */
   async function feedback(c, it, res, { ms, aided, mode }) {
@@ -159,7 +164,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     }
     if (!res.full && first) queue.splice(Math.min(queue.length, 4), 0, { ...c, retry: true });
     const L = D.lexByN.get(it.strongs), best = res.best;
-    const notes = explain(L.head, it.form.plain, best.d);
+    const bd = breakdown(L.head, it.form.plain, best.d), notes = bd.notes;
     const others = it.valid.filter((v) => v !== best);
     const soft = Object.entries(res.perSlot).filter(([, v]) => v.soft);
     const head = res.full ? ['ok', 'Correct'] : res.wrong.length === 1 && res.total >= 3 ? ['mid', 'Almost — one part off'] : ['bad', 'Not quite'];
@@ -170,7 +175,9 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       others.length ? h('div.small.muted', 'Also valid: ' + others.map((o) => describe(o) + ' (' + o.code + ')').join(' · ')) : null,
       h('div.pslots', chips),
       soft.length ? h('div.small.muted', 'Accepted: the Robinson–Pierpont code marks this as ' + labelOf('voice', best.slots.voice).toLowerCase() + ' — a middle/passive form that may be read either way.') : null,
-      notes.length ? h('details.why', { open: !res.full }, h('summary', 'Why it looks like this'), h('ul', notes.map((n) => h('li', n)))) : null);
+      bd.pieces.length ? h('div.buildbox', h('div.small.muted', 'How ' + it.form.plain + ' is built'), buildRow(bd.pieces, true)) : null,
+      notes.length ? h('details.why', { open: !res.full }, h('summary', 'About this form'), h('ul', notes.map((n) => h('li', n)))) : null,
+      chartLink(it, best.d));
     const go = h('button.btn.primary.block', { onclick: advance }, queue.length ? 'Continue' : 'Finish');
     (view.querySelector('.qwrap') || view).append(fb, go);
     go.focus({ preventScroll: true });
@@ -198,7 +205,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       clear(area).append(
         h('div.pslots', done.map((k) => h('span.pslot.' + (answers[k + '_ok'] ? 'ok' : 'bad'), h('small', SLOT_TITLE[k]), labelOf(k, answers[k]))), h('span.pslot.cur', SLOT_TITLE[slot] + '?')),
         h('div.pgrid', opts.map(([code, label], i) => h('button.popt', { dataset: { code }, onclick: (e) => pick(slot, code, e.currentTarget) }, h('kbd', i + 1), label))),
-        h('div.row.between', h('button.btn.ghost.sm', { onclick: () => { aided = true; hintBox.replaceChildren(h('div.hint', 'Hint: ' + (explain(L.head, it.form.plain, cands[0].d)[0] || 'Look at the ending first — it carries most of the information.'))); } }, 'Hint'),
+        h('div.row.between', h('button.btn.ghost.sm', { onclick: () => { aided = true; hintBox.replaceChildren(h('div.hint', 'Hint: ' + hintFor(L, it, cands[0].d))); } }, 'Hint'),
           h('button.btn.ghost.sm', { onclick: () => { gaveUp = true; cands[0].keys.forEach((k) => { if (!(k in answers)) answers[k] = undefined; }); end(); } }, 'I don’t know')), hintBox);
     };
     const pick = (slot, code, btn) => {
