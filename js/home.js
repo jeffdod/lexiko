@@ -1,7 +1,8 @@
 // Home: where you are, what to do today, what to read next.
 import { D, scopeLabel } from './data.js';
-import { K, parseCardsDue, partsCardsDue, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel } from './know.js';
-import { h, clear, pct, icon } from './util.js';
+import { K, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel } from './know.js';
+import { h, clear, pct, icon, startButton } from './util.js';
+import { smartAll, counts } from './smart.js';
 import { levelPicker } from './settings.js';
 import { suggestions, suggestionItem } from './progress.js';
 import { readHref } from './reader.js';
@@ -10,7 +11,7 @@ const DAY = 86400000;
 
 export function renderHome(view) {
   const lvl = setting('level');
-  const due = dueCards().length;
+  const cnt = counts(), due = cnt.words.due + cnt.parse.due + cnt.parts.due;
   const studied = [...K.cards.keys()].filter((k) => k.startsWith('w:')).length;
   const newLeft = Math.max(0, setting('newPerDay') - newToday());
   const goal = K.goal && K.goal.book ? K.goal : null;
@@ -30,12 +31,7 @@ export function renderHome(view) {
   stack.append(h('div.card.stack',
     h('div.row.between', h('h2', 'Today'), streak() ? h('span.chip.gold', icon('flame', 14), streak() + '-day streak') : null),
     h('div.kpis', h('div.kpi', h('b', due), h('span', 'due for review')), h('div.kpi', h('b', newLeft), h('span', 'new words left today')), h('div.kpi', h('b', studied), h('span', 'words studied'))),
-    h('a.btn.primary.block', { href: '#/learn/daily' }, icon('learn', 20), due || newLeft ? 'Start today’s session' : 'Practice anyway')));
-
-  { const pd = parseCardsDue().length;
-    stack.append(h('a.tile', { href: '#/parse' }, h('h3', 'Parsing practice'), h('p', pd ? pd + ' form' + (pd === 1 ? '' : 's') + ' due · tense, voice, mood, case, number, gender' : 'Tense, voice, mood, case, number, gender — one part at a time')));
-    const kd = partsCardsDue().length;
-    stack.append(h('a.tile', { href: '#/parts' }, h('h3', 'Principal parts'), h('p', kd ? kd + ' part' + (kd === 1 ? '' : 's') + ' due · the six parts of each verb' : 'The six parts of each verb'))); }
+    startButton(smartAll())));
 
   if (goal) {
     const rd = scopeReadiness(goal);

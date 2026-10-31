@@ -35,6 +35,9 @@ Users get new versions automatically: the service worker notices a changed `sw-a
 ## Principal parts
 `#/parts` drills the six principal parts of ~1,300 verbs (`data/parts.json`, built by `python3 tools/build_parts.py <spreadsheet.xlsx>`; each part printed for a verb is one FSRS card `p:<strongs>:<slot>`). Several spreadsheet rows can share one Strong's number, so a row is chosen by matching the lexicon headword (else by how often its forms occur). Two question types: *recognise* (see a part → pick the verb → pick which part) and *recall* (verb + part name → pick the form from plausible look-alikes, or remember it and rate yourself). *Auto* starts with multiple choice and moves to self-graded flashcards at ≥85 % over 20 answers (back below 60 % over 12). Pools: verbs you're learning, or the verbs of a passage. `js/parts.js`; tests: `node tools/test_parts.js`.
 
+## Learn pages
+`#/learn` has one **Start** button and three topics (Vocabulary `#/learn/words`, Parsing `#/parse`, Principal parts `#/parts`). `js/smart.js` decides what Start does: reviews that are due, then new material, then **Reinforce** (your shakiest cards), then a preview — so it never says there is nothing to do. Each topic page has the same single button, a *Preview new* link, and collapsed *Study a passage* and *Options* sections.
+
 ## Reinforce, preview and charts
 Vocabulary, parsing and principal parts each have *Reinforce* (your shakiest cards) and *Preview new* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Quiz screens have a **Charts** button (`js/charts.js`): the master verb chart and primary/secondary endings, as tables; after an answer the row that builds the part is highlighted.
 

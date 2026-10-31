@@ -3,7 +3,8 @@ import { D, lexeme, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, to
 import { K, status, setting, setSetting, rate, getCard, dueCards, buildSession, scopeReadiness, newToday, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, studiedCount } from './know.js';
 import * as F from './fsrs.js';
 import { decode } from './morph.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner } from './util.js';
+import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner, fold, startButton } from './util.js';
+import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
@@ -87,7 +88,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })),
-        h('span.chip.' + label[0], label[1])),
+        h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
       practice ? practiceBanner(item.type === 'preview') : null, inner));
   }
 
@@ -133,7 +134,8 @@ function runSession(view, items, { title, scope, back, practice = false }) {
 function startFrom(view, kind, scope, title) {
   const items = buildSession({ scope, kind });
   if (!items.length) {
-    clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉' : 'Nothing is due right now.'),
+    if (!scope) { const alt = smart('words'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }       // caught up: go to something useful instead
+    clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉' : 'You’re all caught up. 🎉'),
       h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1) }, 'Read it') : null, h('a.btn', { href: '#/learn' }, 'Back'))));
     return;
   }
@@ -187,6 +189,7 @@ function previewWords(goal) {
 
 export function renderLearn(view, params) {
   const [mode, ...rest] = params;
+  if (mode === 'words') return void wordsPage(view);
   if (mode === 'daily') return void startFrom(view, 'daily', null, 'Today’s session');
   if (mode === 'review') return void startFrom(view, 'review', null, 'Review');
   if (mode === 'practice') {                                   // extra practice: never touches the schedule
@@ -205,24 +208,27 @@ export function renderLearn(view, params) {
     if (!D.bookByCode.has(book)) return void (location.hash = '#/learn');
     return void startFrom(view, 'passage', scope, scopeLabel(scope));
   }
-  const due = dueCards().length;
-  const lvl = K.settings.level;
-  const goal = K.goal && K.goal.book ? K.goal : null;
+  const next = smartAll();
   clear(view).append(
     h('div.pagehead', h('h1', 'Learn')),
     h('div.stack',
-      h('div.scope-pick',
-        h('a.tile', { href: '#/learn/daily' }, h('h3', 'Today’s session'), h('p', due + ' due · ' + Math.max(0, setting('newPerDay') - newToday()) + ' new available' + (lvl != null ? ' · check-ins' : ''))),
-        h('a.tile', { href: '#/learn/review' }, h('h3', 'Review only'), h('p', due ? due + ' card' + (due === 1 ? '' : 's') + ' due' : 'Nothing due')),
-        h('a.tile', { href: '#/learn/level' }, h('h3', 'Next words'), h('p', 'The ' + setting('newPerDay') + ' most common words you don’t know yet')),
-        h('a.tile', { href: '#/parse' }, h('h3', 'Parsing'), h('p', 'Tense, voice, mood, case… one part at a time')),
-        h('a.tile', { href: '#/parts' }, h('h3', 'Principal parts'), h('p', 'The six parts of each verb'))),
-      h('div.scope-pick',
-        h('a.tile', { href: '#/learn/practice/trouble' }, h('h3', 'Reinforce'), h('p', studiedCount('w:') ? 'Your shakiest words — doesn’t affect your schedule' : 'Available once you’ve studied some words')),
-        h('a.tile', { href: '#/learn/practice/preview' }, h('h3', 'Preview new words'), h('p', 'A look at a few new words — doesn’t affect your schedule'))),
-      goal ? h('div.card', h('div.row.between', h('div', h('h3', 'Your goal: ' + scopeLabel(goal)), h('div.muted.small', 'Learn the words, then read it.')),
-        h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study'))) : null,
-      passagePicker(view, goal),
-      h('div.card.flat', h('div.row.between', h('div', h('b', 'Quiz style'), h('div.muted.small', 'How you answer each word.')),
-        h('div.seg', [['flash', 'Flashcards'], ['choice', 'Multiple choice']].map(([v, t]) => h('button', { 'aria-pressed': setting('mode') === v, onclick: async (e) => { await setSetting('mode', v); [...e.target.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', b === e.target)); } }, t)))))));
+      startButton(next),
+      h('div.topics', ['words', 'parse', 'parts'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)))))));
+}
+
+/* ---------- Vocabulary page ---------- */
+function wordsPage(view) {
+  const goal = K.goal && K.goal.book ? K.goal : null;
+  clear(view).append(
+    h('div.pagehead', h('h1', 'Vocabulary')),
+    h('div.stack',
+      startButton(smart('words')),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Preview new words')),
+      fold('Study a passage',
+        goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
+        passagePicker(view, goal)),
+      fold('Options',
+        h('div.row.between', h('div', h('b', 'Quiz style'), h('div.muted.small', 'How you answer each word.')),
+          h('div.seg', [['flash', 'Flashcards'], ['choice', 'Multiple choice']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('mode') === v), onclick: async (e) => { await setSetting('mode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); } }, t)))),
+        h('div.row.wrap', h('a.btn.sm', { href: '#/learn/review' }, 'Review only'), h('a.btn.sm', { href: '#/learn/level' }, 'Learn the next common words'), h('a.btn.sm', { href: '#/settings' }, 'Change my level')))));
 }

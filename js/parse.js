@@ -4,8 +4,9 @@ import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from
 import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards, studiedCount } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { explain } from './stem.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton } from './util.js';
 import { chartsButton } from './charts.js';
+import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 
@@ -135,7 +136,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Reinforce'] : c.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), chartsButton(), h('span.chip.' + tag[0], tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
       practice ? practiceBanner(c.type === 'preview') : null, inner));
   }
 
@@ -286,9 +287,9 @@ export function renderParse(view, params) {
     } else kind = rest[1] || 'all';
     const q = buildParseSession({ scope, kind });
     if (!q.length) {
+      if (!scope) { const alt = smart('parse'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }
       clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack',
-        h('p', scope ? 'There is nothing to parse in ' + scopeLabel(scope) + ' for this selection.' : 'Nothing is due, and you have reached today’s new-form limit. 🎉'),
-        h('p.small.muted', 'You can raise the daily limit on the Parsing page, or practise a passage — passages ignore the daily limit.'), h('a.btn', { href: '#/parse' }, 'Back')));
+        h('p', scope ? 'There is nothing to parse in ' + scopeLabel(scope) + ' for this selection.' : 'You’re all caught up. 🎉'), h('a.btn', { href: '#/parse' }, 'Back')));
       return;
     }
     return runSession(view, q, { title: scope ? scopeLabel(scope) : KIND_TITLE[kind], scope, restart: () => renderParse(view, params) });
@@ -299,10 +300,7 @@ export function renderParse(view, params) {
 async function landing(view) {
   ensureIndex();
   const st = await getParseStats();
-  // The tiles say exactly what pressing them gives you: the forms due, plus new ones up to today's allowance.
-  const plan = {};
-  for (const k of ['all', 'verb', 'noun']) { const p = planParseSession({ kind: k }); const nDue = Math.min(p.due.length, p.size); plan[k] = { due: p.due.length, fresh: Math.min(p.limit, p.fresh.length, Math.max(0, p.size - nDue)) }; }
-  const tileInfo = (k) => { const { due, fresh } = plan[k]; return !due && !fresh ? 'Nothing to do right now' : [due ? due + ' to review' : '', fresh ? fresh + ' new' : ''].filter(Boolean).join(' + '); };
+  const goal = K.goal && K.goal.book ? K.goal : null;
   const modeNote = () => setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : '';
   const note = h('div.muted.small', modeNote());
   const modeSeg = h('div.seg', [['auto', 'Auto'], ['guided', 'Guided'], ['quick', 'Quick']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('parseMode') === v), onclick: async (e) => {
@@ -313,21 +311,18 @@ async function landing(view) {
   clear(view).append(
     h('div.pagehead', h('h1', 'Parsing')),
     h('div.stack',
-      h('div.card.stack',
-        h('p', 'Name the parts of a form in a fixed order — verbs: tense → voice → mood → person → number (participles: case → number → gender); everything else: case → number → gender. Every valid parsing is accepted, each part is scored on its own, and slips come back later.'),
-        h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Guided asks one part at a time with instant feedback. Quick shows all parts at once. Auto starts guided and moves up when you’re reliable.')), modeSeg), note,
-        h('div.row.between', h('span.small.muted', 'New forms per day'), newSel)),
-      h('div.scope-pick',
-        ['all', 'verb', 'noun'].map((k) => h('a.tile', { href: '#/parse/run/mix/' + k }, h('h3', KIND_TITLE[k]), h('p', tileInfo(k)))),
-      ),
-      h('div.scope-pick',
-        h('a.tile', { href: '#/parse/run/extra/trouble' }, h('h3', 'Reinforce'), h('p', studiedCount('f:') ? 'Your shakiest forms — doesn’t affect your schedule' : 'Available once you’ve studied some forms')),
-        h('a.tile', { href: '#/parse/run/extra/preview' }, h('h3', 'Preview new forms'), h('p', 'A look at a few new forms — doesn’t affect your schedule'))),
-      chartsButton(),
-      passagePicker(view, K.goal && K.goal.book ? K.goal : null, {
-        title: 'Parse a passage', blurb: 'Practise the forms that occur in the text you want to read, most frequent first.', label: 'Practise these forms',
-        href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/all',
-        info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(canon[t >> 4])) ids.add(canon[t >> 4]); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
-      }),
-      h('div.card', h('h3', 'Your accuracy by part'), Object.keys(st.slots).length ? [slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null] : h('p.muted.small', 'It will appear here after your first session.'))));
+      startButton(smart('parse')),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Preview new forms'), chartsButton()),
+      fold('Study a passage',
+        goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practise')) : null,
+        passagePicker(view, goal, {
+          title: 'Parse a passage', blurb: 'Practise the forms that occur in the text you want to read, most frequent first.', label: 'Practise these forms',
+          href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/all',
+          info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(canon[t >> 4])) ids.add(canon[t >> 4]); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
+        })),
+      fold('Options',
+        h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Guided asks one part at a time. Quick shows all parts at once. Auto moves up when you’re reliable.')), modeSeg), note,
+        h('div.row.between', h('span', 'New forms per day'), newSel),
+        h('div.row.wrap', h('a.btn.sm', { href: '#/parse/run/mix/verb' }, 'Verbs only'), h('a.btn.sm', { href: '#/parse/run/mix/noun' }, 'Nouns, adjectives & pronouns only'))),
+      Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
 }

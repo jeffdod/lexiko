@@ -27,9 +27,9 @@ process.on('unhandledRejection', () => {});
   ok(r.rows['ἐλύθην'] === 'aor1-pas' && r.rows['ἐγράφην'] === 'aor2-pas' && r.rows['ἔλυσα'] === 'aor1-act' && r.rows['ἔμεινα'] === 'aor-liq-act' && r.rows['ἔβαλον'] === 'aor2-act' && r.rows['ἐγενόμην'] === 'aor2-mid' && r.rows['λέλυκα'] === 'perf1-act' && r.rows['γέγονα'] === 'perf2-act' && r.rows['μενῶ'] === 'fut-liq-act' && r.rows['λύσω'] === 'fut-act', 'chart rows picked correctly');
 
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
-  await p.goto(URL + '#/parts'); await p.waitForSelector('.tile');
+  await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });
-  const tiles = await p.$$eval('.tile', (t) => t.map((x) => x.innerText.replace(/\n/g, ' | '))); console.log(tiles);
+  const startText = await p.textContent('.start'); console.log(startText); ok(!/nothing to do/i.test(await p.textContent('#view')), 'no "nothing to do" text on the parts page');
   const snap = () => p.evaluate(async () => { const k = await import('./js/know.js'); return JSON.stringify([...k.K.cards.entries()].sort()); });
   const before = await snap();
   await p.goto(URL + '#/parts/run/mix'); await p.waitForSelector('.qcard');
@@ -76,7 +76,8 @@ process.on('unhandledRejection', () => {});
   }
   const stateAfter = await snap();
   ok(stateBefore === stateAfter, 'extra practice left every card and counter unchanged');
-  await p.goto(URL + '#/learn'); await p.waitForSelector('.tile'); await p.screenshot({ path: out + '/learn.png', fullPage: true });
+  await p.goto(URL + '#/learn'); await p.waitForSelector('.start'); await p.screenshot({ path: out + '/learn.png', fullPage: true });
+  for (const u of ['#/learn', '#/learn/words', '#/parse', '#/parts', '#/home']) { await p.goto(URL + u); await p.waitForSelector('.start'); ok(!/nothing (to do|is due)/i.test(await p.textContent('#view')), 'no dead-end wording on ' + u); }
   ok(errs.length === 0, 'no console/page errors', errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? 'FAILED ' + fails : 'ALL PASSED'); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
