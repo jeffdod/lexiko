@@ -61,18 +61,25 @@ function candidatePool(scope, kinds) {
   return out;
 }
 
-export function buildParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
+/** What a session would contain right now: the due forms, then new ones up to the daily allowance. */
+export function planParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
   ensureIndex();
   const kinds = KINDS[kind] || KINDS.all, now = Date.now();
   const pool = candidatePool(scope, kinds), inPool = new Set(pool.map((x) => x.id));
   const due = parseCardsDue(now).map((c) => ({ c, id: keyMap.get(c.id) }))
     .filter((x) => x.id != null && itemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
-    .sort((a, b) => a.c.due - b.c.due).slice(0, size).map((x) => ({ id: x.id, type: 'due' }));
+    .sort((a, b) => a.c.due - b.c.due);
   const limit = newLimit != null ? newLimit : scope ? size : Math.max(0, setting('parseNewPerDay') - parseNewToday());
-  const fresh = pool.filter((x) => { const c = K.cards.get(parseId(D.forms[x.id])); return !c || c.state === 'new'; })
-    .map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s)
-    .slice(0, Math.min(limit, Math.max(0, size - due.length))).map((o) => ({ id: o.x.id, type: 'new' }));
-  return shuffle([...due, ...fresh]);
+  const fresh = pool.filter((x) => { const c = K.cards.get(parseId(D.forms[x.id])); return !c || c.state === 'new'; });
+  return { due, fresh, limit, size };
+}
+
+export function buildParseSession(opts) {
+  const { due, fresh, limit, size } = planParseSession(opts);
+  const dueIds = due.slice(0, size).map((x) => ({ id: x.id, type: 'due' }));
+  const newIds = fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s)
+    .slice(0, Math.min(limit, Math.max(0, size - dueIds.length))).map((o) => ({ id: o.x.id, type: 'new' }));
+  return shuffle([...dueIds, ...newIds]);
 }
 
 /* ---------- adaptive mode: guided until you're reliable, then quick ---------- */
@@ -278,15 +285,16 @@ export function renderParse(view, params) {
 async function landing(view) {
   ensureIndex();
   const st = await getParseStats();
-  const dueBy = { all: 0, verb: 0, noun: 0 };
-  for (const c of parseCardsDue()) { const id = keyMap.get(c.id); const it = id != null && itemOf(id); if (!it) continue; dueBy.all++; if (it.kind === 'verb') dueBy.verb++; else if (it.kind === 'nominal') dueBy.noun++; }
-  const left = Math.max(0, setting('parseNewPerDay') - parseNewToday());
+  // The tiles say exactly what pressing them gives you: the forms due, plus new ones up to today's allowance.
+  const plan = {};
+  for (const k of ['all', 'verb', 'noun']) { const p = planParseSession({ kind: k }); const nDue = Math.min(p.due.length, p.size); plan[k] = { due: p.due.length, fresh: Math.min(p.limit, p.fresh.length, Math.max(0, p.size - nDue)) }; }
+  const tileInfo = (k) => { const { due, fresh } = plan[k]; return !due && !fresh ? 'Nothing to do right now' : [due ? due + ' to review' : '', fresh ? fresh + ' new' : ''].filter(Boolean).join(' + '); };
   const modeNote = () => setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : '';
   const note = h('div.muted.small', modeNote());
   const modeSeg = h('div.seg', [['auto', 'Auto'], ['guided', 'Guided'], ['quick', 'Quick']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('parseMode') === v), onclick: async (e) => {
     await setSetting('parseMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); note.textContent = modeNote();
   } }, t)));
-  const newSel = h('select', { 'aria-label': 'New forms per day', onchange: (e) => setSetting('parseNewPerDay', +e.target.value) }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)));
+  const newSel = h('select', { 'aria-label': 'New forms per day', onchange: async (e) => { await setSetting('parseNewPerDay', +e.target.value); landing(view); } }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)));
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
   clear(view).append(
     h('div.pagehead', h('h1', 'Parsing')),
@@ -296,7 +304,7 @@ async function landing(view) {
         h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Guided asks one part at a time with instant feedback. Quick shows all parts at once. Auto starts guided and moves up when you’re reliable.')), modeSeg), note,
         h('div.row.between', h('span.small.muted', 'New forms per day'), newSel)),
       h('div.scope-pick',
-        ['all', 'verb', 'noun'].map((k) => h('a.tile', { href: '#/parse/run/mix/' + k }, h('h3', KIND_TITLE[k]), h('p', dueBy[k] + ' due' + (k === 'all' ? ' · ' + left + ' new left today' : '')))),
+        ['all', 'verb', 'noun'].map((k) => h('a.tile', { href: '#/parse/run/mix/' + k }, h('h3', KIND_TITLE[k]), h('p', tileInfo(k)))),
       ),
       passagePicker(view, K.goal && K.goal.book ? K.goal : null, {
         title: 'Parse a passage', blurb: 'Practise the forms that occur in the text you want to read, most frequent first.', label: 'Practise these forms',
