@@ -7,6 +7,15 @@ import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner, fol
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
 
+/** A verb's principal parts as a small grid, shown with the answer (only when the verb has parts beyond the present). */
+const PART_NAMES = ['Present', 'Future', 'Aorist active', 'Perfect active', 'Perfect mid/pas', 'Aorist passive'];
+function partsBlock(L) {
+  const e = L.pos === 'V' ? D.parts.get(L.n) : null;
+  if (!e || !e.parts.slice(1).some(Boolean)) return null;
+  return h('div.cardparts', h('div.small.muted', 'Principal parts'),
+    h('div.partsgrid', PART_NAMES.map((name, i) => h('div.pp' + (e.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, e.parts[i] || '—')))));
+}
+
 const fmt = (n) => n.toLocaleString('en-US');
 const POSNAME = { N: 'noun', V: 'verb', A: 'adjective', T: 'article', P: 'pronoun', R: 'pronoun', D: 'pronoun', X: 'pronoun', I: 'pronoun', F: 'pronoun', S: 'pronoun', C: 'pronoun', K: 'pronoun', Q: 'pronoun', ADV: 'adverb', CONJ: 'conjunction', PREP: 'preposition', PRT: 'particle', COND: 'conditional', INJ: 'interjection', HEB: 'Hebrew', ARAM: 'Aramaic' };
 
@@ -100,7 +109,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     const reveal = (extra) => {
       const card = getCard(item.n) || F.newCard('w:' + item.n);
       const pv = F.preview(card, Date.now(), setting('retention'));
-      const answer = [h('div.qgloss', L.brief), L.full ? h('div.qdef', L.full) : null, contextFor(L.n, scope)];
+      const answer = [h('div.qgloss', L.brief), L.full ? h('div.qdef', L.full) : null, partsBlock(L), contextFor(L.n, scope)];
       const grades = h('div.grades' + (practice ? '.two' : ''),
         (practice ? [[1, 'Again'], [3, 'Got it']] : [[1, 'Again'], [2, 'Hard'], [3, 'Good'], [4, 'Easy']]).map(([g, name]) => h('button.g' + g, { onclick: () => grade(item, g) }, name, practice ? null : h('small', fmtInterval(pv[g])))));
       return { answer, grades };

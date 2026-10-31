@@ -1,6 +1,6 @@
 # lexiko
 
-Learn to read the Greek New Testament. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
+Build your Greek vocabulary. Read the Greek New Testament better. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
 
 **Status: phases 1–2.** Reader, vocabulary SRS (FSRS), levels, passage readiness, goals, backup/restore, PWA shell.
 **Planned:** more reference charts (participles, non-indicative moods).
@@ -42,7 +42,7 @@ Users get new versions automatically: the service worker notices a changed `sw-a
 Vocabulary, parsing and principal parts each have *Reinforce* (your shakiest cards) and *Preview new* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Quiz screens have a **Charts** button (`js/charts.js`): the master verb chart and primary/secondary endings, as tables; after an answer the row that builds the part is highlighted.
 
 ## Parsing practice
-`#/parse` quizzes the parts of a form in a fixed order (verbs: tense → voice → mood → person → number; infinitives stop after mood; participles continue with case → number → gender; other words: case → number → gender). Every parsing listed for the form under the same lexeme is accepted, each part is scored separately, and every form has its own FSRS card (`f:<form>:<strongs>`). *Guided* asks one part at a time with instant feedback and a hint; *Quick* shows all parts at once; *Auto* starts guided and switches (per verbs / other words) once you're ≥85 % reliable over 20 forms, and back below 60 %. After each answer, `js/stem.js` explains the form (augment, reduplication, tense markers, stem changes, endings). Code: `js/parse-model.js` (slots, matching, grading), `js/stem.js` (explanations), `js/parse.js` (UI). `node tools/test_stem.mjs [form…]` checks them against the whole text.
+`#/parse` quizzes the parts of a form in a fixed order (verbs: tense → voice → mood → person → number; infinitives stop after mood; participles continue with case → number → gender; other words: case → number → gender). Every parsing listed for the form under the same lexeme is accepted, each part is scored separately, and every form has its own FSRS card (`f:<form>:<strongs>`). *Guided* asks one part at a time with instant feedback and a hint; *Quick* shows all parts at once; *Auto* starts guided and switches (per verbs / other words) once you're ≥85 % reliable over 20 forms, and back below 60 %. Code: `js/parse-model.js` (slots, matching, grading), `js/parse.js` (UI). `node tools/test_stem.mjs [form…]` checks them against the whole text.
 
 ## Sources and licences
 * **Greek text:** Robinson–Pierpont Byzantine Textform (CCAT Beta Code with Strong's and RP morphology codes) — the 2026 edition, released into the **public domain on 16 Aug 2026**, so the full text is published here (`sources/rp/`).

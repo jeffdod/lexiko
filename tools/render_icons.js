@@ -31,12 +31,12 @@ const fontUrl = 'file://' + path.join(root, 'fonts');
    background:radial-gradient(900px 600px at 85% 110%,#2f7a9c55,transparent 70%),linear-gradient(135deg,#0f2f42,#17445f 60%,#1d5573)}
   .ico{position:absolute;left:84px;top:96px}.ico svg{width:200px;height:200px;filter:drop-shadow(0 12px 28px #0006)}
   h1{position:absolute;left:84px;top:300px;margin:0;font-size:150px;line-height:1;font-weight:700;letter-spacing:-2px}
-  .tag{position:absolute;left:88px;top:462px;font-size:44px;font-weight:400;color:#f7f1e3}
+  .tag{position:absolute;left:88px;top:462px;font-size:36px;font-weight:400;color:#f7f1e3}
   .sub{position:absolute;left:88px;top:528px;font-size:27px;font-style:italic;color:#e0b765}
   .gk{position:absolute;right:70px;top:92px;font-size:62px;color:#f7f1e3aa;text-align:right;line-height:1.35}
   .gk b{color:#e0b765;font-weight:400}
   </style><body><div class=ico>${svg('icons/icon-any.svg')}</div><h1>lexiko</h1>
-  <div class=tag>Learn to read the Greek New Testament.</div>
+  <div class=tag>Build your Greek vocabulary. Read the Greek New Testament better.</div>
   <div class=sub>Spaced repetition · parsing drills · a passage reader — free, offline, no login</div>
   <div class=gk>Ἐν ἀρχῇ ἦν<br>ὁ <b>λόγος</b></div></body>`;
   await png('icons/og-image.png', 1200, 630, og);

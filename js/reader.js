@@ -1,4 +1,4 @@
-// The reader: Greek text with tap/hover word popups, optional glosses for unknown words, readiness per chapter.
+// The reader: Greek text with tap/click word popups, optional glosses for unknown words, readiness per chapter.
 import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, scopeLabel, periScope, periRange } from './data.js';
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, readinessLabel, readinessClass, markRead, setReadKey } from './know.js';
@@ -68,7 +68,7 @@ function showPop(el, pinned, rerender) {
   if (popAnchor && popAnchor !== el) popAnchor.classList.remove('sel');
   popAnchor = el; popPinned = pinned; el.classList.add('sel');
   clear(pop);
-  pop.append(h('button.btn.ghost.icon.sm.x', { 'aria-label': 'Close', onclick: hidePop }, icon('close', 18)), popupBody(+el.dataset.t, { onStatus: () => { rerender(); } }));
+  pop.append(h('button.btn.ghost.icon.sm.x', { 'aria-label': 'Close', onclick: hidePop }, icon('close', 18)), popupBody(+el.dataset.t, { onStatus: () => { hidePop(); rerender(); } }));
   pop.hidden = false;
   if (matchMedia('(min-width: 700px)').matches) {
     const r = el.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
@@ -193,16 +193,10 @@ export function renderReader(view, params) {
     const act = e.target.closest && e.target.closest('[data-act="pread"]');
     if (act) { const id = act.dataset.pid, on = !K.read[id]; await setReadKey(id, on); toast(on ? 'Section marked as read' : 'Unmarked'); return redraw(); }
     const w = wordOf(e); if (w) { e.preventDefault(); showPop(w, true, redraw); } };
-  const over = (e) => {
-    if (e.pointerType !== 'mouse' || popPinned) return;
-    const w = wordOf(e); if (!w || w === popAnchor) return;
-    clearTimeout(hideTimer); hideTimer = setTimeout(() => showPop(w, false, redraw), 220);
-  };
-  const out = (e) => { if (e.pointerType === 'mouse' && wordOf(e) && !popPinned) { clearTimeout(hideTimer); scheduleHide(); } };
   const redraw = () => { const y = scrollY; draw(); scrollTo(0, y); if (popAnchor) { const el = body.querySelector('.w[data-t="' + popAnchor.dataset.t + '"]'); if (el) showPop(el, true, redraw); } };
   const outside = (e) => { if (pop && !pop.hidden && popPinned && !pop.contains(e.target) && !wordOf(e)) hidePop(); };
   const esc_ = (e) => { if (e.key === 'Escape') hidePop(); };
-  body.addEventListener('click', click); body.addEventListener('pointerover', over); body.addEventListener('pointerout', out);
+  body.addEventListener('click', click);
   document.addEventListener('pointerdown', outside); document.addEventListener('keydown', esc_);
 
   if (vsS) { const v = body.querySelector('#v' + (+vsS)); if (v) { v.classList.add('focus'); requestAnimationFrame(() => v.scrollIntoView({ block: 'center' })); } } else scrollTo(0, 0);

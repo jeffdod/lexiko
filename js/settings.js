@@ -105,6 +105,9 @@ export function renderSettings(view) {
     h('div.card.stack', h('h2', 'Your data'), persistLine,
       h('div.row.wrap', h('button.btn', { onclick: () => refreshPersist(true) }, 'Protect my data'),
         h('button.btn.primary', { onclick: doBackup }, icon('download', 18), 'Back up progress'), h('button.btn', { onclick: () => fileIn.click() }, icon('upload', 18), 'Restore…'), fileIn),
+      h('p.muted.small', { id: 'bk-where' }, ios ? 'On iPhone/iPad: tap Back up progress, then choose “Save to Files” in the menu that appears, and pick a folder in iCloud Drive (a folder named lexiko works well). To restore later, tap Restore… and choose that file. Backup names start with “lex” and end with the date, so the newest is easy to find.'
+        : /Android/.test(navigator.userAgent) ? 'On Android: tap Back up progress, then choose where to save it (for example Drive or Files). To restore later, tap Restore… and choose that file. Backup names start with “lex” and end with the date.'
+        : 'On a computer the backup is saved to your Downloads folder. Copy it somewhere safe (a cloud drive or a USB stick). To restore later, click Restore… and choose that file. Backup names start with “lex” and end with the date.'),
       h('div.muted.small', { id: 'bk-last' }, lastBackup ? 'Last backup: ' + new Date(lastBackup).toLocaleString() : 'No backup yet. Your progress lives only on this device — back it up now and then.'),
       h('div.muted.small', store.usingMemory ? '⚠ This browser is blocking storage, so progress will be lost when you close the page.' : 'Stored in this browser (IndexedDB). No account, no server.')),
     h('div.card.stack', h('h2', 'Install'), installBtn,
