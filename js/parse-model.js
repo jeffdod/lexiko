@@ -4,7 +4,7 @@
 // Everything else: case → number → gender (personal/reflexive/possessive pronouns add person first).
 import { decode, CASE, NUM, GEN, TENSE, MOOD } from './morph.js';
 
-export const SLOT_TITLE = { tense: 'Tense', voice: 'Voice', mood: 'Mood', person: 'Person', number: 'Number', case: 'Case', gender: 'Gender', possessorNumber: 'Possessor' };
+export const SLOT_TITLE = { tense: 'Tense', voice: 'Voice', mood: 'Mood', person: 'Person', number: 'Number', case: 'Case', gender: 'Gender', possessorNumber: 'Possessor number' };
 
 const VOICE_OPTS = { A: 'Active', M: 'Middle', P: 'Passive', E: 'Middle or passive', D: 'Middle deponent', O: 'Passive deponent' };
 const PERSON_OPTS = { 1: '1st', 2: '2nd', 3: '3rd' };
@@ -31,20 +31,30 @@ const LABELS = {
 export const labelOf = (slot, code) => (LABELS[slot] && LABELS[slot][code]) || code;
 
 /**
- * Word group decides the slot sequence: 'V' for verbs, 'N' for everything else. Only verbs are asked for person.
- * Pronouns, articles, nouns and adjectives are parsed by case, number and gender (a 1st/2nd-person pronoun like ἐγώ has no gender, so just case and number;
- * which person it is comes from the word itself).
+ * What a word is asked for follows its Robinson–Pierpont code exactly:
+ *   V  verbs                   tense, voice, mood, then person+number (finite) / case+number+gender (participle) / nothing (infinitive)
+ *   P  1st/2nd-person pronoun  person, case, number              (P-1NS, P-2GP — RP gives no gender)
+ *   F  reflexive pronoun       person, case, number, gender      (F-3ASM)
+ *   S  possessive pronoun      possessor person, possessor number, case, number, gender   (S-1SNSM)
+ *   N  everything else         case, number, gender              (nouns, adjectives, article, 3rd-person personal pronouns P-GSM,
+ *                                                                 relative, demonstrative, interrogative, indefinite, … pronouns)
  */
 export function groupOf(d) {
   const s = d.slots;
   if (d.pos === 'V') return s.mood && s.tense && s.voice ? 'V' : null;
-  return s.case && s.number && (s.gender || d.pos === 'P') ? 'N' : null;
+  if (d.pos === 'P' && /^P-[123]/.test(d.code)) return s.person && s.case && s.number ? 'P' : null;
+  if (d.pos === 'F') return s.person && s.case && s.number && s.gender ? 'F' : null;
+  if (d.pos === 'S') return s.person && s.possessorNumber && s.case && s.number && s.gender ? 'S' : null;
+  return s.case && s.number && s.gender ? 'N' : null;
 }
 
 /** Slot order for a group; for verbs it depends on the mood chosen so far. */
 export function slotOrder(group, mood) {
   switch (group) {
     case 'V': return ['tense', 'voice', 'mood', ...(!mood ? [] : mood === 'N' ? [] : mood === 'P' ? ['case', 'number', 'gender'] : ['person', 'number'])];
+    case 'P': return ['person', 'case', 'number'];
+    case 'F': return ['person', 'case', 'number', 'gender'];
+    case 'S': return ['person', 'possessorNumber', 'case', 'number', 'gender'];
     default: return ['case', 'number', 'gender'];
   }
 }
@@ -124,5 +134,11 @@ export function gradeOf(res, { ms = 0, aided = false } = {}) {
 }
 
 /** Plain-English one-liner for a parsing, e.g. "Aorist Passive Indicative 3rd person Singular". */
-export const describe = (cand) => (cand.d.pos === 'V' ? cand.d.summary
-  : cand.keys.map((k) => labelOf(k, cand.slots[k])).join(' ') + (cand.d.notes.length ? ' (' + cand.d.notes.join(', ') + ')' : ''));
+export function describe(cand) {
+  const d = cand.d, sl = cand.slots; if (d.pos === 'V') return d.summary;
+  const L = (k) => labelOf(k, sl[k]), tail = (d.notes.length ? ' (' + d.notes.join(', ') + ')' : '');
+  const cng = ['case', 'number', 'gender'].filter((k) => sl[k] != null).map(L).join(' ');
+  if (d.pos === 'S') return L('person') + ' person ' + L('possessorNumber').toLowerCase() + ' possessor, ' + cng + tail;
+  if (sl.person != null && (d.pos === 'F' || cand.code.startsWith('P-1') || cand.code.startsWith('P-2'))) return L('person') + ' person ' + cng + tail;
+  return cng + tail;
+}
