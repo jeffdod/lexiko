@@ -53,6 +53,22 @@
   </div>
 </div>
 <noscript><p style="padding:1rem">lexiko needs JavaScript to run.</p></noscript>
+<script>
+  // Opened straight from disk (file://)? Browsers refuse to load the app's modules and data that way, so explain instead of spinning forever.
+  (function () {
+    var msg = document.getElementById('loadmsg'), bar = document.getElementById('loadbar');
+    function explain() {
+      if (!msg || !document.getElementById('loading') || document.getElementById('loading').classList.contains('done')) return;
+      if (bar && bar.parentNode) bar.parentNode.style.display = 'none';
+      msg.style.cssText = 'margin-top:.8rem;line-height:1.5';
+      msg.innerHTML = 'lexiko can’t run when index.html is opened directly from a folder — browsers block that for security.<br><br>' +
+        'Use it at <a href="https://lexiko.org/">lexiko.org</a> (add it to your home screen or install it and it works offline), ' +
+        'or serve this folder locally, e.g. run <b>python3 -m http.server</b> in it and open <b>http://localhost:8000</b>.';
+    }
+    if (location.protocol === 'file:') explain(); else setTimeout(function () { if (document.getElementById('loading')) explain2(); }, 20000);
+    function explain2() { if (msg) msg.innerHTML = 'This is taking longer than expected. Check your connection and reload; if it keeps happening, reload with the page’s cache cleared.'; }
+  })();
+</script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
