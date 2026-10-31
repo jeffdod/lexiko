@@ -111,7 +111,7 @@ def main(rp_dir, dodson_xml, user_lex, out_dir):
     dump('meta.json', {
         'built': datetime.date.today().isoformat(), 'tokens': sum(b['tokens'] for b in meta_books),
         'forms': len(forms), 'lexemes': len(lex), 'verses': sum(len(v) for v in books.values()),
-        'text': 'Robinson-Pierpont Majority Text Greek New Testament (supplied by the project owner, CCAT Beta Code with Strong\'s numbers and RP parsing codes)',
+        'text': 'Robinson-Pierpont Byzantine Textform Greek New Testament (supplied by the project owner, CCAT Beta Code with Strong\'s numbers and RP parsing codes)',
         'lexicon': 'Glosses: project owner\'s lexicon (a Dodson Greek-English Lexicon derivative); long definitions and Unicode headwords: Dodson Greek-English Lexicon (public domain / CC0), biblicalhumanities/Dodson-Greek-Lexicon',
         'tokenEncoding': 'formId*16 + p; p&7 punct (1 comma,2 period,3 ano teleia,4 question); p&8 em-dash follows the word (no space after)',
     })
