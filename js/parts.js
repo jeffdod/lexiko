@@ -7,7 +7,6 @@ import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
 import { K, status, setting, setSetting, partsId, partsCardsDue, partsNewToday, rateParts, getPartsStats, savePartsStats, troubleCards, studiedCount } from './know.js';
 import * as F from './fsrs.js';
 import { decode } from './morph.js';
-import { explain } from './stem.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton } from './util.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
@@ -105,14 +104,6 @@ export function verbOptions(entry) {
   return shuffle([entry, ...shuffle(scored).slice(0, 3)]);
 }
 
-function notesFor(entry, slot) {
-  const form = entry.parts[slot]; if (!form) return [];
-  const mid = slot <= 1 ? /μαι$/.test(skel(form)) : slot === 2 ? /μην$/.test(skel(form)) : false;
-  let code = ['V-PAI-1S', 'V-FAI-1S', 'V-AAI-1S', 'V-RAI-1S', 'V-RPI-1S', 'V-API-1S'][slot];
-  if (mid) code = code.replace(/^(V-.)A/, '$1M');
-  try { return explain(lexeme(entry.n).head, form, decode(code)); } catch { return []; }
-}
-
 /* ---------- session ---------- */
 let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
@@ -166,11 +157,10 @@ function runSession(view, queue, { scope, restart, practice }) {
 
   /* the verb with all its parts, the tested one marked, and why it looks that way */
   function verbPanel(entry, slot) {
-    const L = lexeme(entry.n), notes = notesFor(entry, slot);
+    const L = lexeme(entry.n);
     return h('div.fb.ok',
       h('div.row.between', h('b', { lang: 'grc' }, entry.lemma), h('span.small.muted', L.short || L.brief)),
-      h('div.partsgrid', SLOT_NAMES.map((name, i) => h('div.pp' + (i === slot ? '.hi' : '') + (entry.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, entry.parts[i] || '—')))),
-      notes.length ? h('details.why', { open: false }, h('summary', 'Why it looks like this'), h('ul', notes.map((n) => h('li', n)))) : null);
+      h('div.partsgrid', SLOT_NAMES.map((name, i) => h('div.pp' + (i === slot ? '.hi' : '') + (entry.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, entry.parts[i] || '—')))));
   }
 
   const setKeys = (enter) => {

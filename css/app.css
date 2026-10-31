@@ -212,7 +212,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .fb { padding: .9rem 1rem; border-radius: var(--r); border: 1.5px solid var(--line); background: var(--surface); display: grid; gap: .55rem; }
 .fb.ok { border-color: var(--good); } .fb.mid { border-color: var(--warn); } .fb.bad { border-color: var(--bad); }
 .fb .parsed { font-weight: 700; font-size: 1.05rem; }
-.why summary { cursor: pointer; font-weight: 700; color: var(--accent); } .why ul { margin: .4rem 0 0 1.1rem; display: grid; gap: .35rem; font-size: .92rem; color: var(--ink-2); }
 .pbars { display: grid; gap: .45rem; margin-top: .5rem; }
 .pbar { display: grid; grid-template-columns: 5.5rem 1fr 3rem 2.5rem; align-items: center; gap: .5rem; font-size: .88rem; } .pbar small { color: var(--muted); }
 
@@ -230,7 +229,7 @@ pre.license { max-height: 60dvh; overflow: auto; margin: .6rem 0 0; padding: .7r
 .pp small { font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .pp span { font-family: var(--greek); font-size: 1.1rem; font-weight: 600; } .pp.none span { color: var(--muted); }
 .pp.hi { outline: 2px solid var(--good); background: var(--good-soft); }
-dialog.charts { width: min(48rem, 96vw); max-height: 90dvh; overflow: auto; }
+dialog.charts { width: min(60rem, 96vw); max-width: 96vw; max-height: 90dvh; overflow: auto; }
 .cbody { display: grid; gap: .8rem; margin-top: .7rem; }
 .cscroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
 .ctable { border-collapse: collapse; width: 100%; font-size: .9rem; white-space: nowrap; }
@@ -242,6 +241,10 @@ dialog.charts { width: min(48rem, 96vw); max-height: 90dvh; overflow: auto; }
 .ctable tr.hi th, .ctable tr.hi td { background: var(--good-soft); }
 .clabel { font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: .5rem 0 .25rem; }
 
+@media (max-width: 1000px) {
+  .ctable { font-size: .82rem; white-space: normal; } .ctable th, .ctable td { padding: .35rem .45rem; }
+  .ctable thead th { white-space: normal; vertical-align: bottom; }
+}
 @media (max-width: 560px) {
   dialog.charts { padding: .8rem; }
   .ctable { font-size: .74rem; white-space: normal; } .ctable th, .ctable td { padding: .3rem .32rem; }
@@ -262,8 +265,5 @@ dialog.charts { width: min(48rem, 96vw); max-height: 90dvh; overflow: auto; }
 /* verb quiz: one asked form, verse tucked away, breakdown of the form */
 .qask { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; color: var(--muted); }
 .ctxfold { margin-top: .6rem; width: 100%; max-width: 34rem; text-align: left; } .ctxfold summary { cursor: pointer; font-size: .85rem; color: var(--accent); font-weight: 700; text-align: center; }
-.buildbox { margin-top: .6rem; display: grid; gap: .35rem; justify-items: center; }
-.build { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: center; align-items: flex-start; }
-.bp { display: inline-flex; flex-direction: column; align-items: center; padding: .3rem .6rem; border-radius: 10px; background: var(--surface-2); min-width: 2.6rem; }
-.bp b { font-family: var(--greek); font-size: 1.35rem; } .bp small { font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; text-align: center; max-width: 7rem; }
-.bp.aug, .bp.prefix { background: var(--gold-soft); } .bp.mark { background: var(--accent-soft); } .bp.end { background: var(--good-soft); }
+
+.cardparts { margin-top: .8rem; text-align: left; width: 100%; max-width: 34rem; display: grid; gap: .3rem; } .cardparts .partsgrid { grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }

@@ -1,7 +1,7 @@
 {
   "name": "lexiko",
   "short_name": "lexiko",
-  "description": "Learn to read the Greek New Testament: spaced-repetition vocabulary, a tap-for-parsing reader and passage readiness. Free, offline, no login.",
+  "description": "Build your Greek vocabulary and read the Greek New Testament better: spaced-repetition vocabulary, a tap-for-parsing reader and passage readiness. Free, offline, no login.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

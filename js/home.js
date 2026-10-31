@@ -19,7 +19,7 @@ export function renderHome(view) {
   const needsBackup = studied >= 15 && (!lastBackup || Date.now() - lastBackup > 14 * DAY);
 
   const stack = h('div.stack');
-  stack.append(h('div', h('h1', { style: { fontSize: '2rem' } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'), h('div.muted', 'Learn to read the Greek New Testament.')));
+  stack.append(h('div', h('h1', { style: { fontSize: '2rem' } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'), h('div.muted', 'Build your Greek vocabulary. Read the Greek New Testament better.')));
 
   if (lvl == null && !K.settings.levelAsked) {
     stack.append(h('div.card.stack', h('h2', 'Where are you starting?'),

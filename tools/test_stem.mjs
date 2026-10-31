@@ -1,6 +1,5 @@
-// Sanity check for js/stem.js and js/parse-model.js against the real data: node tools/test_stem.mjs [form ...]
+// Sanity check for js/parse-model.js against the real data: node tools/test_stem.mjs [form ...]
 import fs from 'node:fs';
-import { explain } from '../js/stem.js';
 import { buildItem, check, groupForms, mergeForms } from '../js/parse-model.js';
 import { decode } from '../js/morph.js';
 const J = (p) => JSON.parse(fs.readFileSync(new URL('../data/' + p, import.meta.url)));
@@ -17,7 +16,6 @@ for (const f of forms) {
   }
   try {
     const d = item.valid[0].d, L = lex.get(f.an[0].s);
-    const ex = explain(L[1], f.w, d); if (ex.length) notes++;
     const res = check(item, Object.fromEntries(item.valid[0].keys.map((k) => [k, item.valid[0].slots[k]]))); if (res.full) ok++;
     if (want.includes(f.w)) console.log(f.w, '<-', L[1], item.valid.map((v) => v.code).join(' | '), '\n  ' + ex.join('\n  '));
   } catch (e) { crash++; console.log('CRASH', f.w, e.message); }
@@ -40,21 +38,3 @@ if (personOnNonVerb) { console.log('FAIL: person/possessor asked where the RP co
   if (bad.length) { console.log('FAIL:', bad); process.exit(1); }
 }
 
-// Verb breakdowns must be built from the form's own letters (no other verbs' examples).
-{
-  const { breakdown } = await import('../js/stem.js');
-  const bad = [];
-  const t = (head, form, code, wantPieces, forbid = []) => {
-    const b = breakdown(head, form, decode(code)), got = b.pieces.map((p) => p.text.normalize('NFC')).join('+'), txt = b.notes.join(' ');
-    if (wantPieces && got !== wantPieces) bad.push(form + ': pieces ' + got + ' ≠ ' + wantPieces);
-    for (const w of forbid) if (txt.includes(w)) bad.push(form + ': note mentions ' + w);
-  };
-  t('λύω', 'ἐλύθην', 'V-API-1S', 'ἐ+λύ+θη+ν', ['ἔμεινα', 'λέ-λυ-κα']);
-  t('λύω', 'ἔλυσαν', 'V-AAI-3P', 'ἔ+λυ+σα+ν');
-  t('λύω', 'ἐλύσατο', 'V-AMI-3S', 'ἐ+λύ+σα+το');
-  t('λύω', 'λύομεν', 'V-PAI-1P', 'λύ+ο+μεν');
-  t('ἀποστέλλω', 'ἀπέστειλεν', 'V-AAI-3S', null, ['2nd aorist']);
-  t('βάλλω', 'ἔβαλεν', 'V-2AAI-3S', null, ['liquid']);
-  if (bad.length) { console.log('FAIL:', bad); process.exit(1); }
-  console.log('breakdown checks ok');
-}
