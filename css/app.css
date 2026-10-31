@@ -213,3 +213,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .why summary { cursor: pointer; font-weight: 700; color: var(--accent); } .why ul { margin: .4rem 0 0 1.1rem; display: grid; gap: .35rem; font-size: .92rem; color: var(--ink-2); }
 .pbars { display: grid; gap: .45rem; margin-top: .5rem; }
 .pbar { display: grid; grid-template-columns: 5.5rem 1fr 3rem 2.5rem; align-items: center; gap: .5rem; font-size: .88rem; } .pbar small { color: var(--muted); }
+
+dialog.sheet { width: min(36rem, 94vw); }
+pre.license { max-height: 60dvh; overflow: auto; margin: .6rem 0 0; padding: .7rem .8rem; background: var(--surface-2); border-radius: 12px; font: .74rem/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }

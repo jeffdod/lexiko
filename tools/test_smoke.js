@@ -73,6 +73,14 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   ok(await page.locator('.srow.ok, .srow.bad').count() === 3, 'quick mode scores case/number/gender separately');
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
 
+  // the font license opens inside the app (a link to the .txt would strand the installed app)
+  await page.goto(URL + '#/settings'); await page.waitForSelector('h2:has-text("About")');
+  ok(await page.locator('a[href$="OFL.txt"]').count() === 0, 'no plain link to the license file');
+  await page.click('button:has-text("Font license")'); await page.waitForFunction(() => /OPEN FONT LICENSE/i.test(document.querySelector('pre.license')?.textContent || ''));
+  await page.click('dialog button:has-text("Close")'); await page.waitForTimeout(150);
+  ok((await page.$('dialog')) === null && /#\/settings/.test(page.url()), 'license dialog closes back to Settings');
+  await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
+
   // gloss mode on
   await page.click('button:has-text("Glosses")'); await page.waitForSelector('.gl');
   const nGl = await page.locator('.gl').count();

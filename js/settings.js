@@ -104,6 +104,17 @@ export function renderSettings(view) {
     h('div.card.stack', h('h2', 'About'),
       h('p.small', 'lexiko — free, offline, no login. Greek text: Robinson–Pierpont Majority Text with Strong’s numbers and RP morphology. Glosses: a Dodson Greek–English Lexicon derivative (public domain). Type: Gentium Porsonic by SIL Global, SIL Open Font License 1.1, modified web subset renamed “Lexiko Serif”.'),
       h('p.small.muted', 'Scheduling uses the open FSRS algorithm. ' + fmt(D.lex.length) + ' words · ' + fmt(D.totalTokens) + ' tokens · ' + (K.cards.size ? [...K.cards.keys()].filter((k) => k.startsWith('w:')).length + ' words studied.' : 'nothing studied yet.')),
-      h('div.row.wrap', h('a.btn.sm', { href: 'fonts/OFL.txt' }, 'Font license'), h('a.btn.sm', { href: 'https://github.com/jeffdod/lexiko', target: '_blank', rel: 'noopener' }, 'Source'),
+      h('div.row.wrap', h('button.btn.sm', { onclick: showLicense }, 'Font license'), h('a.btn.sm', { href: 'https://github.com/jeffdod/lexiko', target: '_blank', rel: 'noopener' }, 'Source'),
         h('button.btn.sm.danger', { onclick: async () => { if (confirm('Erase ALL progress and settings on this device? Back up first if unsure.') && confirm('Really erase everything?')) { await store.clearAll(); try { localStorage.removeItem('lexiko-theme'); } catch { /* ignore */ } location.reload(); } } }, 'Erase everything')))));
+}
+
+/** The license opens inside the app (a plain link to the .txt file would leave the installed app with no way back). */
+async function showLicense() {
+  const pre = h('pre.license', 'Loading…');
+  const dlg = h('dialog.sheet', h('h2', 'Font license'), pre, h('div.row', { style: { marginTop: '.8rem' } }, h('button.btn.primary.block', { onclick: () => dlg.close() }, 'Close')));
+  dlg.addEventListener('close', () => dlg.remove());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  document.body.append(dlg); dlg.showModal();
+  try { const r = await fetch('fonts/OFL.txt'); if (!r.ok) throw new Error(r.status); pre.textContent = await r.text(); }
+  catch { pre.textContent = 'The license text could not be loaded. It is the SIL Open Font License 1.1: https://openfontlicense.org'; }
 }
