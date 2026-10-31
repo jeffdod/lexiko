@@ -10,7 +10,11 @@ const want = process.argv.slice(2);
 let n = 0, ok = 0, crash = 0, notes = 0, personOnNonVerb = 0;
 for (const f of forms) {
   const item = buildItem(f); if (!item) continue; n++;
-  if (item.group !== 'V' && item.valid.some((v) => v.keys.includes('person'))) personOnNonVerb++;
+  if (item.group !== 'V') for (const v of item.valid) {                   // what is asked must follow the RP code
+    const pos = v.code[0] === 'P' || v.code[0] === 'F' || v.code[0] === 'S' ? v.code[0] : 'other', explicit = pos === 'F' || pos === 'S' || /^P-[123]/.test(v.code);
+    if (v.keys.includes('person') !== explicit) personOnNonVerb++;
+    if (v.code.startsWith('S-') !== v.keys.includes('possessorNumber')) personOnNonVerb++;
+  }
   try {
     const d = item.valid[0].d, L = lex.get(f.an[0].s);
     const ex = explain(L[1], f.w, d); if (ex.length) notes++;
@@ -19,4 +23,4 @@ for (const f of forms) {
   } catch (e) { crash++; console.log('CRASH', f.w, e.message); }
 }
 console.log({ drillable: n, selfCheckFull: ok, withNotes: notes, crash, personOnNonVerb });
-if (personOnNonVerb) { console.log('FAIL: only verbs may be asked for person'); process.exit(1); }
+if (personOnNonVerb) { console.log('FAIL: person/possessor asked where the RP code does not have it (or missing where it does)'); process.exit(1); }
