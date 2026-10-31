@@ -1,9 +1,9 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { D, lexeme, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, status, setting, setSetting, rate, getCard, dueCards, buildSession, scopeReadiness, newToday, nextByLevel, passageWords, readinessLabel, readinessClass } from './know.js';
+import { K, status, setting, setSetting, rate, getCard, dueCards, buildSession, scopeReadiness, newToday, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, studiedCount } from './know.js';
 import * as F from './fsrs.js';
 import { decode } from './morph.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, toAcute } from './util.js';
+import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner } from './util.js';
 import { readHref } from './reader.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
@@ -46,22 +46,24 @@ function distractors(L, k = 3) {
 }
 
 /* ---------- session runner ---------- */
-function runSession(view, items, { title, scope, back }) {
+function runSession(view, items, { title, scope, back, practice = false }) {
   const queue = items.map((i) => ({ ...i }));
   const total = queue.length;
   const stats = { done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
   let current = null, t0 = 0;
 
   const finish = () => {
+    const previewed = items.filter((i) => i.type === 'preview').map((i) => i.n);
+    const addBtn = previewed.length ? h('button.btn.primary', { onclick: async (e) => { e.currentTarget.disabled = true; for (const n of previewed) if (!getCard(n)) await markLearning(n); e.currentTarget.textContent = '✓ Added to your review pile'; } }, 'Add these ' + previewed.length + ' words to my review pile') : null;
     clear(view).append(
-      h('div.pagehead', h('h1', 'Session complete')),
-      h('div.card.stack', h('div.kpis',
+      h('div.pagehead', h('h1', previewed.length ? 'Preview complete' : practice ? 'Practice complete' : 'Session complete')),
+      h('div.card.stack', practice ? h('p.muted.small', 'Reinforce is practice only — your review schedule is unchanged.') : null, h('div.kpis',
         h('div.kpi', h('b', stats.done), h('span', 'cards done')),
         h('div.kpi', h('b', stats.done ? pct(stats.good / (stats.good + stats.again || 1)) : '—'), h('span', 'answered correctly')),
-        h('div.kpi', h('b', stats.fresh), h('span', 'new words started')),
+        practice ? null : h('div.kpi', h('b', stats.fresh), h('span', 'new words started')),
         stats.probes ? h('div.kpi', h('b', stats.probes - stats.probeMiss + '/' + stats.probes), h('span', 'check-ins held')) : null),
         stats.probeMiss ? h('p.muted', stats.probeMiss + ' word' + (stats.probeMiss > 1 ? 's' : '') + ' you’d assumed you knew slipped; they’re back in your review pile.') : null,
-        h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null,
+        h('div.row.wrap', addBtn, scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null,
           h('a.btn' + (scope ? '' : '.primary'), { href: '#/learn' }, 'Back to Learn'), h('a.btn', { href: '#/progress' }, 'Progress'))));
   };
 
@@ -69,7 +71,7 @@ function runSession(view, items, { title, scope, back }) {
   const requeue = (item, gap) => queue.splice(Math.min(queue.length, gap), 0, item);
 
   async function grade(item, g) {
-    await rate(item.n, g, item.type, Date.now() - t0);
+    if (!practice) await rate(item.n, g, item.type, Date.now() - t0);
     if (!item.seen) {                       // first time this card is answered in the session
       item.seen = true;
       if (item.type === 'new') stats.fresh++;
@@ -81,12 +83,12 @@ function runSession(view, items, { title, scope, back }) {
   }
 
   function frame(item, inner) {
-    const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : ['', 'Review'];
+    const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Reinforce'] : item.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })),
         h('span.chip.' + label[0], label[1])),
-      inner));
+      practice ? practiceBanner(item.type === 'preview') : null, inner));
   }
 
   function show(item) {
@@ -98,8 +100,8 @@ function runSession(view, items, { title, scope, back }) {
       const card = getCard(item.n) || F.newCard('w:' + item.n);
       const pv = F.preview(card, Date.now(), setting('retention'));
       const answer = [h('div.qgloss', L.brief), L.full ? h('div.qdef', L.full) : null, contextFor(L.n, scope)];
-      const grades = h('div.grades',
-        [[1, 'Again'], [2, 'Hard'], [3, 'Good'], [4, 'Easy']].map(([g, name]) => h('button.g' + g, { onclick: () => grade(item, g) }, name, h('small', fmtInterval(pv[g])))));
+      const grades = h('div.grades' + (practice ? '.two' : ''),
+        (practice ? [[1, 'Again'], [3, 'Got it']] : [[1, 'Again'], [2, 'Hard'], [3, 'Good'], [4, 'Easy']]).map(([g, name]) => h('button.g' + g, { onclick: () => grade(item, g) }, name, practice ? null : h('small', fmtInterval(pv[g])))));
       return { answer, grades };
     };
     if (flash) {
@@ -177,10 +179,23 @@ export function passagePicker(view, initial, o = {}) {
     h('div.row.wrap', h('label.field', 'To chapter', c2), h('label.field', 'verse (optional)', v2)), info, go);
 }
 
+/** A few words you haven't started: from your goal passage if you have one, else the most common you don't know yet. */
+function previewWords(goal) {
+  const fromGoal = goal ? passageWords(goal).filter((x) => status(x.n) === 'unknown').slice(0, 6).map((x) => x.n) : [];
+  return fromGoal.length ? fromGoal : nextByLevel(6).map((x) => x.n);
+}
+
 export function renderLearn(view, params) {
   const [mode, ...rest] = params;
   if (mode === 'daily') return void startFrom(view, 'daily', null, 'Today’s session');
   if (mode === 'review') return void startFrom(view, 'review', null, 'Review');
+  if (mode === 'practice') {                                   // extra practice: never touches the schedule
+    const preview = rest[0] === 'preview';
+    const goal = K.goal && K.goal.book ? K.goal : null;
+    const items = preview ? previewWords(goal).map((n) => ({ n, type: 'preview' })) : troubleCards('w:', 15).map((c) => ({ n: +c.id.slice(2), type: 'practice' }));
+    if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Preview new words' : 'Reinforce')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'You haven’t studied any words yet, so there are no trouble spots to practise.'), h('a.btn', { href: '#/learn' }, 'Back'))); return; }
+    return void runSession(view, items, { title: 'Reinforce', practice: true });
+  }
   if (mode === 'level') {
     const items = nextByLevel(setting('newPerDay')).map((x) => ({ n: x.n, type: 'new' }));
     return void (items.length ? runSession(view, items, { title: 'New words' }) : startFrom(view, 'review', null));
@@ -200,7 +215,11 @@ export function renderLearn(view, params) {
         h('a.tile', { href: '#/learn/daily' }, h('h3', 'Today’s session'), h('p', due + ' due · ' + Math.max(0, setting('newPerDay') - newToday()) + ' new available' + (lvl != null ? ' · check-ins' : ''))),
         h('a.tile', { href: '#/learn/review' }, h('h3', 'Review only'), h('p', due ? due + ' card' + (due === 1 ? '' : 's') + ' due' : 'Nothing due')),
         h('a.tile', { href: '#/learn/level' }, h('h3', 'Next words'), h('p', 'The ' + setting('newPerDay') + ' most common words you don’t know yet')),
-        h('a.tile', { href: '#/parse' }, h('h3', 'Parsing'), h('p', 'Tense, voice, mood, case… one part at a time'))),
+        h('a.tile', { href: '#/parse' }, h('h3', 'Parsing'), h('p', 'Tense, voice, mood, case… one part at a time')),
+        h('a.tile', { href: '#/parts' }, h('h3', 'Principal parts'), h('p', 'The six parts of each verb'))),
+      h('div.scope-pick',
+        h('a.tile', { href: '#/learn/practice/trouble' }, h('h3', 'Reinforce'), h('p', studiedCount('w:') ? 'Your shakiest words — doesn’t affect your schedule' : 'Available once you’ve studied some words')),
+        h('a.tile', { href: '#/learn/practice/preview' }, h('h3', 'Preview new words'), h('p', 'A look at a few new words — doesn’t affect your schedule'))),
       goal ? h('div.card', h('div.row.between', h('div', h('h3', 'Your goal: ' + scopeLabel(goal)), h('div.muted.small', 'Learn the words, then read it.')),
         h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study'))) : null,
       passagePicker(view, goal),

@@ -6,7 +6,7 @@ import { todayKey, shuffle } from './util.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsNewPerDay: 10,
 };
 export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, ready: false };
 
@@ -182,5 +182,32 @@ export async function rateParse(id, grade, ms = 0, meta = {}) {
 export const PARSE_DEFAULT = { slots: {}, recent: { verb: [], other: [] }, mode: { verb: 'guided', other: 'guided' }, total: 0 };
 export async function getParseStats() { return { ...PARSE_DEFAULT, ...((await store.get('parseStats')) || {}) }; }
 export const saveParseStats = (st) => store.set('parseStats', st);
+
+/* ---------- principal parts: one card per printed part ('p:<strongs>:<slot>') ---------- */
+export const partsId = (n, slot) => 'p:' + n + ':' + slot;
+export const partsCardsDue = (now = Date.now()) => [...K.cards.values()].filter((c) => c.id.startsWith('p:') && c.state !== 'new' && c.due <= now);
+export const partsNewToday = () => (K.daily[todayKey()] || {}).ppn || 0;
+export async function rateParts(id, grade, ms = 0, meta = {}) {
+  const now = Date.now();
+  const prev = K.cards.get(id) || F.newCard(id);
+  const next = F.review(prev, grade, now, K.settings.retention);
+  await saveCard(next);
+  const d = (K.daily[todayKey()] ||= {}); d.ppr = (d.ppr || 0) + 1; if (prev.state === 'new') d.ppn = (d.ppn || 0) + 1;
+  await store.set('daily', K.daily);
+  await store.addLog([{ t: now, id, g: grade, k: 'parts', ms, ...meta }]);
+  return next;
+}
+export const PARTS_DEFAULT = { recent: [], mode: 'choice', total: 0 };
+export async function getPartsStats() { return { ...PARTS_DEFAULT, ...((await store.get('partsStats')) || {}) }; }
+export const savePartsStats = (st) => store.set('partsStats', st);
+
+/* ---------- extra practice: which studied cards give you the most trouble (never writes anything) ---------- */
+export function troubleScore(c, now = Date.now()) { return (c.lapses || 0) * 2 + ((c.difficulty || 5) - 5) / 2 + (1 - F.retrievability(c, now)) * 3; }
+export function troubleCards(prefix, limit = 15) {
+  const now = Date.now();
+  return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new').map((c) => ({ c, s: troubleScore(c, now) }))
+    .sort((a, b) => b.s - a.s).slice(0, limit).map((x) => x.c);
+}
+export const studiedCount = (prefix) => { let n = 0; for (const c of K.cards.values()) if (c.id.startsWith(prefix) && c.state !== 'new') n++; return n; };
 
 export { scopeVerses };

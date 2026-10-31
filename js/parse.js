@@ -1,10 +1,11 @@
 // Parsing practice: pick the parts of a form in a fixed order (guided one-at-a-time, or quick all-at-once),
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards, studiedCount } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { explain } from './stem.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner } from './util.js';
+import { chartsButton } from './charts.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 
@@ -82,6 +83,14 @@ export function buildParseSession(opts) {
   return shuffle([...dueIds, ...newIds]);
 }
 
+/** Extra practice: never scheduled. 'trouble' = your shakiest forms; 'preview' = a few frequent forms you haven't started. */
+export function buildParseExtra(kind) {
+  ensureIndex();
+  if (kind === 'trouble') return troubleCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'practice' })).filter((x) => x.id != null && itemOf(x.id));
+  const fresh = candidatePool(null, KINDS.all).filter((x) => { const c = K.cards.get(parseId(D.forms[x.id])); return !c || c.state === 'new'; });
+  return fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s).slice(0, 6).map((o) => ({ id: o.x.id, type: 'preview' }));
+}
+
 /* ---------- adaptive mode: guided until you're reliable, then quick ---------- */
 const effectiveMode = (group, st) => { const pref = setting('parseMode'); return pref === 'guided' || pref === 'quick' ? pref : (st.mode[group] || 'guided'); };
 
@@ -102,7 +111,7 @@ async function recordResult(st, it, res) {
 let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
 
-function runSession(view, queue, { title, scope, restart }) {
+function runSession(view, queue, { title, scope, restart, practice = false }) {
   const total = queue.length;
   const S = { done: 0, full: 0, fresh: 0, slots: {} };
   let st = null, cur = null;
@@ -111,9 +120,9 @@ function runSession(view, queue, { title, scope, restart }) {
     stop();
     const weakest = Object.entries(S.slots).filter(([, v]) => v[1] >= 3).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
     clear(view).append(
-      h('div.pagehead', h('h1', 'Session complete')),
-      h('div.card.stack',
-        h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'forms parsed')), h('div.kpi', h('b', S.done ? pct(S.full / S.done) : '—'), h('span', 'fully correct')), h('div.kpi', h('b', S.fresh), h('span', 'new forms'))),
+      h('div.pagehead', h('h1', practice ? 'Practice complete' : 'Session complete')),
+      h('div.card.stack', practice ? h('p.muted.small', 'Reinforce is practice only — your review schedule is unchanged.') : null,
+        h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'forms parsed')), h('div.kpi', h('b', S.done ? pct(S.full / S.done) : '—'), h('span', 'fully correct')), practice ? null : h('div.kpi', h('b', S.fresh), h('span', 'new forms'))),
         Object.keys(S.slots).length ? h('div', h('b', 'Accuracy by part'), slotBars(S.slots)) : null,
         weakest && weakest[1] < 0.8 ? h('p.muted', 'Most slips this time: ' + SLOT_TITLE[weakest[0]].toLowerCase() + '. It will keep coming back until it sticks.') : null,
         h('div.row.wrap', h('button.btn.primary', { onclick: restart }, 'Practise more'),
@@ -123,11 +132,11 @@ function runSession(view, queue, { title, scope, restart }) {
   const advance = async () => { stop(); cur = queue.shift(); if (!cur) return finish(); st = await getParseStats(); show(cur); };
 
   function frame(c, inner) {
-    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : ['', 'Review'];
+    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Reinforce'] : c.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), h('span.chip.' + tag[0], tag[1])),
-      inner));
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), chartsButton(), h('span.chip.' + tag[0], tag[1])),
+      practice ? practiceBanner(c.type === 'preview') : null, inner));
   }
 
   function prompt(c, it) {
@@ -142,10 +151,10 @@ function runSession(view, queue, { title, scope, restart }) {
     const grade = gradeOf(res, { ms, aided });
     let next = null;
     if (first) {
-      next = await rateParse(parseId(it.form), grade, ms, { m: mode, w: res.wrong.join('') });
+      if (!practice) next = await rateParse(parseId(it.form), grade, ms, { m: mode, w: res.wrong.join('') });
       S.done++; if (res.full) S.full++; if (c.type === 'new') S.fresh++;
       for (const [k, v] of Object.entries(res.perSlot)) { const s = (S.slots[k] ||= [0, 0]); s[1]++; if (v.ok) s[0]++; }
-      await recordResult(st, it, res);
+      if (!practice) await recordResult(st, it, res);
     }
     if (!res.full && first) queue.splice(Math.min(queue.length, 4), 0, { ...c, retry: true });
     const L = D.lexByN.get(it.strongs), best = res.best;
@@ -266,6 +275,11 @@ export function renderParse(view, params) {
   if (mode === 'run') {
     ensureIndex();
     let scope = null, kind = 'all';
+    if (rest[0] === 'extra') {
+      const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : 'trouble');
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : 'You haven’t studied any forms yet, so there are no trouble spots to practise.'), h('a.btn', { href: '#/parse' }, 'Back'))); return; }
+      return runSession(view, q, { title: 'Reinforce', practice: true, restart: () => renderParse(view, params) });
+    }
     if (rest[0] === 'passage') {
       const [, book, c1, v1, c2, v2, k] = rest; if (!D.bookByCode.has(book)) { location.hash = '#/parse'; return; }
       scope = { book, c1: +c1, v1: +v1 || 1, c2: +c2 || +c1, v2: +v2 || 999 }; kind = k || 'all';
@@ -306,6 +320,10 @@ async function landing(view) {
       h('div.scope-pick',
         ['all', 'verb', 'noun'].map((k) => h('a.tile', { href: '#/parse/run/mix/' + k }, h('h3', KIND_TITLE[k]), h('p', tileInfo(k)))),
       ),
+      h('div.scope-pick',
+        h('a.tile', { href: '#/parse/run/extra/trouble' }, h('h3', 'Reinforce'), h('p', studiedCount('f:') ? 'Your shakiest forms — doesn’t affect your schedule' : 'Available once you’ve studied some forms')),
+        h('a.tile', { href: '#/parse/run/extra/preview' }, h('h3', 'Preview new forms'), h('p', 'A look at a few new forms — doesn’t affect your schedule'))),
+      chartsButton(),
       passagePicker(view, K.goal && K.goal.book ? K.goal : null, {
         title: 'Parse a passage', blurb: 'Practise the forms that occur in the text you want to read, most frequent first.', label: 'Practise these forms',
         href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/all',

@@ -7,13 +7,14 @@ import { renderReader } from './reader.js';
 import { renderLearn } from './learn.js';
 import { renderProgress } from './progress.js';
 import { renderParse } from './parse.js';
+import { renderParts } from './parts.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { h, clear, icon, toast } from './util.js';
 
 const view = document.getElementById('view');
 const navEl = document.getElementById('nav');
 const TABS = [['home', 'Home', 'home'], ['read', 'Read', 'read'], ['learn', 'Learn', 'learn'], ['progress', 'Progress', 'progress'], ['settings', 'Settings', 'settings']];
-const routes = { home: renderHome, read: renderReader, learn: renderLearn, progress: renderProgress, settings: renderSettings, parse: renderParse };
+const routes = { home: renderHome, read: renderReader, learn: renderLearn, progress: renderProgress, settings: renderSettings, parse: renderParse, parts: renderParts };
 let cleanup = null;
 
 function buildNav() {
@@ -24,7 +25,7 @@ function route() {
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/').map(decodeURIComponent);
   const name = routes[parts[0]] ? parts[0] : 'home';
   if (cleanup) { try { cleanup(); } catch (e) { console.error(e); } cleanup = null; }
-  const tabName = name === 'parse' ? 'learn' : name;
+  const tabName = name === 'parse' || name === 'parts' ? 'learn' : name;
   navEl.querySelectorAll('a[data-tab]').forEach((a) => (a.dataset.tab === tabName ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   view.scrollTop = 0; window.scrollTo(0, 0);
   try { cleanup = routes[name](view, parts.slice(1)) || null; }

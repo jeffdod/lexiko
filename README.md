@@ -3,7 +3,7 @@
 Learn to read the Greek New Testament. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
 
 **Status: phases 1–2.** Reader, vocabulary SRS (FSRS), levels, passage readiness, goals, backup/restore, PWA shell.
-**Planned:** parsing module (guided tense → voice → mood… tree, per-slot scoring, stem-change explanations), principal parts, pericope divisions, form-level SRS.
+**Planned:** more reference charts (participles, non-indicative moods).
 
 ## Use it
 Open `https://lexiko.org/` and "Add to Home Screen" / "Install app". It then runs full-screen and fully offline.
@@ -31,6 +31,12 @@ Users get new versions automatically: the service worker notices a changed `sw-a
 * A word is *known* if you have a mature SRS card for it, or (no card yet) its frequency ≥ your declared level. Missing a "known" word in a check-in demotes it to learning.
 * Passage readiness = share of the running words you know. ≥98 % Ready · 95–98 % Comfortable · 90–95 % Stretch · 80–90 % Challenging.
 * Progress is stored in IndexedDB; the app requests persistent storage and offers JSON backup/restore (merge or replace).
+
+## Principal parts
+`#/parts` drills the six principal parts of ~1,300 verbs (`data/parts.json`, built by `python3 tools/build_parts.py <spreadsheet.xlsx>`; each part printed for a verb is one FSRS card `p:<strongs>:<slot>`). Several spreadsheet rows can share one Strong's number, so a row is chosen by matching the lexicon headword (else by how often its forms occur). Two question types: *recognise* (see a part → pick the verb → pick which part) and *recall* (verb + part name → pick the form from plausible look-alikes, or remember it and rate yourself). *Auto* starts with multiple choice and moves to self-graded flashcards at ≥85 % over 20 answers (back below 60 % over 12). Pools: verbs you're learning, or the verbs of a passage. `js/parts.js`; tests: `node tools/test_parts.js`.
+
+## Reinforce, preview and charts
+Vocabulary, parsing and principal parts each have *Reinforce* (your shakiest cards) and *Preview new* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Quiz screens have a **Charts** button (`js/charts.js`): the master verb chart and primary/secondary endings, as tables; after an answer the row that builds the part is highlighted.
 
 ## Parsing practice
 `#/parse` quizzes the parts of a form in a fixed order (verbs: tense → voice → mood → person → number; infinitives stop after mood; participles continue with case → number → gender; other words: case → number → gender). Every parsing listed for the form under the same lexeme is accepted, each part is scored separately, and every form has its own FSRS card (`f:<form>:<strongs>`). *Guided* asks one part at a time with instant feedback and a hint; *Quick* shows all parts at once; *Auto* starts guided and switches (per verbs / other words) once you're ≥85 % reliable over 20 forms, and back below 60 %. After each answer, `js/stem.js` explains the form (augment, reduplication, tense markers, stem changes, endings). Code: `js/parse-model.js` (slots, matching, grading), `js/stem.js` (explanations), `js/parse.js` (UI). `node tools/test_stem.mjs [form…]` checks them against the whole text.
