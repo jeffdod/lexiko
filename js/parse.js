@@ -2,7 +2,7 @@
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats } from './know.js';
-import { buildItem, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
+import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { explain } from './stem.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast } from './util.js';
 import { passagePicker } from './learn.js';
@@ -14,19 +14,21 @@ const KIND_TITLE = { all: 'Mixed practice', verb: 'Verbs', noun: 'Nouns, adjecti
 
 /* ---------- indexes (built once, on first use) ---------- */
 const items = new Map();       // form id -> parse item | null
-let keyMap = null;             // 'f:form:strongs' -> form id
+let keyMap = null, canon = null, members = null;             // 'f:form:strongs' -> form id
 let samples = null;            // form id -> [[book, ch, vs], ...]
 function ensureIndex() {
   if (keyMap) return;
   keyMap = new Map();
-  D.forms.forEach((f, i) => { f.id = i; keyMap.set(parseId(f), i); });
+  ({ canon, members } = groupForms(D.forms));                        // rows that are the same written form share one item
+  D.forms.forEach((f, i) => { f.id = i; });
+  for (const i of members.keys()) { const k = parseId(D.forms[i]), j = keyMap.get(k); if (j == null || D.forms[i].count > D.forms[j].count) keyMap.set(k, i); }
   samples = new Map();
   for (const b of D.books) for (const [ch, verses] of D.text[b.code]) for (const [vs, toks] of verses) for (const t of toks) {
-    const id = t >> 4; let a = samples.get(id); if (!a) samples.set(id, (a = []));
+    const id = canon[t >> 4]; let a = samples.get(id); if (!a) samples.set(id, (a = []));
     if (a.length < 8 && !a.some((x) => x[2] === vs && x[1] === ch && x[0] === b.code)) a.push([b.code, ch, vs]);
   }
 }
-const itemOf = (id) => { if (!items.has(id)) items.set(id, buildItem(D.forms[id])); return items.get(id); };
+const itemOf = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
 
 /* ---------- context sentence with the form highlighted ---------- */
@@ -39,7 +41,7 @@ function formContext(id) {
   }
   if (!best) return null;
   const el = h('div.qctx', { lang: 'grc' }, h('span.ref', D.bookByCode.get(best.code).name + ' ' + best.ch + ':' + best.vs));
-  best.toks.forEach((t) => { const f = D.forms[t >> 4]; el.append((t >> 4) === id ? h('mark', f.w) : f.w, tokenPunct(t) + (tokenFlag(t) ? '—' : ' ')); });
+  best.toks.forEach((t) => { const f = D.forms[t >> 4]; el.append(canon[t >> 4] === id ? h('mark', f.w) : f.w, tokenPunct(t) + (tokenFlag(t) ? '—' : ' ')); });
   el.append(h('a.small', { href: readHref(best.code, best.ch, best.vs), style: { display: 'block', fontFamily: 'var(--ui)', marginTop: '.3rem' } }, 'Read in context →'));
   return el;
 }
@@ -49,28 +51,35 @@ function candidatePool(scope, kinds) {
   const ok = new Set(kinds), out = [];
   if (scope) {
     const counts = new Map();
-    for (const { toks } of scopeVerses(scope)) for (const t of toks) counts.set(t >> 4, (counts.get(t >> 4) || 0) + 1);
+    for (const { toks } of scopeVerses(scope)) for (const t of toks) counts.set(canon[t >> 4], (counts.get(canon[t >> 4]) || 0) + 1);
     for (const [id, n] of counts) { const it = itemOf(id); if (it && ok.has(it.kind)) out.push({ id, w: n * 3 + Math.sqrt(D.forms[id].count) }); }
     return out;
   }
-  const take = (pred) => { for (let id = 0; id < D.forms.length; id++) { const f = D.forms[id]; const it = itemOf(id); if (it && ok.has(it.kind) && pred(f)) out.push({ id, w: f.count }); } };
+  const take = (pred) => { for (const id of members.keys()) { const it = itemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
   take((f) => status(f.an[0].s) !== 'unknown');
   if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400); }   // nothing known yet: start with the most common words
   return out;
 }
 
-export function buildParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
+/** What a session would contain right now: the due forms, then new ones up to the daily allowance. */
+export function planParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
   ensureIndex();
   const kinds = KINDS[kind] || KINDS.all, now = Date.now();
   const pool = candidatePool(scope, kinds), inPool = new Set(pool.map((x) => x.id));
   const due = parseCardsDue(now).map((c) => ({ c, id: keyMap.get(c.id) }))
     .filter((x) => x.id != null && itemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
-    .sort((a, b) => a.c.due - b.c.due).slice(0, size).map((x) => ({ id: x.id, type: 'due' }));
+    .sort((a, b) => a.c.due - b.c.due);
   const limit = newLimit != null ? newLimit : scope ? size : Math.max(0, setting('parseNewPerDay') - parseNewToday());
-  const fresh = pool.filter((x) => { const c = K.cards.get(parseId(D.forms[x.id])); return !c || c.state === 'new'; })
-    .map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s)
-    .slice(0, Math.min(limit, Math.max(0, size - due.length))).map((o) => ({ id: o.x.id, type: 'new' }));
-  return shuffle([...due, ...fresh]);
+  const fresh = pool.filter((x) => { const c = K.cards.get(parseId(D.forms[x.id])); return !c || c.state === 'new'; });
+  return { due, fresh, limit, size };
+}
+
+export function buildParseSession(opts) {
+  const { due, fresh, limit, size } = planParseSession(opts);
+  const dueIds = due.slice(0, size).map((x) => ({ id: x.id, type: 'due' }));
+  const newIds = fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s)
+    .slice(0, Math.min(limit, Math.max(0, size - dueIds.length))).map((o) => ({ id: o.x.id, type: 'new' }));
+  return shuffle([...dueIds, ...newIds]);
 }
 
 /* ---------- adaptive mode: guided until you're reliable, then quick ---------- */
@@ -276,15 +285,16 @@ export function renderParse(view, params) {
 async function landing(view) {
   ensureIndex();
   const st = await getParseStats();
-  const dueBy = { all: 0, verb: 0, noun: 0 };
-  for (const c of parseCardsDue()) { const id = keyMap.get(c.id); const it = id != null && itemOf(id); if (!it) continue; dueBy.all++; if (it.kind === 'verb') dueBy.verb++; else if (it.kind === 'nominal') dueBy.noun++; }
-  const left = Math.max(0, setting('parseNewPerDay') - parseNewToday());
+  // The tiles say exactly what pressing them gives you: the forms due, plus new ones up to today's allowance.
+  const plan = {};
+  for (const k of ['all', 'verb', 'noun']) { const p = planParseSession({ kind: k }); const nDue = Math.min(p.due.length, p.size); plan[k] = { due: p.due.length, fresh: Math.min(p.limit, p.fresh.length, Math.max(0, p.size - nDue)) }; }
+  const tileInfo = (k) => { const { due, fresh } = plan[k]; return !due && !fresh ? 'Nothing to do right now' : [due ? due + ' to review' : '', fresh ? fresh + ' new' : ''].filter(Boolean).join(' + '); };
   const modeNote = () => setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : '';
   const note = h('div.muted.small', modeNote());
   const modeSeg = h('div.seg', [['auto', 'Auto'], ['guided', 'Guided'], ['quick', 'Quick']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('parseMode') === v), onclick: async (e) => {
     await setSetting('parseMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); note.textContent = modeNote();
   } }, t)));
-  const newSel = h('select', { 'aria-label': 'New forms per day', onchange: (e) => setSetting('parseNewPerDay', +e.target.value) }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)));
+  const newSel = h('select', { 'aria-label': 'New forms per day', onchange: async (e) => { await setSetting('parseNewPerDay', +e.target.value); landing(view); } }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)));
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
   clear(view).append(
     h('div.pagehead', h('h1', 'Parsing')),
@@ -294,12 +304,12 @@ async function landing(view) {
         h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Guided asks one part at a time with instant feedback. Quick shows all parts at once. Auto starts guided and moves up when you’re reliable.')), modeSeg), note,
         h('div.row.between', h('span.small.muted', 'New forms per day'), newSel)),
       h('div.scope-pick',
-        ['all', 'verb', 'noun'].map((k) => h('a.tile', { href: '#/parse/run/mix/' + k }, h('h3', KIND_TITLE[k]), h('p', dueBy[k] + ' due' + (k === 'all' ? ' · ' + left + ' new left today' : '')))),
+        ['all', 'verb', 'noun'].map((k) => h('a.tile', { href: '#/parse/run/mix/' + k }, h('h3', KIND_TITLE[k]), h('p', tileInfo(k)))),
       ),
       passagePicker(view, K.goal && K.goal.book ? K.goal : null, {
         title: 'Parse a passage', blurb: 'Practise the forms that occur in the text you want to read, most frequent first.', label: 'Practise these forms',
         href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/all',
-        info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(t >> 4)) ids.add(t >> 4); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
+        info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(canon[t >> 4])) ids.add(canon[t >> 4]); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
       }),
       h('div.card', h('h3', 'Your accuracy by part'), Object.keys(st.slots).length ? [slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null] : h('p.muted.small', 'It will appear here after your first session.'))));
 }

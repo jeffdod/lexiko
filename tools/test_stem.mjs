@@ -1,7 +1,7 @@
 // Sanity check for js/stem.js and js/parse-model.js against the real data: node tools/test_stem.mjs [form ...]
 import fs from 'node:fs';
 import { explain } from '../js/stem.js';
-import { buildItem, check } from '../js/parse-model.js';
+import { buildItem, check, groupForms, mergeForms } from '../js/parse-model.js';
 import { decode } from '../js/morph.js';
 const J = (p) => JSON.parse(fs.readFileSync(new URL('../data/' + p, import.meta.url)));
 const lex = new Map(J('lexicon.json').map((r) => [r[0], r]));
@@ -24,3 +24,18 @@ for (const f of forms) {
 }
 console.log({ drillable: n, selfCheckFull: ok, withNotes: notes, crash, personOnNonVerb });
 if (personOnNonVerb) { console.log('FAIL: person/possessor asked where the RP code does not have it (or missing where it does)'); process.exit(1); }
+
+// Every reading of the same written form must be accepted (τὰ is stored as T-NPN and T-APN in separate rows).
+{
+  const { canon, members } = groupForms(forms);
+  const merged = (w) => { const i = forms.findIndex((f) => f.w === w); return buildItem(mergeForms(forms, members.get(canon[i]))); };
+  const ta = merged('τὰ'), codes = ta.valid.map((v) => v.code);
+  const full = (it, code, ans) => check(it, ans).full;
+  const bad = [];
+  if (!(codes.includes('T-NPN') && codes.includes('T-APN'))) bad.push('τὰ: ' + codes.join());
+  if (!full(ta, 'T-NPN', { case: 'N', number: 'P', gender: 'N' })) bad.push('τὰ nominative plural neuter rejected');
+  if (!full(ta, 'T-APN', { case: 'A', number: 'P', gender: 'N' })) bad.push('τὰ accusative plural neuter rejected');
+  const multi = [...members.values()].filter((ids) => ids.length > 1).length;
+  console.log({ groupedForms: multi, ta: codes });
+  if (bad.length) { console.log('FAIL:', bad); process.exit(1); }
+}
