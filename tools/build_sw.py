@@ -17,7 +17,9 @@ for item in INCLUDE:
 files = sorted(set(f.replace(os.sep, '/') for f in files))
 h = hashlib.sha1()
 for f in files:
-    h.update(f.encode()); h.update(open(os.path.join(ROOT, f), 'rb').read())
+    b = open(os.path.join(ROOT, f), 'rb').read()
+    if f.endswith(('.html', '.js', '.css', '.json', '.svg', '.webmanifest')): b = b.replace(b'\r\n', b'\n')   # same hash on Windows checkouts (CRLF)
+    h.update(f.encode()); h.update(b)
 version = h.hexdigest()[:10]
 assets = ['./'] + files
 open(os.path.join(ROOT, 'sw-assets.js'), 'w').write(

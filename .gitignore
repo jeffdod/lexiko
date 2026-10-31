@@ -2,3 +2,11 @@ __pycache__/
 node_modules/
 *.pyc
 .DS_Store
+
+# editor / IDE state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
