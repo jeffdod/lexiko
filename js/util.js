@@ -96,4 +96,4 @@ export function icon(name, size = 22) {
 }
 
 /** Shown on Extra practice screens: nothing answered here touches the review schedule. */
-export const practiceBanner = (preview) => h('div.practice-note', h('b', preview ? 'Preview' : 'Extra practice'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : 'practice only; it won’t change your review schedule.'));
+export const practiceBanner = (preview) => h('div.practice-note', h('b', preview ? 'Preview' : 'Reinforce'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : 'practice only; it won’t change your review schedule.'));

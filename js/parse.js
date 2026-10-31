@@ -121,7 +121,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     const weakest = Object.entries(S.slots).filter(([, v]) => v[1] >= 3).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
     clear(view).append(
       h('div.pagehead', h('h1', practice ? 'Practice complete' : 'Session complete')),
-      h('div.card.stack', practice ? h('p.muted.small', 'Practice only — your review schedule is unchanged.') : null,
+      h('div.card.stack', practice ? h('p.muted.small', 'Reinforce is practice only — your review schedule is unchanged.') : null,
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'forms parsed')), h('div.kpi', h('b', S.done ? pct(S.full / S.done) : '—'), h('span', 'fully correct')), practice ? null : h('div.kpi', h('b', S.fresh), h('span', 'new forms'))),
         Object.keys(S.slots).length ? h('div', h('b', 'Accuracy by part'), slotBars(S.slots)) : null,
         weakest && weakest[1] < 0.8 ? h('p.muted', 'Most slips this time: ' + SLOT_TITLE[weakest[0]].toLowerCase() + '. It will keep coming back until it sticks.') : null,
@@ -132,7 +132,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
   const advance = async () => { stop(); cur = queue.shift(); if (!cur) return finish(); st = await getParseStats(); show(cur); };
 
   function frame(c, inner) {
-    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Practice'] : c.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
+    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Reinforce'] : c.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), chartsButton(), h('span.chip.' + tag[0], tag[1])),
@@ -278,7 +278,7 @@ export function renderParse(view, params) {
     if (rest[0] === 'extra') {
       const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : 'trouble');
       if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : 'You haven’t studied any forms yet, so there are no trouble spots to practise.'), h('a.btn', { href: '#/parse' }, 'Back'))); return; }
-      return runSession(view, q, { title: 'Extra practice', practice: true, restart: () => renderParse(view, params) });
+      return runSession(view, q, { title: 'Reinforce', practice: true, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'passage') {
       const [, book, c1, v1, c2, v2, k] = rest; if (!D.bookByCode.has(book)) { location.hash = '#/parse'; return; }
@@ -321,7 +321,7 @@ async function landing(view) {
         ['all', 'verb', 'noun'].map((k) => h('a.tile', { href: '#/parse/run/mix/' + k }, h('h3', KIND_TITLE[k]), h('p', tileInfo(k)))),
       ),
       h('div.scope-pick',
-        h('a.tile', { href: '#/parse/run/extra/trouble' }, h('h3', 'Extra practice'), h('p', studiedCount('f:') ? 'Your shakiest forms — doesn’t affect your schedule' : 'Available once you’ve studied some forms')),
+        h('a.tile', { href: '#/parse/run/extra/trouble' }, h('h3', 'Reinforce'), h('p', studiedCount('f:') ? 'Your shakiest forms — doesn’t affect your schedule' : 'Available once you’ve studied some forms')),
         h('a.tile', { href: '#/parse/run/extra/preview' }, h('h3', 'Preview new forms'), h('p', 'A look at a few new forms — doesn’t affect your schedule'))),
       chartsButton(),
       passagePicker(view, K.goal && K.goal.book ? K.goal : null, {

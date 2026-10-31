@@ -136,7 +136,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     stop();
     clear(view).append(h('div.pagehead', h('h1', practice ? (S.previewOnly ? 'Preview complete' : 'Practice complete') : 'Session complete')),
       h('div.card.stack',
-        practice ? h('p.muted.small', 'Practice only — your review schedule is unchanged.') : null,
+        practice ? h('p.muted.small', 'Reinforce is practice only — your review schedule is unchanged.') : null,
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'parts done')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'answered correctly')), practice ? null : h('div.kpi', h('b', S.fresh), h('span', 'new parts started'))),
         h('div.row.wrap', h('button.btn.primary', { onclick: restart }, practice ? 'Another round' : 'Practise more'),
           h('a.btn', { href: '#/parts' }, 'Back to Principal parts'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
@@ -155,7 +155,7 @@ function runSession(view, queue, { scope, restart, practice }) {
   }
 
   function frame(c, entry, inner, ctl) {
-    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Practice'] : c.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
+    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Reinforce'] : c.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
@@ -287,7 +287,7 @@ function landing(view) {
         h('div.row.between', h('span.small.muted', 'New parts per day'), newSel), chartsButton()),
       h('div.scope-pick',
         h('a.tile', { href: '#/parts/run/mix' }, h('h3', 'Today’s parts'), h('p', !plan.due.length && !fresh ? 'Nothing to do right now' : [plan.due.length ? plan.due.length + ' to review' : '', fresh ? fresh + ' new' : ''].filter(Boolean).join(' + '))),
-        h('a.tile', { href: '#/parts/run/extra/trouble' }, h('h3', 'Extra practice'), h('p', studied ? 'Your shakiest parts — doesn’t affect your schedule' : 'Available once you’ve studied some parts')),
+        h('a.tile', { href: '#/parts/run/extra/trouble' }, h('h3', 'Reinforce'), h('p', studied ? 'Your shakiest parts — doesn’t affect your schedule' : 'Available once you’ve studied some parts')),
         h('a.tile', { href: '#/parts/run/extra/preview' + (goal ? '/goal' : '') }, h('h3', 'Preview new parts'), h('p', previewable ? 'A look at a few new parts — doesn’t affect your schedule' : 'No new parts to preview'))),
       goal ? h('div.card', h('div.row.between', h('div', h('h3', 'Your goal: ' + scopeLabel(goal)), h('div.muted.small', 'The principal parts of the verbs in it.')),
         h('a.btn.primary.sm', { href: '#/parts/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study'))) : null,
