@@ -201,7 +201,7 @@ function endingNote(sl, tail, endText, connText) {
   if (tail.merged) return '-' + endText + ' is the ' + who + ' ending, with the connecting vowel run together with it.';
   const out = [];
   if (connText) out.push('-' + connText + '- is the connecting vowel between stem and ending.');
-  if (tail.end === 'ν' && tail.conn === 'ε' && sl.person === 3 && sl.number === 'S') out.push('-ν is the movable ν, which may be added to this ending.');
+  if (tail.end === 'ν' && tail.conn === 'ε' && sl.person == 3 && sl.number === 'S') out.push('-ν is the movable ν, which may be added to this ending.');
   else if (endText) out.push('-' + endText + ' is the ' + who + ' ending.');
   else out.push('The ' + who + ' has no separate ending here.');
   return out.join(' ');
