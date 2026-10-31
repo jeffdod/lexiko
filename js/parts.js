@@ -8,7 +8,8 @@ import { K, status, setting, setSetting, partsId, partsCardsDue, partsNewToday, 
 import * as F from './fsrs.js';
 import { decode } from './morph.js';
 import { explain } from './stem.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton } from './util.js';
+import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 import { chartsButton, chartRowFor } from './charts.js';
@@ -159,7 +160,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip.' + tag[0], tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
       practice ? practiceBanner(c.type === 'preview') : null, inner, ctl || null));
   }
 
@@ -258,10 +259,10 @@ export function renderParts(view, params) {
       practice = true; scope = rest[2] === 'goal' && K.goal && K.goal.book ? K.goal : null; queue = buildPartsExtra(rest[1] === 'preview' ? 'preview' : 'trouble', scope);
     } else queue = buildPartsSession({});
     if (!queue.length) {
+      if (!scope && !practice) { const alt = smart('parts'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }
       clear(view).append(h('div.pagehead', h('h1', 'Principal parts')), h('div.card.stack',
-        h('p', practice ? (rest[1] === 'preview' ? 'No new parts to preview right now.' : 'You haven’t studied any principal parts yet, so there are no trouble spots to practise.')
-          : scope ? 'There are no principal parts to learn in ' + scopeLabel(scope) + '.' : 'Nothing is due, and you have reached today’s new-parts limit. 🎉'),
-        h('p.small.muted', practice ? '' : 'You can raise the daily limit on the Principal parts page, or practise a passage — passages ignore the daily limit.'), h('a.btn', { href: '#/parts' }, 'Back')));
+        h('p', practice ? (rest[1] === 'preview' ? 'You’ve already started every part available right now.' : 'Study a few principal parts first; Reinforce will then pick out your shakiest.')
+          : scope ? 'There are no principal parts to learn in ' + scopeLabel(scope) + '.' : 'You’re all caught up. 🎉'), h('a.btn', { href: '#/parts' }, 'Back')));
       return;
     }
     return runSession(view, queue, { scope, practice, restart: () => renderParts(view, params) });
@@ -270,10 +271,7 @@ export function renderParts(view, params) {
 }
 
 function landing(view) {
-  const plan = planPartsSession(); const nDue = Math.min(plan.due.length, plan.size);
-  const fresh = Math.min(plan.limit, plan.fresh.length, Math.max(0, plan.size - nDue));
   const goal = K.goal && K.goal.book ? K.goal : null;
-  const studied = studiedCount('p:'), previewable = plan.fresh.length;
   const modeSeg = h('div.seg', [['auto', 'Auto'], ['choice', 'Multiple choice'], ['flash', 'Flashcards']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('partsMode') === v), onclick: async (e) => {
     await setSetting('partsMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget)));
   } }, t)));
@@ -281,19 +279,16 @@ function landing(view) {
     [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('partsNewPerDay') }, n)));
   clear(view).append(h('div.pagehead', h('h1', 'Principal parts')),
     h('div.stack',
-      h('div.card.stack',
-        h('p', 'Learn the six principal parts of each verb — present, future, aorist, perfect active, perfect middle/passive and aorist passive. You’re shown a part and name its verb and tense, or shown a verb and asked for a part.'),
-        h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Multiple choice checks you; flashcards ask you to remember, then rate yourself. Auto starts with multiple choice and moves up when you’re reliable.')), modeSeg),
-        h('div.row.between', h('span.small.muted', 'New parts per day'), newSel), chartsButton()),
-      h('div.scope-pick',
-        h('a.tile', { href: '#/parts/run/mix' }, h('h3', 'Today’s parts'), h('p', !plan.due.length && !fresh ? 'Nothing to do right now' : [plan.due.length ? plan.due.length + ' to review' : '', fresh ? fresh + ' new' : ''].filter(Boolean).join(' + '))),
-        h('a.tile', { href: '#/parts/run/extra/trouble' }, h('h3', 'Reinforce'), h('p', studied ? 'Your shakiest parts — doesn’t affect your schedule' : 'Available once you’ve studied some parts')),
-        h('a.tile', { href: '#/parts/run/extra/preview' + (goal ? '/goal' : '') }, h('h3', 'Preview new parts'), h('p', previewable ? 'A look at a few new parts — doesn’t affect your schedule' : 'No new parts to preview'))),
-      goal ? h('div.card', h('div.row.between', h('div', h('h3', 'Your goal: ' + scopeLabel(goal)), h('div.muted.small', 'The principal parts of the verbs in it.')),
-        h('a.btn.primary.sm', { href: '#/parts/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study'))) : null,
-      passagePicker(view, goal, {
-        title: 'Parts for a passage', blurb: 'The principal parts of the verbs in the text you want to read, the most frequent first.', label: 'Practise these verbs',
-        href: (sc) => '#/parts/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/'),
-        info: (sc) => { let verbs = 0, n = 0; for (const [v, c] of scopeCounts(sc)) { n += c; if (eligible().has(v)) verbs++; } return fmt(verbs) + ' verb' + (verbs === 1 ? '' : 's') + ' with principal parts in this passage'; },
-      })));
+      startButton(smart('parts')),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Preview new parts'), chartsButton()),
+      fold('Study a passage',
+        goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/parts/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
+        passagePicker(view, goal, {
+          title: 'Parts for a passage', blurb: 'The principal parts of the verbs in the text you want to read, the most frequent first.', label: 'Practise these verbs',
+          href: (sc) => '#/parts/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/'),
+          info: (sc) => { let verbs = 0; for (const [v] of scopeCounts(sc)) if (eligible().has(v)) verbs++; return fmt(verbs) + ' verb' + (verbs === 1 ? '' : 's') + ' with principal parts in this passage'; },
+        })),
+      fold('Options',
+        h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Multiple choice checks you; flashcards ask you to remember, then rate yourself. Auto moves up when you’re reliable.')), modeSeg),
+        h('div.row.between', h('span', 'New parts per day'), newSel))));
 }

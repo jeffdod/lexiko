@@ -56,7 +56,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
 
   // parsing practice
-  await page.goto(URL + '#/parse'); await page.waitForSelector('.scope-pick');
+  await page.goto(URL + '#/parse'); await page.waitForSelector('.start');
   ok(/Parsing/.test(await page.textContent('h1')), 'parsing page renders');
   await page.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('parseMode', 'guided'); });
   await page.goto(URL + '#/parse/run/mix/verb'); await page.waitForSelector('.pcard .qgreek');
@@ -88,10 +88,12 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.screenshot({ path: out + '/04-reader-glosses.png' });
 
   // learn: passage session
-  await page.goto(URL + '#/learn'); await page.waitForSelector('.scope-pick');
+  await page.goto(URL + '#/learn'); await page.waitForSelector('.start');
+  ok(await page.locator('.topics .tile').count() === 3 && /Start|Reinforce|Preview/.test(await page.textContent('.start')), 'Learn shows one start button and three topics');
   await page.screenshot({ path: out + '/05-learn.png' });
+  await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
   await page.selectOption('select[aria-label=Book]', 'JHN'); await page.selectOption('select[aria-label=Section]', { index: 1 });
-  const href = await page.getAttribute('a.btn.primary', 'href');
+  const href = await page.locator('.fold a.btn.primary').last().getAttribute('href');
   ok(/#\/learn\/passage\/JHN\/1\/1\/1\/18$/.test(href), 'section picker fills the range: ' + href);
   await page.goto(URL + '#/learn/passage/JHN/1/1/1/18'); await page.waitForSelector('.qcard');
   await page.screenshot({ path: out + '/06-quiz-front.png' });

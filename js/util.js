@@ -97,3 +97,8 @@ export function icon(name, size = 22) {
 
 /** Shown on Extra practice screens: nothing answered here touches the review schedule. */
 export const practiceBanner = (preview) => h('div.practice-note', h('b', preview ? 'Preview' : 'Reinforce'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : 'practice only; it won’t change your review schedule.'));
+
+/** A collapsed section: keeps secondary options out of the way until you want them. */
+export const fold = (title, ...kids) => h('details.fold', h('summary', title), h('div.stack', kids));
+/** The one big button of a page: what to do next, with a line saying what it will give you. */
+export const startButton = (s) => h('a.btn.primary.block.start', { href: s.href }, h('b', s.label), s.sub ? h('small', s.sub) : null);

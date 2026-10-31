@@ -248,3 +248,13 @@ dialog.charts { width: min(48rem, 96vw); max-height: 90dvh; overflow: auto; }
   .ctable thead th { font-size: .56rem; letter-spacing: 0; white-space: normal; vertical-align: bottom; }
   .ctable td span[lang] { font-size: .92rem; } .ctable tbody th { white-space: normal; min-width: 4.6rem; }
 }
+
+/* ---------- simplified Learn pages ---------- */
+.start { flex-direction: column; gap: .1rem; padding: .9rem 1rem; min-height: 4rem; } .start b { font-size: 1.15rem; } .start small { font-size: .85rem; font-weight: 600; opacity: .85; }
+.topics { display: grid; gap: .6rem; }
+.fold { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.fold > summary { cursor: pointer; padding: .8rem 1rem; font-weight: 700; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: '+'; font-size: 1.3rem; color: var(--muted); } .fold[open] > summary::after { content: '–'; }
+.fold > .stack { padding: 0 1rem 1rem; }
+.fold .card { border: 0; box-shadow: none; padding: 0; background: transparent; }
