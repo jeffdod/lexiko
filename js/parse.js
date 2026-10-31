@@ -2,7 +2,7 @@
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats } from './know.js';
-import { buildItem, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
+import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { explain } from './stem.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast } from './util.js';
 import { passagePicker } from './learn.js';
@@ -14,19 +14,21 @@ const KIND_TITLE = { all: 'Mixed practice', verb: 'Verbs', noun: 'Nouns, adjecti
 
 /* ---------- indexes (built once, on first use) ---------- */
 const items = new Map();       // form id -> parse item | null
-let keyMap = null;             // 'f:form:strongs' -> form id
+let keyMap = null, canon = null, members = null;             // 'f:form:strongs' -> form id
 let samples = null;            // form id -> [[book, ch, vs], ...]
 function ensureIndex() {
   if (keyMap) return;
   keyMap = new Map();
-  D.forms.forEach((f, i) => { f.id = i; keyMap.set(parseId(f), i); });
+  ({ canon, members } = groupForms(D.forms));                        // rows that are the same written form share one item
+  D.forms.forEach((f, i) => { f.id = i; });
+  for (const i of members.keys()) { const k = parseId(D.forms[i]), j = keyMap.get(k); if (j == null || D.forms[i].count > D.forms[j].count) keyMap.set(k, i); }
   samples = new Map();
   for (const b of D.books) for (const [ch, verses] of D.text[b.code]) for (const [vs, toks] of verses) for (const t of toks) {
-    const id = t >> 4; let a = samples.get(id); if (!a) samples.set(id, (a = []));
+    const id = canon[t >> 4]; let a = samples.get(id); if (!a) samples.set(id, (a = []));
     if (a.length < 8 && !a.some((x) => x[2] === vs && x[1] === ch && x[0] === b.code)) a.push([b.code, ch, vs]);
   }
 }
-const itemOf = (id) => { if (!items.has(id)) items.set(id, buildItem(D.forms[id])); return items.get(id); };
+const itemOf = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
 
 /* ---------- context sentence with the form highlighted ---------- */
@@ -39,7 +41,7 @@ function formContext(id) {
   }
   if (!best) return null;
   const el = h('div.qctx', { lang: 'grc' }, h('span.ref', D.bookByCode.get(best.code).name + ' ' + best.ch + ':' + best.vs));
-  best.toks.forEach((t) => { const f = D.forms[t >> 4]; el.append((t >> 4) === id ? h('mark', f.w) : f.w, tokenPunct(t) + (tokenFlag(t) ? '—' : ' ')); });
+  best.toks.forEach((t) => { const f = D.forms[t >> 4]; el.append(canon[t >> 4] === id ? h('mark', f.w) : f.w, tokenPunct(t) + (tokenFlag(t) ? '—' : ' ')); });
   el.append(h('a.small', { href: readHref(best.code, best.ch, best.vs), style: { display: 'block', fontFamily: 'var(--ui)', marginTop: '.3rem' } }, 'Read in context →'));
   return el;
 }
@@ -49,11 +51,11 @@ function candidatePool(scope, kinds) {
   const ok = new Set(kinds), out = [];
   if (scope) {
     const counts = new Map();
-    for (const { toks } of scopeVerses(scope)) for (const t of toks) counts.set(t >> 4, (counts.get(t >> 4) || 0) + 1);
+    for (const { toks } of scopeVerses(scope)) for (const t of toks) counts.set(canon[t >> 4], (counts.get(canon[t >> 4]) || 0) + 1);
     for (const [id, n] of counts) { const it = itemOf(id); if (it && ok.has(it.kind)) out.push({ id, w: n * 3 + Math.sqrt(D.forms[id].count) }); }
     return out;
   }
-  const take = (pred) => { for (let id = 0; id < D.forms.length; id++) { const f = D.forms[id]; const it = itemOf(id); if (it && ok.has(it.kind) && pred(f)) out.push({ id, w: f.count }); } };
+  const take = (pred) => { for (const id of members.keys()) { const it = itemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
   take((f) => status(f.an[0].s) !== 'unknown');
   if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400); }   // nothing known yet: start with the most common words
   return out;
@@ -299,7 +301,7 @@ async function landing(view) {
       passagePicker(view, K.goal && K.goal.book ? K.goal : null, {
         title: 'Parse a passage', blurb: 'Practise the forms that occur in the text you want to read, most frequent first.', label: 'Practise these forms',
         href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/all',
-        info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(t >> 4)) ids.add(t >> 4); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
+        info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(canon[t >> 4])) ids.add(canon[t >> 4]); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
       }),
       h('div.card', h('h3', 'Your accuracy by part'), Object.keys(st.slots).length ? [slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null] : h('p.muted.small', 'It will appear here after your first session.'))));
 }

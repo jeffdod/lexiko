@@ -66,6 +66,29 @@ export function keySlots(d) {
 }
 
 /**
+ * The data stores each reading of a written form as its own row (τὰ is one row as T-NPN and another as T-APN).
+ * Group the rows that are the same written form of the same word, so every reading counts as correct.
+ * Returns canon[i] = index of the most frequent row of row i's group, and members: canonical index -> all rows in the group.
+ */
+export function groupForms(forms) {
+  const by = new Map(), canon = new Array(forms.length), members = new Map();
+  forms.forEach((f, i) => { const k = f.w.replace(/\u00ad/g, '') + '|' + (f.an[0] && f.an[0].s); (by.get(k) || by.set(k, []).get(k)).push(i); });
+  for (const ids of by.values()) {
+    ids.sort((a, b) => forms[b].count - forms[a].count || a - b);
+    for (const i of ids) canon[i] = ids[0];
+    members.set(ids[0], ids);
+  }
+  return { canon, members };
+}
+
+/** One form carrying every reading of its group (most frequent first), for buildItem. */
+export function mergeForms(forms, ids) {
+  const an = [], seen = new Set();
+  for (const i of ids) for (const a of forms[i].an) { const k = a.s + ':' + a.m; if (!seen.has(k)) { seen.add(k); an.push(a); } }
+  return { ...forms[ids[0]], count: ids.reduce((n, i) => n + forms[i].count, 0), an };
+}
+
+/**
  * Everything needed to quiz one word form: the lemma to show and every analysis that counts as correct.
  * A form can have alternate parsings (e.g. N-NSF and N-VSF); all with the same lexeme and shape are accepted.
  */
