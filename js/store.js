@@ -124,7 +124,7 @@ export async function importBackup(o, mode = 'merge') {
     for (const [f, n] of Object.entries(v)) m[f] = Math.max(m[f] || 0, n);
   }
   await store.set('daily', daily);
-  for (const k of ['settings', 'goal', 'read', 'parseStats']) {            // fill in anything the device lacks
+  for (const k of ['settings', 'goal', 'read', 'parseStats', 'partsStats']) {            // fill in anything the device lacks
     if (o.kv[k] !== undefined && (await store.get(k)) === undefined) await store.set(k, o.kv[k]);
   }
   if (o.kv.read) {                                            // union of chapters marked read

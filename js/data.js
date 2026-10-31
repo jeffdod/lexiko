@@ -9,7 +9,7 @@ const getJSON = async (p) => {
 };
 
 export const D = {
-  lex: [], lexByN: new Map(), forms: [], books: [], bookByCode: new Map(), text: {},
+  lex: [], lexByN: new Map(), parts: new Map(), forms: [], books: [], bookByCode: new Map(), text: {},
   chap: new Map(),      // 'JHN:1' -> {book, ch, strongs:Int32Array, verses:n}
   occ: new Map(),       // strongs -> [packed bookIdx*1e5+ch*1e3+vs]
   periList: [], periAt: new Map(),   // sections (pericopes): list, and 'MAT:1:18' -> section starting at that verse
@@ -29,7 +29,7 @@ export function shortGloss(b) {
 }
 
 export async function loadData(onProgress = () => {}) {
-  const [lex, forms, books, peri] = await Promise.all([getJSON('lexicon.json'), getJSON('forms.json'), getJSON('books.json'), getJSON('pericopes.json')]);
+  const [lex, forms, books, peri, parts] = await Promise.all([getJSON('lexicon.json'), getJSON('forms.json'), getJSON('books.json'), getJSON('pericopes.json'), getJSON('parts.json')]);
   onProgress(0.25);
   D.lex = lex.map((r, i) => ({ n: r[0], head: r[1], brief: r[2], full: r[3], freq: r[4], pos: r[5], short: shortGloss(r[2]) }));
   D.lex.sort((a, b) => b.freq - a.freq || a.n - b.n);
@@ -39,6 +39,8 @@ export async function loadData(onProgress = () => {}) {
     for (let i = 2; i < r.length; i += 2) an.push({ s: r[i], m: r[i + 1] });
     return { w: r[0], plain: strip(r[0]), count: r[1], an };
   });
+  // principal parts: strongs -> { n, lemma, parts:[present, future, aorist act, perfect act, perfect mid/pas, aorist pas] } (null = not printed)
+  D.parts = new Map(parts.map((r) => [r[0], { n: r[0], lemma: r[1], parts: r.slice(2) }]));
   D.books = books; books.forEach((b, i) => { b.i = i; D.bookByCode.set(b.code, b); });
   let done = 0;
   await Promise.all(books.map(async (b) => {

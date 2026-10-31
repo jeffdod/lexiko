@@ -84,6 +84,7 @@ const ICONS = {
   upload: 'M12 15V3m0 0L8 7m4-4l4 4M4 19h16',
   book: 'M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3V4z',
   text: 'M4 7V5h16v2M9 19h6M12 5v14',
+  table: 'M3 5h18v14H3zM3 10h18M9 5v14',
 };
 export function icon(name, size = 22) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -93,3 +94,6 @@ export function icon(name, size = 22) {
   const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', ICONS[name] || ''); svg.append(p);
   return svg;
 }
+
+/** Shown on Extra practice screens: nothing answered here touches the review schedule. */
+export const practiceBanner = (preview) => h('div.practice-note', h('b', preview ? 'Preview' : 'Extra practice'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : 'practice only; it won’t change your review schedule.'));

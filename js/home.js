@@ -1,6 +1,6 @@
 // Home: where you are, what to do today, what to read next.
 import { D, scopeLabel } from './data.js';
-import { K, parseCardsDue, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel } from './know.js';
+import { K, parseCardsDue, partsCardsDue, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel } from './know.js';
 import { h, clear, pct, icon } from './util.js';
 import { levelPicker } from './settings.js';
 import { suggestions, suggestionItem } from './progress.js';
@@ -33,7 +33,9 @@ export function renderHome(view) {
     h('a.btn.primary.block', { href: '#/learn/daily' }, icon('learn', 20), due || newLeft ? 'Start today’s session' : 'Practice anyway')));
 
   { const pd = parseCardsDue().length;
-    stack.append(h('a.tile', { href: '#/parse' }, h('h3', 'Parsing practice'), h('p', pd ? pd + ' form' + (pd === 1 ? '' : 's') + ' due · tense, voice, mood, case, number, gender' : 'Tense, voice, mood, case, number, gender — one part at a time'))); }
+    stack.append(h('a.tile', { href: '#/parse' }, h('h3', 'Parsing practice'), h('p', pd ? pd + ' form' + (pd === 1 ? '' : 's') + ' due · tense, voice, mood, case, number, gender' : 'Tense, voice, mood, case, number, gender — one part at a time')));
+    const kd = partsCardsDue().length;
+    stack.append(h('a.tile', { href: '#/parts' }, h('h3', 'Principal parts'), h('p', kd ? kd + ' part' + (kd === 1 ? '' : 's') + ' due · the six parts of each verb' : 'The six parts of each verb'))); }
 
   if (goal) {
     const rd = scopeReadiness(goal);
