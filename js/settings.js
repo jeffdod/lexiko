@@ -2,7 +2,7 @@
 import { D } from './data.js';
 import { K, setting, setSetting, setLevel } from './know.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup } from './store.js';
-import { h, clear, toast, icon, pct, todayKey } from './util.js';
+import { h, clear, toast, icon, pct } from './util.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
 export const LEVELS = [null, 1000, 500, 250, 100, 50, 30, 20, 10, 5];
@@ -41,6 +41,12 @@ const seg = (opts, cur, onPick) => {
   return el;
 };
 
+/** Short, sortable file name, e.g. lexiko-261031-0553.json (year-month-day, then time), so the newest is obvious in the Files app. */
+function backupName(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return 'lexiko-' + p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+}
+
 function download(blob, name) {
   const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
@@ -68,7 +74,7 @@ export function renderSettings(view) {
     document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   });
   const doBackup = async () => {
-    const data = await makeBackup(), json = JSON.stringify(data), name = 'lexiko-backup-' + todayKey() + '.json';
+    const data = await makeBackup(), json = JSON.stringify(data), name = backupName();
     const blob = new Blob([json], { type: 'application/json' });
     await setSetting('lastBackup', Date.now());
     try {
