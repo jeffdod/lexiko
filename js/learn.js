@@ -138,14 +138,14 @@ function startFrom(view, kind, scope, title) {
   runSession(view, items, { title, scope });
 }
 
-function passagePicker(view, initial) {
+export function passagePicker(view, initial, o = {}) {
   const sc = { book: 'JHN', c1: 1, v1: 1, c2: 1, v2: 999, ...(initial || {}) };
   const bookSel = h('select', { 'aria-label': 'Book' }, D.books.map((b) => h('option', { value: b.code, selected: b.code === sc.book }, b.name)));
   const c1 = h('select', { 'aria-label': 'From chapter' }), c2 = h('select', { 'aria-label': 'To chapter' });
   const v1 = h('input', { type: 'number', min: 1, placeholder: 'start', 'aria-label': 'From verse', style: { width: '5.5rem' } });
   const v2 = h('input', { type: 'number', min: 1, placeholder: 'end', 'aria-label': 'To verse', style: { width: '5.5rem' } });
   const sec = h('select', { 'aria-label': 'Section' });
-  const info = h('div.muted.small'), go = h('a.btn.primary', 'Study these words');
+  const info = h('div.muted.small'), go = h('a.btn.primary', o.label || 'Study these words');
   let applying = false;
   const fillSecs = () => { clear(sec).append(h('option', { value: '' }, 'Custom range…'), ...periBook(bookSel.value).map((p) => h('option', { value: p.id }, periRange(p) + ' · ' + p.title))); };
   const fillChs = () => {
@@ -157,8 +157,9 @@ function passagePicker(view, initial) {
     sc.v1 = +v1.value || 1; sc.v2 = +v2.value || 999;
     if (sc.c1 !== sc.c2 || sc.v2 < sc.v1) { if (sc.c1 === sc.c2 && sc.v2 < sc.v1) sc.v2 = 999; }
     const rd = scopeReadiness(sc), words = passageWords(sc);
+    if (o.info) { clear(info).append(o.info(sc)); go.href = o.href(sc); return; }
     clear(info).append(h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' known · ' + readinessLabel(rd.known)), ' ', words.length + ' word' + (words.length === 1 ? '' : 's') + ' to learn · ' + fmt(rd.tokens) + ' words of text');
-    go.href = '#/learn/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/');
+    go.href = o.href ? o.href(sc) : '#/learn/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/');
     go.classList.toggle('disabled', !words.length); go.toggleAttribute('disabled', !words.length);
   };
   bookSel.addEventListener('change', () => { sc.c1 = sc.c2 = 1; v1.value = v2.value = ''; fillChs(); fillSecs(); read(); });
@@ -170,7 +171,7 @@ function passagePicker(view, initial) {
   c1.addEventListener('change', () => { if (+c2.value < +c1.value) c2.value = c1.value; read(); });
   [c2, v1, v2].forEach((e) => e.addEventListener('input', read)); [c2, v1, v2].forEach((e) => e.addEventListener('change', read));
   fillChs(); fillSecs(); if (sc.v1 > 1) v1.value = sc.v1; if (sc.v2 < 999) v2.value = sc.v2; read();
-  return h('div.card.stack', h('h2', 'Prepare a passage'), h('p.muted.small', 'Pick the text you want to read. lexiko teaches the words in it that you don’t know yet, most useful first.'),
+  return h('div.card.stack', h('h2', o.title || 'Prepare a passage'), h('p.muted.small', o.blurb || 'Pick the text you want to read. lexiko teaches the words in it that you don’t know yet, most useful first.'),
     h('div.row.wrap', h('label.field', 'Book', bookSel)), h('label.field', 'Section', sec),
     h('div.row.wrap', h('label.field', 'From chapter', c1), h('label.field', 'verse (optional)', v1)),
     h('div.row.wrap', h('label.field', 'To chapter', c2), h('label.field', 'verse (optional)', v2)), info, go);
@@ -198,7 +199,8 @@ export function renderLearn(view, params) {
       h('div.scope-pick',
         h('a.tile', { href: '#/learn/daily' }, h('h3', 'Today’s session'), h('p', due + ' due · ' + Math.max(0, setting('newPerDay') - newToday()) + ' new available' + (lvl != null ? ' · check-ins' : ''))),
         h('a.tile', { href: '#/learn/review' }, h('h3', 'Review only'), h('p', due ? due + ' card' + (due === 1 ? '' : 's') + ' due' : 'Nothing due')),
-        h('a.tile', { href: '#/learn/level' }, h('h3', 'Next words'), h('p', 'The ' + setting('newPerDay') + ' most common words you don’t know yet'))),
+        h('a.tile', { href: '#/learn/level' }, h('h3', 'Next words'), h('p', 'The ' + setting('newPerDay') + ' most common words you don’t know yet')),
+        h('a.tile', { href: '#/parse' }, h('h3', 'Parsing'), h('p', 'Tense, voice, mood, case… one part at a time'))),
       goal ? h('div.card', h('div.row.between', h('div', h('h3', 'Your goal: ' + scopeLabel(goal)), h('div.muted.small', 'Learn the words, then read it.')),
         h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study'))) : null,
       passagePicker(view, goal),

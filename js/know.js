@@ -6,7 +6,7 @@ import { todayKey, shuffle } from './util.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10,
 };
 export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, ready: false };
 
@@ -105,7 +105,7 @@ export function dueCards(now = Date.now()) {
 }
 export function dueSoonCount(hours = 24) {
   const lim = Date.now() + hours * 3600000; let n = 0;
-  for (const c of K.cards.values()) if (c.due <= lim && c.state !== 'new') n++;
+  for (const c of K.cards.values()) if (c.id.startsWith('w:') && c.due <= lim && c.state !== 'new') n++;
   return n;
 }
 export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
@@ -165,4 +165,22 @@ export function buildSession({ scope = null, kind = 'daily', size = K.settings.s
   }
   return shuffle(items).slice(0, scope ? 400 : Math.max(size, 40));
 }
+/* ---------- parsing practice: form-level cards ('f:<form>:<strongs>') ---------- */
+export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;
+export const parseCardsDue = (now = Date.now()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && c.state !== 'new' && c.due <= now);
+export const parseNewToday = () => (K.daily[todayKey()] || {}).pn || 0;
+export async function rateParse(id, grade, ms = 0, meta = {}) {
+  const now = Date.now();
+  const prev = K.cards.get(id) || F.newCard(id);
+  const next = F.review(prev, grade, now, K.settings.retention);
+  await saveCard(next);
+  const d = (K.daily[todayKey()] ||= {}); d.pr = (d.pr || 0) + 1; if (prev.state === 'new') d.pn = (d.pn || 0) + 1;
+  await store.set('daily', K.daily);
+  await store.addLog([{ t: now, id, g: grade, k: 'parse', ms, ...meta }]);
+  return next;
+}
+export const PARSE_DEFAULT = { slots: {}, recent: { verb: [], other: [] }, mode: { verb: 'guided', other: 'guided' }, total: 0 };
+export async function getParseStats() { return { ...PARSE_DEFAULT, ...((await store.get('parseStats')) || {}) }; }
+export const saveParseStats = (st) => store.set('parseStats', st);
+
 export { scopeVerses };

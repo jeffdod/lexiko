@@ -32,6 +32,9 @@ Users get new versions automatically: the service worker notices a changed `sw-a
 * Passage readiness = share of the running words you know. ≥98 % Ready · 95–98 % Comfortable · 90–95 % Stretch · 80–90 % Challenging.
 * Progress is stored in IndexedDB; the app requests persistent storage and offers JSON backup/restore (merge or replace).
 
+## Parsing practice
+`#/parse` quizzes the parts of a form in a fixed order (verbs: tense → voice → mood → person → number; infinitives stop after mood; participles continue with case → number → gender; other words: case → number → gender). Every parsing listed for the form under the same lexeme is accepted, each part is scored separately, and every form has its own FSRS card (`f:<form>:<strongs>`). *Guided* asks one part at a time with instant feedback and a hint; *Quick* shows all parts at once; *Auto* starts guided and switches (per verbs / other words) once you're ≥85 % reliable over 20 forms, and back below 60 %. After each answer, `js/stem.js` explains the form (augment, reduplication, tense markers, stem changes, endings). Code: `js/parse-model.js` (slots, matching, grading), `js/stem.js` (explanations), `js/parse.js` (UI). `node tools/test_stem.mjs [form…]` checks them against the whole text.
+
 ## Sources and licences
 * **Greek text:** Robinson–Pierpont Majority Text (CCAT Beta Code with Strong's and RP morphology codes) — the 2026 edition, released into the **public domain on 16 Aug 2026**, so the full text is published here (`sources/rp/`).
 * **Section headings:** Kretzmann pericope list (`sources/pericopes/kretzmann.txt`), supplied by the project owner.

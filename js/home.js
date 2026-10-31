@@ -1,6 +1,6 @@
 // Home: where you are, what to do today, what to read next.
 import { D, scopeLabel } from './data.js';
-import { K, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel } from './know.js';
+import { K, parseCardsDue, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel } from './know.js';
 import { h, clear, pct, icon } from './util.js';
 import { levelPicker } from './settings.js';
 import { suggestions, suggestionItem } from './progress.js';
@@ -11,7 +11,7 @@ const DAY = 86400000;
 export function renderHome(view) {
   const lvl = setting('level');
   const due = dueCards().length;
-  const studied = K.cards.size;
+  const studied = [...K.cards.keys()].filter((k) => k.startsWith('w:')).length;
   const newLeft = Math.max(0, setting('newPerDay') - newToday());
   const goal = K.goal && K.goal.book ? K.goal : null;
   const lastBackup = K.settings.lastBackup;
@@ -31,6 +31,9 @@ export function renderHome(view) {
     h('div.row.between', h('h2', 'Today'), streak() ? h('span.chip.gold', icon('flame', 14), streak() + '-day streak') : null),
     h('div.kpis', h('div.kpi', h('b', due), h('span', 'due for review')), h('div.kpi', h('b', newLeft), h('span', 'new words left today')), h('div.kpi', h('b', studied), h('span', 'words studied'))),
     h('a.btn.primary.block', { href: '#/learn/daily' }, icon('learn', 20), due || newLeft ? 'Start today’s session' : 'Practice anyway')));
+
+  { const pd = parseCardsDue().length;
+    stack.append(h('a.tile', { href: '#/parse' }, h('h3', 'Parsing practice'), h('p', pd ? pd + ' form' + (pd === 1 ? '' : 's') + ' due · tense, voice, mood, case, number, gender' : 'Tense, voice, mood, case, number, gender — one part at a time'))); }
 
   if (goal) {
     const rd = scopeReadiness(goal);

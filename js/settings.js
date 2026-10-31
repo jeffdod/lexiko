@@ -60,7 +60,7 @@ export function renderSettings(view) {
   fileIn.addEventListener('change', async () => {
     const f = fileIn.files[0]; fileIn.value = ''; if (!f) return;
     let data; try { data = validateBackup(JSON.parse(await f.text())); } catch (e) { return toast(e.message || 'That file can’t be read.'); }
-    const dlg = h('dialog', h('h2', 'Restore backup'), h('p', 'Backup from ' + new Date(data.exported).toLocaleString() + ' with ' + data.cards.length + ' studied words.'),
+    const dlg = h('dialog', h('h2', 'Restore backup'), h('p', 'Backup from ' + new Date(data.exported).toLocaleString() + ' with ' + data.cards.length + ' cards.'),
       h('p.small.muted', '“Merge” keeps the most recent result for each word on both sides. “Replace” wipes this device first.'),
       h('div.row.wrap', h('button.btn.primary', { onclick: async () => { dlg.close(); await importBackup(data, 'merge'); toast('Merged — reloading…'); setTimeout(() => location.reload(), 700); } }, 'Merge'),
         h('button.btn.danger', { onclick: async () => { dlg.close(); await importBackup(data, 'replace'); toast('Restored — reloading…'); setTimeout(() => location.reload(), 700); } }, 'Replace'),
@@ -103,7 +103,7 @@ export function renderSettings(view) {
       h('p.muted.small', standalone ? '✓ You’re running the installed app.' : ios ? 'On iPhone/iPad: tap the Share button, then “Add to Home Screen”. It then opens full-screen and works offline.' : 'Use your browser’s “Install app” / “Add to Home Screen” option to run lexiko full-screen, offline, with no browser bars.')),
     h('div.card.stack', h('h2', 'About'),
       h('p.small', 'lexiko — free, offline, no login. Greek text: Robinson–Pierpont Majority Text with Strong’s numbers and RP morphology. Glosses: a Dodson Greek–English Lexicon derivative (public domain). Type: Gentium Porsonic by SIL Global, SIL Open Font License 1.1, modified web subset renamed “Lexiko Serif”.'),
-      h('p.small.muted', 'Scheduling uses the open FSRS algorithm. ' + fmt(D.lex.length) + ' words · ' + fmt(D.totalTokens) + ' tokens · ' + (K.cards.size ? K.cards.size + ' studied.' : 'nothing studied yet.')),
+      h('p.small.muted', 'Scheduling uses the open FSRS algorithm. ' + fmt(D.lex.length) + ' words · ' + fmt(D.totalTokens) + ' tokens · ' + (K.cards.size ? [...K.cards.keys()].filter((k) => k.startsWith('w:')).length + ' words studied.' : 'nothing studied yet.')),
       h('div.row.wrap', h('a.btn.sm', { href: 'fonts/OFL.txt' }, 'Font license'), h('a.btn.sm', { href: 'https://github.com/jeffdod/lexiko', target: '_blank', rel: 'noopener' }, 'Source'),
         h('button.btn.sm.danger', { onclick: async () => { if (confirm('Erase ALL progress and settings on this device? Back up first if unsure.') && confirm('Really erase everything?')) { await store.clearAll(); try { localStorage.removeItem('lexiko-theme'); } catch { /* ignore */ } location.reload(); } } }, 'Erase everything')))));
 }

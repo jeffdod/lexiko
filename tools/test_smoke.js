@@ -55,6 +55,24 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   ok(nPeri[0] === 589 && nPeri[1] === 0, 'pericope ranges built: ' + nPeri[0] + ' (invalid ranges: ' + nPeri[1] + ')');
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
 
+  // parsing practice
+  await page.goto(URL + '#/parse'); await page.waitForSelector('.scope-pick');
+  ok(/Parsing/.test(await page.textContent('h1')), 'parsing page renders');
+  await page.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('parseMode', 'guided'); });
+  await page.goto(URL + '#/parse/run/mix/verb'); await page.waitForSelector('.pcard .qgreek');
+  ok(/Tense\?/.test(await page.textContent('.pslot.cur')), 'guided starts with tense');
+  for (let i = 0; i < 8 && !(await page.$('.fb')); i++) { const b0 = await page.$('.popt:not([disabled])'); if (b0) await b0.click(); await page.waitForTimeout(450); const c = await page.$('.pq button.btn.primary'); if (c) await c.click(); }
+  await page.waitForSelector('.fb');
+  ok(await page.locator('.pslot.ok, .pslot.bad').count() >= 3, 'feedback lists each part');
+  const stats = await page.evaluate(async () => { const k = await import('./js/know.js'); const s = await k.getParseStats(); return [s.total, [...k.K.cards.keys()].filter((x) => x.startsWith('f:')).length]; });
+  ok(stats[0] === 1 && stats[1] === 1, 'parse result stored as form card: ' + JSON.stringify(stats));
+  await page.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('parseMode', 'quick'); });
+  await page.goto(URL + '#/parse/run/mix/noun'); await page.waitForSelector('.srow');
+  for (let i = 0; i < 6; i++) { const loc = page.locator('.srow:not(:has(button[aria-pressed=true])) button:first-child').first(); if (await loc.count()) await loc.click(); }
+  await page.click('button.btn.primary.block:has-text("Check")'); await page.waitForSelector('.fb');
+  ok(await page.locator('.srow.ok, .srow.bad').count() === 3, 'quick mode scores case/number/gender separately');
+  await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
+
   // gloss mode on
   await page.click('button:has-text("Glosses")'); await page.waitForSelector('.gl');
   const nGl = await page.locator('.gl').count();
