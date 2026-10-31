@@ -2,7 +2,7 @@
 import { D } from './data.js';
 import { K, setting, setSetting, setLevel } from './know.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup } from './store.js';
-import { h, clear, toast, icon, pct, todayKey } from './util.js';
+import { h, clear, toast, icon, pct } from './util.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
 export const LEVELS = [null, 1000, 500, 250, 100, 50, 30, 20, 10, 5];
@@ -41,6 +41,12 @@ const seg = (opts, cur, onPick) => {
   return el;
 };
 
+/** Short, sortable file name, e.g. lex-261031-0553.json (year-month-day, then time), so the newest is obvious in the Files app. */
+function backupName(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return 'lex-' + p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+}
+
 function download(blob, name) {
   const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
@@ -68,7 +74,7 @@ export function renderSettings(view) {
     document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   });
   const doBackup = async () => {
-    const data = await makeBackup(), json = JSON.stringify(data), name = 'lexiko-backup-' + todayKey() + '.json';
+    const data = await makeBackup(), json = JSON.stringify(data), name = backupName();
     const blob = new Blob([json], { type: 'application/json' });
     await setSetting('lastBackup', Date.now());
     try {
@@ -102,7 +108,7 @@ export function renderSettings(view) {
     h('div.card.stack', h('h2', 'Install'), installBtn,
       h('p.muted.small', standalone ? '✓ You’re running the installed app.' : ios ? 'On iPhone/iPad: tap the Share button, then “Add to Home Screen”. It then opens full-screen and works offline.' : 'Use your browser’s “Install app” / “Add to Home Screen” option to run lexiko full-screen, offline, with no browser bars.')),
     h('div.card.stack', h('h2', 'About'),
-      h('p.small', 'lexiko — free, offline, no login. Greek text: Robinson–Pierpont Majority Text with Strong’s numbers and RP morphology. Glosses: a Dodson Greek–English Lexicon derivative (public domain). Type: Gentium Porsonic by SIL Global, SIL Open Font License 1.1, modified web subset renamed “Lexiko Serif”.'),
+      h('p.small', 'lexiko — free, offline, no login. Greek text: Robinson–Pierpont Byzantine Textform with Strong’s numbers and RP morphology. Glosses: a Dodson Greek–English Lexicon derivative (public domain). Type: Gentium Porsonic by SIL Global, SIL Open Font License 1.1, modified web subset renamed “Lexiko Serif”.'),
       h('p.small.muted', 'Scheduling uses the open FSRS algorithm. ' + fmt(D.lex.length) + ' words · ' + fmt(D.totalTokens) + ' tokens · ' + (K.cards.size ? [...K.cards.keys()].filter((k) => k.startsWith('w:')).length + ' words studied.' : 'nothing studied yet.')),
       h('div.row.wrap', h('button.btn.sm', { onclick: showLicense }, 'Font license'), h('a.btn.sm', { href: 'https://github.com/jeffdod/lexiko', target: '_blank', rel: 'noopener' }, 'Source'),
         h('button.btn.sm.danger', { onclick: async () => { if (confirm('Erase ALL progress and settings on this device? Back up first if unsure.') && confirm('Really erase everything?')) { await store.clearAll(); try { localStorage.removeItem('lexiko-theme'); } catch { /* ignore */ } location.reload(); } } }, 'Erase everything')))));

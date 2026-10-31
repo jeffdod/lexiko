@@ -33,7 +33,7 @@
 :root[data-theme='light'] { color-scheme: light; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
 body { font: 16px/1.5 var(--ui); min-height: 100vh; min-height: 100dvh; overscroll-behavior-y: none; -webkit-font-smoothing: antialiased; }
 h1, h2, h3 { font-family: var(--greek); line-height: 1.2; margin: 0 0 .5rem; letter-spacing: .005em; }
