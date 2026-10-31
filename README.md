@@ -20,7 +20,7 @@ python3 tools/build_pericopes.py sources/pericopes/kretzmann.txt data           
 python3 tools/make_fonts.py <GentiumPorsonic dir> fonts                                               # subset + rename + woff2
 python3 tools/make_icons.py && node tools/render_icons.js                                              # icons, favicon, social card
 python3 tools/build_sw.py        # ALWAYS run after changing any app file: regenerates the offline precache list/version
-node tools/serve.js &            # local test server at http://localhost:8123/lexiko/
+node tools/serve.js &            # local test server at http://localhost:8123/lexiko/ (or double-click preview.command / preview.bat)
 node tools/test_smoke.js         # end-to-end test in headless Chromium (needs playwright)
 ```
 Users get new versions automatically: the service worker notices a changed `sw-assets.js`, downloads the update, and shows an "Update ready — Reload" banner.
