@@ -41,10 +41,10 @@ const seg = (opts, cur, onPick) => {
   return el;
 };
 
-/** Short, sortable file name, e.g. lexiko-261031-0553.json (year-month-day, then time), so the newest is obvious in the Files app. */
+/** Short, sortable file name, e.g. lex-261031-0553.json (year-month-day, then time), so the newest is obvious in the Files app. */
 function backupName(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return 'lexiko-' + p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+  return 'lex-' + p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
 }
 
 function download(blob, name) {
