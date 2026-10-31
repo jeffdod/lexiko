@@ -9,8 +9,8 @@ import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
-const KINDS = { all: ['verb', 'nominal', 'pronoun'], verb: ['verb'], noun: ['nominal'], pron: ['pronoun'] };
-const KIND_TITLE = { all: 'Mixed practice', verb: 'Verbs', noun: 'Nouns & adjectives', pron: 'Pronouns' };
+const KINDS = { all: ['verb', 'nominal'], verb: ['verb'], noun: ['nominal'] };
+const KIND_TITLE = { all: 'Mixed practice', verb: 'Verbs', noun: 'Nouns, adjectives & pronouns' };
 
 /* ---------- indexes (built once, on first use) ---------- */
 const items = new Map();       // form id -> parse item | null
@@ -82,7 +82,7 @@ async function recordResult(st, it, res) {
   const rec = (st.recent[g] ||= []); rec.push(res.full ? 1 : 0); if (rec.length > 40) rec.shift();
   st.total = (st.total || 0) + 1;
   if (setting('parseMode') === 'auto') {
-    const cur = st.mode[g] || 'guided', sum = (a) => a.reduce((x, y) => x + y, 0), label = g === 'verb' ? 'verbs' : 'nouns and adjectives';
+    const cur = st.mode[g] || 'guided', sum = (a) => a.reduce((x, y) => x + y, 0), label = g === 'verb' ? 'verbs' : 'nouns, adjectives and pronouns';
     if (cur === 'guided' && rec.length >= 20 && sum(rec.slice(-20)) / 20 >= 0.85) { st.mode[g] = 'quick'; st.recent[g] = []; toast('Nice — you parse ' + label + ' reliably, so lexiko moved you to Quick mode.', 5000); }
     else if (cur === 'quick' && rec.length >= 12 && sum(rec.slice(-12)) / 12 < 0.6) { st.mode[g] = 'guided'; st.recent[g] = []; toast('Back to Guided mode for ' + label + ' for a bit.', 4500); }
   }
@@ -218,8 +218,7 @@ function runSession(view, queue, { title, scope, restart }) {
     const rows = h('div.srows'), checkBtn = h('button.btn.primary.block', 'Check');
     const shownSlots = () => {
       if (it.group === 'V') return slotOrder('V', answers.mood);
-      if (it.group === 'P') return answers.person === '3' ? ['person', 'case', 'number', 'gender'] : ['person', 'case', 'number'];
-      return slotOrder(it.group);
+      return slotOrder(it.group).filter((k) => it.valid[0].keys.includes(k));      // ἐγώ/σύ have no gender, so it isn't asked
     };
     const draw = () => {
       const slots = shownSlots();
@@ -280,7 +279,7 @@ async function landing(view) {
   const dueBy = { all: 0, verb: 0, noun: 0 };
   for (const c of parseCardsDue()) { const id = keyMap.get(c.id); const it = id != null && itemOf(id); if (!it) continue; dueBy.all++; if (it.kind === 'verb') dueBy.verb++; else if (it.kind === 'nominal') dueBy.noun++; }
   const left = Math.max(0, setting('parseNewPerDay') - parseNewToday());
-  const modeNote = () => setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns & adjectives ' + (st.mode.other || 'guided') + '.' : '';
+  const modeNote = () => setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : '';
   const note = h('div.muted.small', modeNote());
   const modeSeg = h('div.seg', [['auto', 'Auto'], ['guided', 'Guided'], ['quick', 'Quick']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('parseMode') === v), onclick: async (e) => {
     await setSetting('parseMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); note.textContent = modeNote();

@@ -30,23 +30,21 @@ const LABELS = {
 };
 export const labelOf = (slot, code) => (LABELS[slot] && LABELS[slot][code]) || code;
 
-/** Word group decides the slot sequence: 'V' (verb), 'P' (personal), 'F' (reflexive), 'S' (possessive), 'N' (case/number/gender). */
+/**
+ * Word group decides the slot sequence: 'V' for verbs, 'N' for everything else. Only verbs are asked for person.
+ * Pronouns, articles, nouns and adjectives are parsed by case, number and gender (a 1st/2nd-person pronoun like ἐγώ has no gender, so just case and number;
+ * which person it is comes from the word itself).
+ */
 export function groupOf(d) {
   const s = d.slots;
   if (d.pos === 'V') return s.mood && s.tense && s.voice ? 'V' : null;
-  if (d.pos === 'P') return s.person && s.case && s.number ? 'P' : null;
-  if (d.pos === 'F') return s.person && s.case ? 'F' : null;
-  if (d.pos === 'S') return s.person && s.case ? 'S' : null;
-  return s.case && s.number && s.gender ? 'N' : null;
+  return s.case && s.number && (s.gender || d.pos === 'P') ? 'N' : null;
 }
 
 /** Slot order for a group; for verbs it depends on the mood chosen so far. */
 export function slotOrder(group, mood) {
   switch (group) {
     case 'V': return ['tense', 'voice', 'mood', ...(!mood ? [] : mood === 'N' ? [] : mood === 'P' ? ['case', 'number', 'gender'] : ['person', 'number'])];
-    case 'P': return ['person', 'case', 'number', 'gender'];   // gender only asked when the answer has one (3rd person)
-    case 'F': return ['person', 'case', 'number', 'gender'];
-    case 'S': return ['person', 'possessorNumber', 'case', 'number', 'gender'];
     default: return ['case', 'number', 'gender'];
   }
 }
@@ -72,7 +70,7 @@ export function buildItem(form) {
     if (groupOf(d) !== group) continue;
     valid.push({ code: a.m, d, slots: d.slots, keys: keySlots(d) });
   }
-  return { form, strongs: first.s, group, valid, kind: d0.pos === 'V' ? 'verb' : group === 'N' ? 'nominal' : 'pronoun' };
+  return { form, strongs: first.s, group, valid, kind: d0.pos === 'V' ? 'verb' : 'nominal' };
 }
 
 /** Is this voice answer acceptable for the RP voice code? (Deponents and "middle or passive" forms accept their plain equivalents.) */
@@ -126,4 +124,5 @@ export function gradeOf(res, { ms = 0, aided = false } = {}) {
 }
 
 /** Plain-English one-liner for a parsing, e.g. "Aorist Passive Indicative 3rd person Singular". */
-export const describe = (cand) => cand.d.summary;
+export const describe = (cand) => (cand.d.pos === 'V' ? cand.d.summary
+  : cand.keys.map((k) => labelOf(k, cand.slots[k])).join(' ') + (cand.d.notes.length ? ' (' + cand.d.notes.join(', ') + ')' : ''));
