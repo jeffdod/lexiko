@@ -95,3 +95,17 @@ export function chartRowFor(slot, form) {
     default: return null;
   }
 }
+
+/** Master-chart row for a parsed indicative verb (RP slots), or null when the chart has no row for it. */
+export function chartRowForSlots(sl) {
+  if (!sl || !sl.tense || sl.mood !== 'I') return null;
+  const act = 'AQ'.includes(sl.voice), pas = 'PO'.includes(sl.voice), sec = !!sl.second;
+  switch (sl.tense) {
+    case 'P': return act ? 'pres-act' : 'pres-mp';
+    case 'I': return act ? 'impf-act' : 'impf-mp';
+    case 'F': return pas ? (sec ? 'fut-pas2' : 'fut-pas1') : act ? 'fut-act' : 'fut-mid';
+    case 'A': return pas ? (sec ? 'aor2-pas' : 'aor1-pas') : act ? (sec ? 'aor2-act' : 'aor1-act') : (sec ? 'aor2-mid' : 'aor1-mid');
+    case 'R': return act ? (sec ? 'perf2-act' : 'perf1-act') : 'perf-mp';
+    default: return null;
+  }
+}

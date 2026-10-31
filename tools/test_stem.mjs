@@ -39,3 +39,19 @@ if (personOnNonVerb) { console.log('FAIL: person/possessor asked where the RP co
   console.log({ groupedForms: multi, ta: codes });
   if (bad.length) { console.log('FAIL:', bad); process.exit(1); }
 }
+
+// Verb breakdowns must be built from the form's own letters (no other verbs' examples).
+{
+  const { breakdown } = await import('../js/stem.js');
+  const bad = [];
+  const t = (head, form, code, wantPieces, forbid = []) => {
+    const b = breakdown(head, form, decode(code)), got = b.pieces.map((p) => p.text.normalize('NFC')).join('+'), txt = b.notes.join(' ');
+    if (wantPieces && got !== wantPieces) bad.push(form + ': pieces ' + got + ' ≠ ' + wantPieces);
+    for (const w of forbid) if (txt.includes(w)) bad.push(form + ': note mentions ' + w);
+  };
+  t('λύω', 'ἐλύθην', 'V-API-1S', 'ἐ+λύ+θ+ην', ['ἔμεινα', 'λέ-λυ-κα', 'ἐλύθην)']);
+  t('ἀποστέλλω', 'ἀπέστειλεν', 'V-AAI-3S', null, ['2nd aorist']);
+  t('βάλλω', 'ἔβαλεν', 'V-2AAI-3S', null, ['liquid']);
+  if (bad.length) { console.log('FAIL:', bad); process.exit(1); }
+  console.log('breakdown checks ok');
+}

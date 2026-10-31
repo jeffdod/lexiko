@@ -258,3 +258,12 @@ dialog.charts { width: min(48rem, 96vw); max-height: 90dvh; overflow: auto; }
 .fold > summary::after { content: '+'; font-size: 1.3rem; color: var(--muted); } .fold[open] > summary::after { content: '–'; }
 .fold > .stack { padding: 0 1rem 1rem; }
 .fold .card { border: 0; box-shadow: none; padding: 0; background: transparent; }
+
+/* verb quiz: one asked form, verse tucked away, breakdown of the form */
+.qask { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; color: var(--muted); }
+.ctxfold { margin-top: .6rem; width: 100%; max-width: 34rem; text-align: left; } .ctxfold summary { cursor: pointer; font-size: .85rem; color: var(--accent); font-weight: 700; text-align: center; }
+.buildbox { margin-top: .6rem; display: grid; gap: .35rem; justify-items: center; }
+.build { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: center; align-items: flex-start; }
+.bp { display: inline-flex; flex-direction: column; align-items: center; padding: .3rem .6rem; border-radius: 10px; background: var(--surface-2); min-width: 2.6rem; }
+.bp b { font-family: var(--greek); font-size: 1.35rem; } .bp small { font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; text-align: center; max-width: 7rem; }
+.bp.aug, .bp.prefix { background: var(--gold-soft); } .bp.mark { background: var(--accent-soft); } .bp.end { background: var(--good-soft); }
