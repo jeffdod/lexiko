@@ -51,62 +51,50 @@ const lastClass = (stem) => {
   return 'vowel';
 };
 
-const PRIMARY_A = { '1S': 'ω', '2S': 'εισ', '3S': 'ει', '1P': 'ομεν', '2P': 'ετε', '3P': 'ουσι(ν)' };
-const SECOND_A = { '1S': 'ον', '2S': 'εσ', '3S': 'ε(ν)', '1P': 'ομεν', '2P': 'ετε', '3P': 'ον' };
-const FIRST_AOR = { '1S': 'α', '2S': 'ασ', '3S': 'ε(ν)', '1P': 'αμεν', '2P': 'ατε', '3P': 'αν' };
-const PERFECT_A = { '1S': 'α', '2S': 'ασ', '3S': 'ε(ν)', '1P': 'αμεν', '2P': 'ατε', '3P': 'ασι(ν)' };
-const PRIMARY_M = { '1S': 'ομαι', '2S': 'ηι / ει', '3S': 'εται', '1P': 'ομεθα', '2P': 'εσθε', '3P': 'ονται' };
-const SECOND_M = { '1S': 'ομην', '2S': 'ου', '3S': 'ετο', '1P': 'ομεθα', '2P': 'εσθε', '3P': 'οντο' };
-const FIRST_AOR_M = { '1S': 'αμην', '2S': 'ω', '3S': 'ατο', '1P': 'αμεθα', '2P': 'ασθε', '3P': 'αντο' };
-const AOR_PASS = { '1S': 'ην', '2S': 'ησ', '3S': 'η', '1P': 'ημεν', '2P': 'ητε', '3P': 'ησαν' };
-const PERF_M = { '1S': 'μαι', '2S': 'σαι', '3S': 'ται', '1P': 'μεθα', '2P': 'σθε', '3P': 'νται' };
-const PLUP_A = { '1S': 'ειν', '2S': 'εισ', '3S': 'ει(ν)', '1P': 'εμεν', '2P': 'ετε', '3P': 'εσαν' };
-const PLUP_M = { '1S': 'μην', '2S': 'σο', '3S': 'το', '1P': 'μεθα', '2P': 'σθε', '3P': 'ντο' };
+// Endings are written "connecting vowel|personal ending". "~x" = one merged piece (the vowel and ending have run together).
+// null = the textbook split is not clear-cut, so no breakdown is shown for that person/number.
+const PRIM_A = { '1S': '~ω', '2S': '~εισ', '3S': '~ει', '1P': 'ο|μεν', '2P': 'ε|τε', '3P': '~ουσι(ν)' };
+const SEC_A = { '1S': 'ο|ν', '2S': 'ε|σ', '3S': 'ε|(ν)', '1P': 'ο|μεν', '2P': 'ε|τε', '3P': 'ο|ν' };
+const PRIM_M = { '1S': 'ο|μαι', '2S': '~ηι / ει', '3S': 'ε|ται', '1P': 'ο|μεθα', '2P': 'ε|σθε', '3P': 'ο|νται' };
+const SEC_M = { '1S': 'ο|μην', '2S': '~ου', '3S': 'ε|το', '1P': 'ο|μεθα', '2P': 'ε|σθε', '3P': 'ο|ντο' };
+const AOR1_A = { '1S': '|', '2S': '|σ', '3S': null, '1P': '|μεν', '2P': '|τε', '3P': '|ν' };
+const AOR1_M = { '1S': '|μην', '2S': null, '3S': '|το', '1P': '|μεθα', '2P': '|σθε', '3P': '|ντο' };
+const AOR_P = { '1S': '|ν', '2S': '|σ', '3S': '|', '1P': '|μεν', '2P': '|τε', '3P': '|σαν' };
+const PERF_A = { '1S': '|', '2S': '|σ', '3S': null, '1P': '|μεν', '2P': '|τε', '3P': '|σι(ν)' };
+const PERF_M = { '1S': '|μαι', '2S': '|σαι', '3S': '|ται', '1P': '|μεθα', '2P': '|σθε', '3P': '|νται' };
+const PLUP_A = { '1S': '|ν', '2S': '|σ', '3S': '|', '1P': '|μεν', '2P': '|τε', '3P': '|σαν' };
+const PLUP_M = { '1S': '|μην', '2S': '|σο', '3S': '|το', '1P': '|μεθα', '2P': '|σθε', '3P': '|ντο' };
 const PERS_NAME = { 1: '1st', 2: '2nd', 3: '3rd' }, NUM_NAME = { S: 'singular', P: 'plural' };
 const TENSE_NAME = { P: 'present', I: 'imperfect', F: 'future', A: 'aorist', R: 'perfect', L: 'pluperfect' };
 const VOICE_NAME = { A: 'active', M: 'middle', P: 'passive', E: 'middle/passive', D: 'middle', O: 'passive', N: 'middle/passive', Q: 'active' };
-const MOOD_NAME = { I: 'indicative', S: 'subjunctive', O: 'optative', M: 'imperative', N: 'infinitive', P: 'participle' };
 
-/** "ουσι(ν)" → ["ουσιν","ουσι"]; "ηι / ει" → ["ηι","ει"] */
-const alts = (e) => e.split(' / ').flatMap((x) => { const m = /^(.*)\((.*)\)$/.exec(x); return m ? [m[1] + m[2], m[1]] : [x]; });
-
-// Families of tails (tense sign + ending) for the indicative. cls: which voice class the family belongs to.
+// Indicative only. mk = tense formatives to try; name = what to call it.
 const IND = {
-  P: [{ mk: [''], set: PRIMARY_A, cls: 'a' }, { mk: [''], set: PRIMARY_M, cls: 'm' }],
-  I: [{ mk: [''], set: SECOND_A, cls: 'a' }, { mk: [''], set: SECOND_M, cls: 'm' }],
-  F: [{ mk: ['σ', 'ξ', 'ψ'], set: PRIMARY_A, cls: 'a' }, { mk: ['σ', 'ξ', 'ψ'], set: PRIMARY_M, cls: 'm' }, { mk: ['θησ'], set: PRIMARY_M, cls: 'p', sign: 'future passive' }, { mk: ['ησ'], set: PRIMARY_M, cls: 'p', sign: 'future passive' }],
-  A: [{ mk: ['θ'], set: AOR_PASS, cls: 'p', sign: 'aorist passive' }, { mk: [''], set: AOR_PASS, cls: 'p', second: true }, { mk: ['σ', 'ξ', 'ψ', 'κ', ''], set: FIRST_AOR, cls: 'a' }, { mk: [''], set: SECOND_A, cls: 'a', second: true },
-    { mk: ['σ', 'ξ', 'ψ', ''], set: FIRST_AOR_M, cls: 'm' }, { mk: [''], set: SECOND_M, cls: 'm', second: true }],
-  R: [{ mk: ['κ'], set: PERFECT_A, cls: 'a' }, { mk: [''], set: PERFECT_A, cls: 'a', second: true }, { mk: [''], set: PERF_M, cls: 'm' }],
-  L: [{ mk: ['κ', ''], set: PLUP_A, cls: 'a' }, { mk: [''], set: PLUP_M, cls: 'm' }],
+  P: [{ mk: [''], set: PRIM_A, cls: 'a' }, { mk: [''], set: PRIM_M, cls: 'm' }],
+  I: [{ mk: [''], set: SEC_A, cls: 'a' }, { mk: [''], set: SEC_M, cls: 'm' }],
+  F: [{ mk: ['σ', 'ξ', 'ψ'], set: PRIM_A, cls: 'a', name: 'future' }, { mk: ['σ', 'ξ', 'ψ'], set: PRIM_M, cls: 'm', name: 'future' }, { mk: ['θησ', 'ησ'], set: PRIM_M, cls: 'p', name: 'future passive' }],
+  A: [{ mk: ['θη'], set: AOR_P, cls: 'p', name: 'aorist passive' }, { mk: ['η'], set: AOR_P, cls: 'p', name: '2nd aorist passive', second: true },
+    { mk: ['σα', 'ξα', 'ψα', 'κα', 'α'], set: AOR1_A, cls: 'a', name: '1st aorist' }, { mk: [''], set: SEC_A, cls: 'a', second: true },
+    { mk: ['σα', 'ξα', 'ψα', 'α'], set: AOR1_M, cls: 'm', name: '1st aorist' }, { mk: [''], set: SEC_M, cls: 'm', second: true }],
+  R: [{ mk: ['κα', 'α'], set: PERF_A, cls: 'a', name: 'perfect active' }, { mk: [''], set: PERF_M, cls: 'm' }],
+  L: [{ mk: ['κει', 'ει'], set: PLUP_A, cls: 'a', name: 'pluperfect' }, { mk: [''], set: PLUP_M, cls: 'm' }],
 };
-// Non-indicative tails: [sign, ending, voice class]. Only the letters at the very end of the form are matched.
-const INF_T = {
-  P: [['', 'ειν', 'a'], ['', 'εσθαι', 'm'], ['', 'ναι', 'a']], F: [['σ', 'ειν', 'a'], ['σ', 'εσθαι', 'm'], ['θησ', 'εσθαι', 'p']],
-  A: [['σ', 'αι', 'a'], ['ξ', 'αι', 'a'], ['ψ', 'αι', 'a'], ['', 'αι', 'a'], ['', 'ειν', 'a'], ['σ', 'ασθαι', 'm'], ['ξ', 'ασθαι', 'm'], ['ψ', 'ασθαι', 'm'], ['', 'εσθαι', 'm'], ['θ', 'ηναι', 'p'], ['', 'ηναι', 'p']],
-  R: [['κ', 'εναι', 'a'], ['', 'εναι', 'a'], ['', 'σθαι', 'm']],
-};
-const SUBJ_T = { a: ['ω', 'ηισ', 'ηι', 'ωμεν', 'ητε', 'ωσι(ν)'], m: ['ωμαι', 'ηι', 'ηται', 'ωμεθα', 'ησθε', 'ωνται'] };
-const IMPV_T = { '2S': [['', 'ε', 'a'], ['σ', 'ον', 'a'], ['ξ', 'ον', 'a'], ['ψ', 'ον', 'a'], ['θ', 'ητι', 'p'], ['', 'ου', 'm'], ['σ', 'αι', 'm']], '3S': [['', 'ετω', 'a'], ['σ', 'ατω', 'a'], ['θ', 'ητω', 'p'], ['', 'εσθω', 'm'], ['σ', 'ασθω', 'm']],
-  '2P': [['', 'ετε', 'a'], ['σ', 'ατε', 'a'], ['θ', 'ητε', 'p'], ['', 'εσθε', 'm'], ['σ', 'ασθε', 'm']], '3P': [['', 'ετωσαν', 'a'], ['σ', 'ατωσαν', 'a'], ['θ', 'ητωσαν', 'p'], ['', 'εσθωσαν', 'm']] };
-const PTC_RX = { P: /(ομεν|οντ|ουσ|ων|ον|μεν)/, I: null, F: /(σομεν|σοντ|σουσ|σων|σον)/, A: /(θεντ|θεισ|θεν|σαμεν|ξαμεν|ψαμεν|σαντ|σασ|σαν|ξαντ|ξασ|ξαν|ψαντ|ψασ|ψαν|ομεν|οντ|ουσ|ων|ον|εντ|εισ|εν)/, R: /(κοτ|κυι|κωσ|κοσ|κος|μεν|οτ|υι|ωσ)/ };
-
+const alts = (e) => e.split(' / ').flatMap((x) => { const m = /^(.*)\((.*)\)(.*)$/.exec(x); return m ? [m[1] + m[2] + m[3], m[1] + m[3]] : [x]; });
 const voiceCls = (v) => ('AQ'.includes(v) ? 'a' : 'PO'.includes(v) ? 'p' : 'm');
 
-/** Find the sign + ending at the end of the form. → { sign, end, rest } (rest = what remains in front) or null. */
+/** Find formative + connecting vowel + ending at the end of an indicative form. Only clear-cut splits; otherwise null. */
 function findTail(sl, F) {
-  const vc = voiceCls(sl.voice), t = sl.tense, k = sl.person + sl.number;
-  let best = null;
-  const consider = (sign, ends, cls, extra = {}) => {
-    for (const e of ends) { const tail = sign + e; if (!F.endsWith(tail) || F.length - tail.length < 1) continue;
-      const sc = tail.length + (cls === vc ? 0.5 : 0) + (extra.second === !!sl.second ? 0.25 : 0);
-      if (!best || sc > best.sc) best = { sign, end: e, sc, ...extra }; }
-  };
-  if (sl.mood === 'I' && sl.person) { for (const f of IND[t] || []) for (const m of f.mk) consider(m, alts(f.set[k] || '~'), f.cls, { signName: f.sign, second: f.second }); }
-  else if (sl.mood === 'N') for (const [s, e, c] of INF_T[t] || []) consider(s, [e], c, { second: undefined });
-  else if (sl.mood === 'S' && sl.person) { for (const c of ['a', 'm']) for (const s of ['', 'σ', 'ξ', 'ψ']) consider(s, alts(SUBJ_T[c][{ '1S': 0, '2S': 1, '3S': 2, '1P': 3, '2P': 4, '3P': 5 }[k]] || '~'), c); consider('θ', alts(SUBJ_T.a[{ '1S': 0, '2S': 1, '3S': 2, '1P': 3, '2P': 4, '3P': 5 }[k]] || '~'), 'p', { signName: 'aorist passive' }); }
-  else if (sl.mood === 'M' && sl.person) for (const [s, e, c] of IMPV_T[k] || []) consider(s, [e], c);
-  else if (sl.mood === 'P' && PTC_RX[t]) { const m = PTC_RX[t].exec(F); if (m && m.index > 0) { best = { sign: '', end: F.slice(m.index), sc: 1, ptc: true }; } }
+  if (sl.mood !== 'I' || !sl.person) return null;
+  const vc = voiceCls(sl.voice), k = sl.person + sl.number; let best = null;
+  for (const f of IND[sl.tense] || []) {
+    const spec = f.set[k]; if (!spec) continue;
+    const merged = spec[0] === '~', body = merged ? spec.slice(1) : spec;
+    const [cv, en] = merged ? [body, ''] : body.split('|');
+    for (const m of f.mk) for (const c of alts(cv)) for (const e of alts(en)) { const tail = m + c + e;
+      if (!F.endsWith(tail) || F.length - tail.length < 1) continue;
+      const sc = tail.length + (f.cls === vc ? 0.5 : 0) + (!!f.second === !!sl.second ? 0.25 : 0);
+      if (!best || sc > best.sc) best = { sign: m, conn: c, end: e, merged, signName: f.name, sc }; }
+  }
   return best;
 }
 
@@ -163,15 +151,17 @@ export function breakdown(lemmaHead, formText, d) {
   if (redup) { pieces.push({ a: at, b: at + redup.len, role: redup.kind === 'eps' ? 'stands for reduplication' : 'reduplication', kind: 'aug' }); at += redup.len; }
 
   // stem + tail
-  const tl = tail ? (tail.sign + tail.end).length : 0;
+  const tl = tail ? (tail.sign + tail.conn + tail.end).length : 0;
   const stemEnd = F.length - tl;
   const ok = tail && stemEnd > at;
   if (ok) {
-    if (tail.ptc) pieces.push({ a: at, b: stemEnd, role: 'stem', kind: 'stem' }, { a: stemEnd, b: F.length, role: 'participle ending', kind: 'end' });
+    pieces.push({ a: at, b: stemEnd, role: 'stem', kind: 'stem' });
+    let x = stemEnd;
+    if (tail.sign) { pieces.push({ a: x, b: x + tail.sign.length, role: 'tense formative', kind: 'mark' }); x += tail.sign.length; }
+    if (tail.merged) pieces.push({ a: x, b: F.length, role: 'ending (with connecting vowel)', kind: 'end' });
     else {
-      pieces.push({ a: at, b: stemEnd, role: 'stem', kind: 'stem' });
-      if (tail.sign) pieces.push({ a: stemEnd, b: stemEnd + tail.sign.length, role: (tail.signName || signName(t, tail.sign, sl)) + ' sign', kind: 'mark' });
-      pieces.push({ a: stemEnd + tail.sign.length, b: F.length, role: endRole(sl, tail), kind: 'end' });
+      if (tail.conn) { pieces.push({ a: x, b: x + tail.conn.length, role: 'connecting vowel', kind: 'conn' }); x += tail.conn.length; }
+      if (x < F.length) pieces.push({ a: x, b: F.length, role: 'ending', kind: 'end' });
     }
   } else if (!tail) { out.contractOnly = true; }
   out.pieces = ok ? pieces.map((p) => ({ text: shown(p.a, p.b), role: p.role, kind: p.kind })) : [];
@@ -184,12 +174,11 @@ export function breakdown(lemmaHead, formText, d) {
   if (temporal) N.push('Augment: the stem of ' + lemmaHead + ' begins with ' + temporal.from + ', which lengthens to ' + temporal.to + ' here, marking a past tense' + (t === 'R' ? ' (the perfect lengthens in the same way).' : '.'));
   if (augNote === 'long') N.push('The stem of ' + lemmaHead + ' already begins with a long vowel (' + lr.slice(0, 1) + '), so the augment does not show.');
   if (redup) N.push(redup.kind === 'eps' ? 'The stem begins with a consonant cluster, so ' + shown(at - 1, at) + '- stands in for the reduplication that marks the perfect.' : 'Reduplication ' + shown(at - 2, at) + '-: the stem’s first consonant ' + redup.from + ' is repeated with ε, which marks the ' + (t === 'L' ? 'pluperfect' : 'perfect') + (redup.to !== redup.from ? ' (the aspirate ' + redup.from + ' is replaced by ' + redup.to + ' in the repeat)' : '') + '.');
-  if (ok && tail.sign) N.push('-' + tail.sign + '- is the ' + (tail.signName || signName(t, tail.sign, sl)) + ' sign' + signWhy(tail.sign, t, stemSk, stemOfLemma, lemmaHead) + '.');
-  else if (ok && !tail.ptc && t === 'A' && !pass(sl) && tail.sign === '' && sl.second) N.push('No σ before the ending: ' + formText + ' is a 2nd aorist, built on its own stem ' + S + '- with the endings of the imperfect.');
-  else if (ok && !tail.ptc && t === 'A' && !pass(sl) && tail.sign === '' && /(λ|μ|ν|ρ)$/.test(stemOfLemma)) N.push('The stem of ' + lemmaHead + ' ends in ' + stemOfLemma.slice(-1) + ', a liquid, so the 1st aorist takes its endings with no σ.');
-  if (ok && !tail.ptc) { const es = endingNote(sl, tail, shown(stemEnd + tail.sign.length, F.length)); if (es) N.push(es); }
-  if (ok && tail.ptc) N.push('-' + shown(stemEnd, F.length) + ' is the ' + TENSE_NAME[t] + ' ' + VOICE_NAME[sl.voice].toLowerCase() + ' participle ending.');
-  if (ok) { const sc = stemChange(stemSk, stemOfLemma, temporal, tail.sign || tail.end[0], lemmaHead, S, lr, !!tail.sign); if (sc) N.push(sc); }
+  if (ok && tail.sign === 'α' && t === 'A' && /(λ|μ|ν|ρ)$/.test(stemOfLemma)) N.push('-α- is the 1st aorist tense formative. The stem of ' + lemmaHead + ' ends in the liquid ' + stemOfLemma.slice(-1) + ', so there is no σ in front of it.');
+  else if (ok && tail.sign) N.push('-' + shown(stemEnd, stemEnd + tail.sign.length) + '- is the ' + (tail.signName || TENSE_NAME[t]) + ' tense formative' + signWhy(tail.sign, stemSk, stemOfLemma, lemmaHead) + '.');
+  else if (ok && t === 'A' && sl.second && !pass(sl)) N.push('There is no σα formative: ' + formText + ' is a 2nd aorist, built directly on its own stem ' + S + '- with the endings of the imperfect.');
+  if (ok) { const en = endingNote(sl, tail, shown(stemEnd + tail.sign.length + (tail.merged ? 0 : tail.conn.length), F.length), shown(stemEnd + tail.sign.length, stemEnd + tail.sign.length + tail.conn.length)); if (en) N.push(en); }
+  if (ok) { const sc = stemChange(stemSk, stemOfLemma, temporal, (tail.sign || tail.conn || tail.end)[0], lemmaHead, S, lr, !!tail.sign); if (sc) N.push(sc); }
   if (!ok || out.contractOnly) {
     const P = lemmaParts(lr);
     if (P.contract && (t === 'P' || t === 'I' || t === 'F' || t === 'A' || t === 'R')) N.push(lemmaHead + ' is an ' + P.contract + '-contract verb: its stem vowel ' + P.contract + ' merges with the ending’s vowel, so in ' + formText + ' stem and ending are written as one.');
@@ -200,30 +189,22 @@ export function breakdown(lemmaHead, formText, d) {
 }
 
 const pass = (sl) => sl.voice === 'P' || sl.voice === 'O';
-function signName(t, s, sl) {
-  if (t === 'F') return s === 'θησ' || s === 'ησ' ? 'future passive' : 'future';
-  if (t === 'A') return s === 'θ' ? 'aorist passive' : s === 'κ' ? 'κ-aorist' : '1st aorist';
-  if (t === 'R') return 'perfect active';
-  if (t === 'L') return 'pluperfect';
-  return TENSE_NAME[t];
-}
-function signWhy(s, t, stemSk, lemmaStem, head) {
-  if (s === 'ξ' || s === 'ψ') { const gone = lemmaStem.slice(stemSk.length); if (lemmaStem.startsWith(stemSk) && gone.length === 1) return ': the last letter of the stem of ' + head + ', ' + gone + ', combined with σ to give ' + s; return ': σ joined with the stem’s last consonant'; }
-  if (s === 'σ' && lemmaStem.startsWith(stemSk) && lemmaStem.length - stemSk.length === 1 && /[τδθζ]/.test(lemmaStem.slice(-1))) return ', and the stem’s final ' + lemmaStem.slice(-1) + ' dropped out before it';
-  if (s === 'θ') return '';
+function signWhy(s, stemSk, lemmaStem, head) {
+  const c = s[0], gone = lemmaStem.startsWith(stemSk) ? lemmaStem.slice(stemSk.length) : '';
+  if ((c === 'ξ' || c === 'ψ') && gone.length === 1) return ': the last letter of the stem of ' + head + ', ' + gone + ', combined with σ to give ' + c;
+  if (c === 'σ' && gone.length === 1 && /[τδθζ]/.test(gone)) return ', and the stem’s final ' + gone + ' dropped out before its σ';
   return '';
 }
-function endRole(sl, tail) {
-  const who = sl.person ? PERS_NAME[sl.person] + ' ' + NUM_NAME[sl.number] : '';
-  if (sl.mood === 'N') return 'infinitive ending';
-  return who ? who + ' ending' : 'ending';
-}
-function endingNote(sl, tail, shownEnd) {
-  tail = tail || {};
-  const e = '-' + shownEnd;
-  if (sl.mood === 'N') return e + ' is the ' + TENSE_NAME[sl.tense] + ' ' + VOICE_NAME[sl.voice].toLowerCase() + ' infinitive ending.';
+function endingNote(sl, tail, endText, connText) {
   if (!sl.person) return null;
-  return e + ' marks the ' + PERS_NAME[sl.person] + ' person ' + NUM_NAME[sl.number] + ' (' + (sl.mood === 'I' ? (tail.signName === 'aorist passive' || (sl.tense === 'A' && /^η/.test(tail.end) && sl.voice !== 'A') ? 'the endings that follow -θη-' : 'the ' + TENSE_NAME[sl.tense] + ' ' + VOICE_NAME[sl.voice].toLowerCase() + ' endings') : MOOD_NAME[sl.mood] + ' endings') + ').';
+  const who = PERS_NAME[sl.person] + ' person ' + NUM_NAME[sl.number];
+  if (tail.merged) return '-' + endText + ' is the ' + who + ' ending, with the connecting vowel run together with it.';
+  const out = [];
+  if (connText) out.push('-' + connText + '- is the connecting vowel between stem and ending.');
+  if (tail.end === 'ν' && tail.conn === 'ε' && sl.person === 3 && sl.number === 'S') out.push('-ν is the movable ν, which may be added to this ending.');
+  else if (endText) out.push('-' + endText + ' is the ' + who + ' ending.');
+  else out.push('The ' + who + ' has no separate ending here.');
+  return out.join(' ');
 }
 function stemChange(stemSk, lemmaStem, temporal, sign, head, S, lr, hasSign) {
   if (!stemSk || !lemmaStem) return '';
@@ -238,8 +219,7 @@ function stemChange(stemSk, lemmaStem, temporal, sign, head, S, lr, hasSign) {
     const diffs = [...exp].map((c, i) => [c, stemSk[i], i]).filter(([a, b]) => a !== b);
     if (diffs.length === 1) { const [a, b, i] = diffs[0]; if (i === exp.length - 1 && sign === 'μ') return 'The stem’s last consonant ' + a + ' (in ' + head + ') has assimilated to the μ that follows it.'; if (i === exp.length - 1) return 'The stem’s last consonant changes from ' + a + ' (in ' + head + ') to ' + b + (' before ' + sign) + '.'; if (isV(a) && isV(b)) return 'The stem vowel changes from ' + a + ' (in ' + head + ') to ' + b + ' in this form (' + S + ').'; }
   }
-  if (!isV(lemmaStem[0]) && stemSk[0] !== lemmaStem[0] && !DEASP[lemmaStem[0]]) return 'This form is built on a different stem, ' + S + '-, from the one in ' + head + ' (' + lemmaStem + '-). Learn it as a principal part.';
-  return 'The stem here is ' + S + '-; the dictionary form ' + head + ' shows ' + lemmaStem + '-, so this tense uses a changed form of the stem.';
+  return '';
 }
 
 /** Notes only (kept for callers that just want sentences). */

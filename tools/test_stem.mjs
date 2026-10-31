@@ -49,7 +49,10 @@ if (personOnNonVerb) { console.log('FAIL: person/possessor asked where the RP co
     if (wantPieces && got !== wantPieces) bad.push(form + ': pieces ' + got + ' ≠ ' + wantPieces);
     for (const w of forbid) if (txt.includes(w)) bad.push(form + ': note mentions ' + w);
   };
-  t('λύω', 'ἐλύθην', 'V-API-1S', 'ἐ+λύ+θ+ην', ['ἔμεινα', 'λέ-λυ-κα', 'ἐλύθην)']);
+  t('λύω', 'ἐλύθην', 'V-API-1S', 'ἐ+λύ+θη+ν', ['ἔμεινα', 'λέ-λυ-κα']);
+  t('λύω', 'ἔλυσαν', 'V-AAI-3P', 'ἔ+λυ+σα+ν');
+  t('λύω', 'ἐλύσατο', 'V-AMI-3S', 'ἐ+λύ+σα+το');
+  t('λύω', 'λύομεν', 'V-PAI-1P', 'λύ+ο+μεν');
   t('ἀποστέλλω', 'ἀπέστειλεν', 'V-AAI-3S', null, ['2nd aorist']);
   t('βάλλω', 'ἔβαλεν', 'V-2AAI-3S', null, ['liquid']);
   if (bad.length) { console.log('FAIL:', bad); process.exit(1); }
