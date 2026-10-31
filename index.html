@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>lexiko — learn to read the Greek New Testament</title>
+<meta name="description" content="lexiko is a free, offline-first app for learning to read the Greek New Testament: spaced-repetition vocabulary, a tap-for-parsing reader, and passage readiness tracking. No login.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f2ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12161b" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="32x32 16x16">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="lexiko">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="lexiko">
+<meta property="og:title" content="lexiko — learn to read the Greek New Testament">
+<meta property="og:description" content="Spaced repetition, parsing drills and a passage reader. Free, works offline, no login.">
+<meta property="og:url" content="https://jeffdod.github.io/lexiko/">
+<meta property="og:image" content="https://jeffdod.github.io/lexiko/icons/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="lexiko — a gold-underlined lambda icon, with the words 'Learn to read the Greek New Testament.'">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="lexiko — learn to read the Greek New Testament">
+<meta name="twitter:description" content="Spaced repetition, parsing drills and a passage reader. Free, works offline, no login.">
+<meta name="twitter:image" content="https://jeffdod.github.io/lexiko/icons/og-image.png">
+
+<link rel="preload" href="fonts/lexiko-serif-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/lexiko-serif-bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/app.css">
+<script>
+  // apply a manually chosen theme before first paint (auto = follow the system, handled in CSS)
+  try { var t = localStorage.getItem('lexiko-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
+</head>
+<body>
+<div id="app">
+  <main id="view" tabindex="-1" aria-live="polite"></main>
+  <nav id="nav" aria-label="Main"></nav>
+</div>
+<div id="loading" role="status">
+  <div class="box">
+    <div class="word"><span>λ</span>exiko</div>
+    <div class="bar accent"><i id="loadbar" style="width:4%"></i></div>
+    <p class="muted small" id="loadmsg" style="margin-top:.8rem">Loading the Greek New Testament…</p>
+  </div>
+</div>
+<noscript><p style="padding:1rem">lexiko needs JavaScript to run.</p></noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

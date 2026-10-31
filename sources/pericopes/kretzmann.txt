@@ -1,0 +1,589 @@
+01.01.01	The Genealogy of Christ
+01.01.18	The Annunciation to Joseph and the Birth of Jesus
+01.02.01	The Wise Men from the East
+01.02.13	The Flight into Egypt and the Return to Nazareth
+01.03.01	The Ministry of John the Baptist
+01.03.13	The Baptism of Jesus
+01.04.01	The Temptation in the Wilderness
+01.04.12	The Beginning of the Galilean Ministry and the Call of the Four
+01.05.01	The Beatitudes
+01.05.13	The Chief Functions of the Disciples in the World
+01.05.17	Christ Confirms and Expounds the Law of Moses
+01.05.38	The Law of Love toward the Enemy
+01.06.01	On Giving of Alms, Praying, and Fasting
+01.06.19	Warning against Covetousness and Care
+01.07.01	Warning against Unauthorized Judging and Admonition to Persevere in Prayer
+01.07.13	The Conclusion of the Sermon
+01.08.01	The Healing of the Leper
+01.08.05	The Centurion of Capernaum
+01.08.14	Various Miracles of Healing
+01.08.18	The Discipleship of Christ
+01.08.23	The Storm on the Lake
+01.08.28	Jesus and the Gadarenes
+01.09.01	The Healing of the Palsied Man
+01.09.09	The Call of Matthew and His Feast
+01.09.18	The Daughter of Jairus
+01.09.27	Further Miracles of That Day
+01.09.35	Continuation of Christ's Teaching and Healing Ministry
+01.10.01	The Commission to the Twelve
+01.10.16	The Perils of Apostleship
+01.10.26	Fearless Confession of Christ Demanded
+01.10.37	Perfect Consecration to Christ
+01.11.01	John the Baptist's Disciples Come to Jesus
+01.11.07	Christ's Testimony Concerning John
+01.11.20	The Woe upon the Galilean Cities
+01.11.25	The Gospel Call
+01.12.01	The Lord of the Sabbath
+01.12.14	The Enmity of the Pharisees and Christ's Answer
+01.12.31	The Blasphemy against the Holy Spirit
+01.12.38	The Sign from Heaven and a Warning
+01.12.46	Christ's Relatives
+01.13.01	The Parable of the Sower
+01.13.24	The Parable of the Tares, and Others
+01.13.53	A Visit to Nazareth
+01.14.01	The Death of John the Baptist
+01.14.13	The Feeding of the Five Thousand
+01.14.22	Christ Walks on the Sea
+01.15.01	A Lesson Concerning Defilement
+01.15.21	The Syrophoenician Woman
+01.15.29	Christ Teaches and Feeds Four Thousand
+01.16.01	The Demand for a Sign
+01.16.05	The Leaven of the Pharisees
+01.16.13	``Christ the Son of the Living God"
+01.16.21	Christ's First Prophecy Concerning His Passion
+01.17.01	The Transfiguration of Christ
+01.17.14	The Healing of a Lunatic
+01.17.22	Christ Foretells His Passion and Pays the Temple-Tax
+01.18.01	The Greatest in the Kingdom of Heaven
+01.18.15	How to Deal with an Erring Brother
+01.18.23	Parable of the Unmerciful Servant
+01.19.01	On Marriage and Divorce
+01.19.13	Christ Blessing Little Children
+01.19.16	The Dangers of Riches
+01.19.27	The Reward of the Apostles
+01.20.01	Parable of the Laborers in the Vineyard
+01.20.17	Christ Again Foretells His Passion
+01.20.20	The Requests of the Sons of Zebedee
+01.20.29	Healing of Two Blind Men
+01.21.01	Christ's Entry into Jerusalem
+01.21.12	Christ Visits the Temple
+01.21.17	The Cursing of the Fig-Tree
+01.21.23	The Authority of Christ
+01.21.28	The Parable of the Two Sons
+01.21.33	The Parable of the Wicked Husbandmen
+01.22.01	The Parable of the Marriage Feast
+01.22.15	The Question Concerning Tribute
+01.22.23	The Question of the Sadducees
+01.22.34	The Silencing of the Pharisees
+01.23.01	The Inordinate Ambition of the Pharisees
+01.23.13	The Woes upon the Hypocrisy of the Pharisees
+01.23.34	The Peroration and the Lament over Jerusalem
+01.24.01	The Judgment of God upon Jerusalem and upon the World
+01.24.42	The Need of Watchfulness
+01.25.01	The Parable of the Ten Virgins
+01.25.14	The Parable of the Talents
+01.25.31	The Last Judgment
+01.26.01	Events Preceding the Last Passover
+01.26.20	The Passover Meal and the Institution of the Lord's Supper
+01.26.30	Events at Gethsemane
+01.26.47	The Betrayal and Arrest
+01.26.57	The Trial before Caiaphas and the Denial of Peter
+01.27.01	The End of Judas
+01.27.11	The Trial before Pilate
+01.27.31	The Crucifixion and Death of Christ
+01.27.57	The Burial of Christ
+01.28.01	The Resurrection of Christ
+01.28.16	The Great Missionary Command
+02.01.01	The Ministry of John the Baptist
+02.01.09	The Baptism of Christ and the Beginning of His Ministry
+02.01.21	Preaching and Healing in Capernaum
+02.01.39	The Healing of a Leper
+02.02.01	Healing the Palsied Man
+02.02.13	The Calling of Levi and the Dinner at His House
+02.02.23	The Lord of the Sabbath
+02.03.01	Healing the Withered Hand
+02.03.07	Miracles by the Seaside
+02.03.22	Discourse on the Casting Out of Demons
+02.04.01	Teaching by Means of Parables
+02.04.35	Christ Stilling the Tempest
+02.05.01	The Gadarene Demoniac
+02.05.21	Raising of the Daughter of Jairus
+02.06.01	Jesus at Nazareth
+02.06.06	The Mission of the Twelve
+02.06.14	Death of John the Baptist
+02.06.33	Feeding of Five Thousand Men
+02.06.45	Christ Walking on the Sea and His Return to Galilee
+02.07.01	Concerning Ceremonial Washings
+02.07.14	Christ's Denunciation of the Pharisees
+02.07.24	The Syrophoenician Woman
+02.07.31	Healing of the Deaf-and-Dumb Person
+02.08.01	Feeding Four Thousand Men
+02.08.10	The Leaven of the Pharisees
+02.08.22	The Blind Man of Bethsaida
+02.08.27	Jesus the Christ and His Service
+02.09.01	The Transfiguration of Jesus
+02.09.14	Casting Out a Deaf-and-Dumb Spirit
+02.09.30	The Last Discourses of Christ in Galilee
+02.10.01	A Question concerning Divorce
+02.10.13	Jesus Blesses Little Children
+02.10.17	The Rich Young Man
+02.10.32	Priority in Christ's Kingdom
+02.10.46	The Healing of Bartimaeus
+02.11.01	Christ's Entry into Jerusalem
+02.11.12	The Miracle of the Fig-Tree
+02.11.27	The Question concerning Christ's Authority
+02.12.01	The Parable of the Vineyard
+02.12.13	Various Questions Proposed to Jesus
+02.12.35	David's Son and Lord
+02.13.01	The Destruction of the Temple Foretold
+02.14.01	The Anointing of Jesus
+02.14.10	The Preparation for, and the Celebration of, the Passover
+02.14.26	The Passion in Gethsemane
+02.14.43	The Capture of Jesus
+02.14.53	The Trial before the High Priest
+02.14.66	The Denial of Peter
+02.15.01	The Trial before Pilate
+02.15.15	Condemnation, Crucifixion, and Death of Jesus
+02.15.38	The Burial of Jesus
+02.16.01	The Resurrection of Jesus
+02.16.09	The Appearances and the Ascension of Jesus
+03.01.01	The Preface to the Gospel
+03.01.05	The Announcement of John the Baptist's Birth
+03.01.26	The Annunciation to Mary
+03.01.39	Mary's Visit to Elizabeth
+03.01.57	The Birth of John the Baptist
+03.02.01	The Birth of Jesus and the Adoration of the Shepherds
+03.02.21	The Circumcision and Presentation of Christ
+03.02.41	The Christ-Child in the Temple
+03.03.01	The Ministry of John the Baptist
+03.03.21	The Baptism and Genealogy of Christ
+03.04.01	The Temptation of Christ
+03.04.14	The Beginning of Christ's Ministry and His Teaching in Nazareth
+03.04.33	Healing of a Demoniac and Other Miracles
+03.05.01	The Miraculous Draught of Fishes and the Call of the First Disciples
+03.05.12	The Healing of a Leper and of a Paralytic
+03.05.27	The Call of Levi and the Discourse Concerning Christ's Ministry
+03.06.01	Disputes Concerning Sabbath Observance
+03.06.13	The Twelve Apostles
+03.06.17	Miracles of Healing and Preaching
+03.07.01	The Centurion of Capernaum
+03.07.11	Raising of the Widow's Son
+03.07.18	The Embassy of John the Baptist
+03.07.36	The First Anointing of Jesus
+03.08.01	Teaching in Parables
+03.08.22	The Storm on the Sea
+03.08.26	In the Country of the Gadarenes
+03.08.40	The Woman with an Issue and the Daughter of Jairus
+03.09.01	The Mission of the Twelve
+03.09.10	The Feeding of the Five Thousand
+03.09.18	Peter's Confession and Christ's Answer
+03.09.28	The Transfiguration
+03.09.37	The Healing of the Epileptic Boy
+03.09.46	Lessons in Humility
+03.09.57	True Discipleship of Christ
+03.10.01	The Mission of the Seventy
+03.10.23	The Good Samaritan
+03.10.38	Mary and Martha
+03.11.01	A Lesson in Prayer
+03.11.14	Christ Casts Out a Demon and Rebukes the Pharisees
+03.11.29	A Warning to the Jews
+03.11.37	Woes upon the Pharisees and Lawyers
+03.12.01	Warning against Hypocrisy and Covetousness
+03.12.22	Of Trust in God and Preparation for Christ's Coming
+03.13.01	Last Admonitions to Repentance
+03.13.10	The Crippled Woman Healed
+03.13.18	Parables and Teachings
+03.14.01	Christ the Guest of a Pharisee
+03.14.15	The Great Supper
+03.14.25	The Obligations of Christ's Discipleship
+03.15.01	Parables of the Love of Christ to the Lost
+03.15.11	The Prodigal Son
+03.16.01	The Parable of the Unjust Steward and Its Lessons
+03.16.19	The Rich Man and Lazarus, the Beggar
+03.17.01	A Lesson on Offenses and Forgiveness
+03.17.11	The Ten Lepers
+03.17.20	Concerning the Kingdom of God and the Coming of Christ
+03.18.01	The Unjust Judge
+03.18.09	The Pharisee and the Publican
+03.18.15	Christ Blesses Little Children
+03.18.18	Denying All for Christ's Sake
+03.18.31	The Lord's Third Prediction of His Passion
+03.18.35	The Blind Man of Jericho
+03.19.01	Zacchaeus the Publican
+03.19.11	The Parable of the Talents
+03.19.28	Christ's Entry into Jerusalem
+03.20.01	The Authority of Jesus
+03.20.19	The Pharisees and Sadducees Confounded
+03.21.01	The Widow's Gift
+03.21.05	The Destruction of Jerusalem and the End of the World
+03.22.01	The Preparation for, and the Celebration of, the Passover
+03.22.24	A Lesson on Humility
+03.22.31	The Walk to Gethsemane and the Agony
+03.22.54	Christ before Caiaphas and The Denial of Peter
+03.23.01	The Trial before Pilate
+03.23.26	The Crucifixion, Death, and Burial of Christ
+03.24.01	The Resurrection of Christ
+03.24.13	The Emmaus Disciples
+03.24.36	The Last Appearances of Christ
+04.01.01	The Word Became Flesh
+04.01.19	The Testimony of John the Baptist
+04.01.35	The First Disciples of Jesus
+04.02.01	The Marriage at Cana
+04.02.12	The Purging of the Temple and Its Results
+04.03.01	The Visit of Nicodemus
+04.03.22	John's Second Testimony of Christ
+04.04.01	Christ and the Woman of Samaria
+04.04.43	The Healing of the Nobleman's Son
+04.05.01	The Sick Man of Bethesda
+04.05.17	The Relation between the Father and the Son
+04.05.31	The Witness of John, of the Father, and of Scriptures
+04.06.01	The Feeding of the Five Thousand
+04.06.15	Christ Walks on the Sea
+04.06.22	Christ the Bread of Life
+04.06.60	The Offense of Many Disciples
+04.07.01	The Unbelief of Christ's Relatives
+04.07.10	Jesus at the Feast of Tabernacles
+04.08.01	The Woman Taken in Adultery
+04.08.12	Jesus the Light of the World
+04.08.31	The True Liberty of the Gospel
+04.09.01	Healing of the Man That was Born Blind
+04.10.01	Jesus the Good Shepherd
+04.10.22	Christ's Sermon at the Feast of Dedication
+04.11.01	The Raising of Lazarus
+04.11.47	The Council of the Jews concerning Christ's Removal
+04.12.01	The Anointing of Jesus
+04.12.12	Christ's Entry into Jerusalem
+04.12.20	Some Greeks Seek Jesus
+04.12.34	Walking in the Light
+04.12.42	Of Faith in Christ and God
+04.13.01	Jesus Washing the Disciples' Feet
+04.13.21	The Traitor at the Table
+04.13.31	Concerning Christ's Glorification
+04.14.01	Of Christ's Going to the Father
+04.14.15	Of Love and Life
+04.14.24	Of the Work of the Spirit
+04.15.01	Christ the True Vine
+04.15.11	The New Status of Christ's Disciples
+04.16.01	Comfort against the World's Hatred
+04.16.16	The Comfort of Christ's Second Advent
+04.17.01	Christ's Great Sacerdotal Prayer
+04.18.01	The Arrest of Jesus
+04.18.15	Jesus Arraigned, and the Denial of Peter
+04.18.28	The Trial before Pilate
+04.19.01	The Condemnation of Jesus
+04.19.16	The Crucifixion
+04.19.31	The Burial of Jesus
+04.20.01	The Resurrection of Jesus
+04.20.19	Two Appearances to the Assembled Disciples
+04.21.01	The Appearance of Christ at the Sea of Tiberias
+04.21.15	The Test of Peter's Love
+05.01.01	The Ascension of Jesus
+05.01.12	The Election of Matthias
+05.02.01	The Pentecost Miracle
+05.02.14	The Sermon of Peter and Its Effect
+05.03.01	The Healing of the Lame Man
+05.03.12	The Address of Peter in the Temple
+05.04.01	Peter and John before the Council of the Jews
+05.04.23	The Prayer and the Further Establishment of the Congregation
+05.05.01	Ananias and Sapphira
+05.05.12	The Prosperity of the Church
+05.05.17	The Imprisonment, Deliverance, and Defense of the Apostles
+05.06.01	The Choosing of the First Deacons
+05.06.09	The Testimony of Stephen
+05.07.01	The Defense of Stephen and His Death
+05.08.01	The Gospel Planted in Samaria
+05.08.26	The Ethiopian Eunuch
+05.09.01	The Conversion and Early Labors of Paul
+05.09.32	Two Miracles Performed by Peter
+05.10.01	Cornelius the Centurion
+05.11.01	Peter's Defense against the Judaizing Brethren
+05.11.19	The Establishment of the Congregation at Antioch
+05.12.01	Herod Persecutes the Church at Jerusalem and is Punished by God
+05.13.01	Paul and Barnabas on the Island of Cyprus
+05.13.13	At Antioch, in Pisidia
+05.14.01	Paul and Barnabas at Iconium and Lystra
+05.14.19	The Return Journey to Syria
+05.15.01	The Convention at Jerusalem
+05.15.36	The Beginning of Paul's Second Missionary Journey
+05.16.01	Paul and Silas in Asia Minor
+05.16.11	Paul and His Companions at Philippi
+05.17.01	Paul and Silas in Thessalonica and Berea
+05.17.15	Paul in Athens
+05.18.01	Paul at Corinth
+05.18.18	The Return Trip to Antioch and the Beginning of the Third Journey
+05.19.01	Paul's Work at Ephesus
+05.19.21	The Tumult of Demetrius
+05.20.01	The Journey to Macedonia and Back to Miletus
+05.20.17	Paul and the Elders of Ephesus
+05.21.01	The Trip to Jerusalem
+05.21.17	The Jewish Uprising against Paul
+05.21.40	Paul's Speech to the Jews
+05.22.22	Paul and the Chief Captain
+05.23.01	The Hearing in the Presence of the Sanhedrin
+05.23.12	The Plot of the Jews
+05.23.23	Paul Brought to Caesarea
+05.24.01	Paul's Trial before Felix
+05.24.23	Paul Retained a Prisoner
+05.25.01	Paul Appeals to Caesar
+05.25.13	Agrippa and Bernice in Caesarea
+05.26.01	The Hearing before Agrippa
+05.27.01	The Voyage from Caesarea to Melita
+05.28.01	The Journey from Melita to Rome
+05.28.17	Two Years at Rome
+06.01.01	The Salutation of the Letter
+06.01.08	The Introduction to the Letter
+06.01.16	The Theme of the Letter
+06.01.18	The Moral Decay of the Gentile World
+06.02.01	The Guilt of the Jews
+06.02.11	The Necessity of Keeping the Law Properly
+06.03.01	Man's Guilt and God's Righteousness
+06.03.09	The Scriptural Proof for the Universal Guilt of Mankind
+06.03.21	Justification by Faith
+06.04.01	The Righteousness of God Demonstrated from History
+06.05.01	The Blessed Consequences of Justification
+06.05.12	The First and the Second Adam
+06.06.01	Sanctification as a Fruit of Justification
+06.06.15	The Service of Righteousness
+06.07.01	Freedom from the Law
+06.07.07	The Purpose of the Law and Its Effect
+06.08.01	The Life in the Spirit
+06.08.18	Comfort in the Manifold Afflictions of this Life
+06.09.01	The Distinction between the True and the False Israel
+06.09.14	The Divine Sovereignty and Its Result
+06.10.01	The Jews the Cause of Their Own Rejection
+06.11.01	A Remnant of Israel Saved
+06.11.11	An Admonition and Encouragement to Gentiles and Jews
+06.12.01	The Christian's Life a Reasonable Service to God
+06.13.01	Obedience to the Government, Love toward One's Neighbor, the Walk in the Light
+06.14.01	The Conduct of Christians toward Such as Are Weak in Faith
+06.15.01	An Admonition to Patience and Harmony
+06.15.14	The Epilog of the Letter
+06.16.01	A Recommendation, Greetings, and a Final Admonition
+07.01.01	Salutation and Thanksgiving
+07.01.10	A Reproof of Disharmony
+07.01.17	The Wisdom of God and the Foolishness of Men
+07.02.01	The Preaching of the Cross
+07.03.01	A Reproof of Spiritual Pride
+07.04.01	The Work of the Ministers of Christ
+07.05.01	The Necessity of Church Discipline
+07.06.01	Lawsuits against Believers
+07.06.12	The Necessity of Keeping the Body Undefiled
+07.07.01	Instructions with Regard to Marriage
+07.08.01	Christian Liberty in the Matter of Eating Meat Offered to Idols
+07.09.01	Paul the Free Servant of Christ
+07.10.01	A Warning against Carnal Security
+07.10.14	Conduct toward the Weak
+07.11.01	Head Coverings
+07.11.17	The Lord's Supper
+07.12.01	Of the Use and Purpose of Spiritual Gifts
+07.13.01	A Psalm of Love
+07.14.01	The Use of Spiritual Gifts in Public Worship
+07.15.01	Of the Resurrection of the Dead
+07.16.01	Concluding Admonitions
+08.01.01	Address, Thanksgiving, and Consolation
+08.01.12	Paul's Vindication of His Conduct and Life
+08.02.01	Paul's Apostolic Kindness
+08.02.12	Paul's Triumph in Christ
+08.03.01	The Glory of the New Testament Ministry
+08.04.01	The Gospel-Message of Light and Life
+08.05.01	Paul's Longing for the Future Glory
+08.05.11	Paul an Ambassador of Christ
+08.06.01	Paul's Ministry in the Midst of Difficulties
+08.06.11	Admonition to Flee the Fellowship of Unbelievers
+08.07.01	Paul's Consolation and Joy because of the Corinthians
+08.08.01	Paul's Tactful Appeal and Recommendation
+08.09.01	Paul's Final Instructions Concerning the Collection
+08.10.01	Paul's Apostolic Authority
+08.11.01	The True Apostle and the False Teachers
+08.11.16	Paul's Boast of His Apostolic Calling
+08.12.01	Paul's Boast of His Weakness
+08.12.11	What Paul Expects of the Corinthians
+08.13.01	A Concluding Admonition and Greetings
+09.01.01	Introductory Greeting and Doxology
+09.01.06	Paul's Reason for Writing the Epistle
+09.01.11	Paul Protests His Apostolic Commission
+09.02.01	Further Confirmation of Paul's Apostleship
+09.02.11	Paul's Reproof of Peter, and the Lessons Drawn Therefrom
+09.03.01	Salvation Is Not of Works, but by Faith
+09.03.19	Proofs for the Liberty of a Christian from the Nature and Meaning of the Law
+09.04.01	The Sonship of the Believers Opposed to the Bondage of the Law
+09.05.01	Christian Liberty an Incentive to Holiness of Life
+09.06.01	An Admonition to Serve One's Neighbor in Love
+09.06.11	Concluding Remarks
+10.01.01	Salutation, the Blessings of Eternal Election, Prayer for Spiritual Enlightenment
+10.02.01	The Church as the Sum Total of Men Saved by Grace
+10.03.01	The Ministry of Paul for the Edification of the Church
+10.04.01	Admonitions to Unity, Perfection in Knowledge, Holiness, and Peace
+10.05.01	A Warning, Principally against the Sins of Uncleanness
+10.05.22	The Duties of Husbands and Wives as Shown by the Relation of Christ to the Church
+10.06.01	The Duties of Children, of Parents, of Servants
+10.06.10	The Christian's Spiritual Armor and Its Use
+10.06.21	Concluding Remarks and Greeting
+11.01.01	The Address and Salutation
+11.01.03	The Apostle's Personal Feeling toward the Philippian Christians
+11.01.12	Paul's Present Circumstances, Experiences, and Expectations
+11.01.27	An Admonition to Constancy and True Unity
+11.02.01	The Need of Loving Humility
+11.02.05	The Example of Christ's Humility
+11.02.12	The Application of the Admonition to True Works of Sanctification
+11.02.19	Recommendation of Timothy and Epaphroditus
+11.03.01	The Dangers of Judaistic Teaching
+11.03.12	Sanctification Following Justification, and the Consummation of the Christian Hope
+11.04.01	Firmness and Unanimity Enjoined
+11.04.04	The Rejoicing of the Christians Especially in Their Fellowship with Christ
+11.04.10	Acknowledgment of the Kindness of the Philippians
+11.04.21	Greetings and Conclusion
+12.01.01	The Opening Salutation
+12.01.03	Paul's Prayer of Thanksgiving and Intercession
+12.01.15	The Work of the Exalted Christ through the Medium of the Ministry
+12.02.01	A Warning against Error
+12.02.09	Christ's Work for His Church, Resulting in Sanctification
+12.03.01	The Affections of the Christians Set on Things Above
+12.03.05	Putting Off the Old Man and Putting On the New
+12.03.12	The Rule of God's Peace and Its Effect on Various Stations in Life
+12.04.02	Concluding Admonitions
+12.04.07	Personal Matters, Greetings, and Concluding Salutation
+13.01.01	Introduction and Thanksgiving
+13.01.05	A Recommendation of the Congregation's Attitude
+13.02.01	Paul's Manner of Working in Thessalonica
+13.02.13	The Manner in Which the Thessalonians Received the Gospel
+13.03.01	Various Proofs of Paul's Love for the Thessalonians
+13.04.01	Warning Regarding Various Sins
+13.04.13	Information about the Resurrection of the Dead
+13.05.01	Christian Watchfulness with Reference to the Last Day
+13.05.12	Concluding Admonitions and Greeting
+14.01.01	Introductory Salutation
+14.01.03	Paul's Prayer of Thanksgiving and Intercession
+14.02.01	The Man of Sin and the Mystery of Iniquity
+14.03.01	Concluding Exhortations and Greeting
+15.01.01	Address and Greeting
+15.01.03	The Judaizing Teachers
+15.01.08	The Real Purpose of the Law
+15.01.12	Paul's Praise for the Grace which He has Experienced
+15.01.18	A Warning against Apostasy
+15.02.01	An Admonition to Pray for All Men on the Basis of Christ's Atoning Death
+15.02.09	The Station and Calling of Christian Women
+15.03.01	The Qualifications of a Bishop, or Overseer
+15.03.08	The Qualifications of Deacons
+15.03.14	The Purpose of Paul's Letter and a Doxology
+15.04.01	The False Doctrines of the Last Days and Their Refutation
+15.04.06	The Personal Conduct of Timothy
+15.05.01	The Pastoral Care of the Aged, the Young, the Widows
+15.05.09	The Care of Widows on the Part of the Congregation
+15.05.17	Rules of Conduct with Regard to the Elders of the Congregation
+15.06.01	The Station of Slaves
+15.06.03	A Description Characterizing the Errorists
+15.06.06	The Sin of Avarice and Its Results
+15.06.11	The Conduct of the True Christian and Its Reward
+15.06.17	Final Admonitions and Conclusion
+16.01.01	Address and Salutation
+16.01.03	Paul Reminds Timothy of His Early Training and Its Obligations
+16.01.05	An Admonition to Steadfastness
+16.01.15	Paul's Sorrowful and Cheerful Experiences
+16.02.01	Admonition to Faithfulness in the Ministry
+16.02.08	An Admonition to Faithfulness in Faith and Christian Conduct
+16.02.14	The Proper Dividing of the Word of God
+16.02.19	Of Clean and Unclean Vessels
+16.02.22	The Minister's Personal Conduct
+16.03.01	The False Teachers and False Brethren of the Last Days
+16.03.10	The Special Lessons of Paul's Afflictions
+16.03.14	The Purpose of Holy Scriptures
+16.04.01	Faithfulness in Office
+16.04.06	Paul's Fight and Victory
+16.04.09	A Report Concerning Various Acquaintances and the First Hearing
+16.04.19	Concluding Remarks and Greeting
+17.01.01	Address and Opening Salutation
+17.01.05	The Qualifications of Christian Pastors
+17.01.10	The False Teachers Characterized and the Question of How to Deal with Them
+17.02.01	Admonitions concerning Various Stations
+17.02.11	The Grace of Salvation and Its Sanctifying Power
+17.03.01	An Admonition to Obedience and Meekness
+17.03.04	The Washing of Regeneration and Its Wonderful Power
+17.03.09	The Conduct of Titus toward False Teachers and Heretics
+17.03.12	Final Directions and Greetings
+18.01.01	Address and Salutation
+18.01.04	Paul's Thankfulness and Sympathy on Account of Philemon's Christian State
+18.01.08	Paul's Intercession for Onesimus
+18.01.15	Another Point Urged by the Apostle
+18.01.21	Concluding Remarks and Greeting
+19.01.01	The Superiority of Christ over the Angels
+19.02.01	The Need of Cheerful Obedience to Christ
+19.02.14	The Deliverance Effected by Christ
+19.03.01	The Superiority of Christ over Moses
+19.04.01	A Further Warning against Unbelief
+19.04.11	Boldness in Faith in Our High Priest
+19.05.01	The Authority of Christ, Our High Priest
+19.05.11	A Reproof of Spiritual Ignorance
+19.06.01	An Exhortation to Progress and Steadfastness in the Faith
+19.07.01	A Comparison between Christ and Melchizedek
+19.08.01	Christ's Eternal Priesthood has Superseded the Temporary Priesthood of Aaron
+19.09.01	The Old Testament System Inferior to the Perfection of Christ's Sacrifice
+19.10.01	The Superiority of the One Perfect Offering of Christ
+19.10.19	An Admonition to Stand Firm in the Faith, with Patience and Thanksgiving
+19.11.01	A Wonderful Epic on the Power of Faith
+19.12.01	An Appeal to Heed the Old Testament Examples, Aided by God's Chastisement
+19.12.14	A Warning against Apostasy on the Basis of the Excellency of the New Covenant
+19.13.01	Final Admonitions and Conclusion
+20.01.01	Various Temptations and Their Endurance
+20.01.16	God's Fatherhood and the Obligations of Sonship
+20.02.01	Dead Faith Compared with Living Faith
+20.03.01	Caution against False Activity in Teaching and the Use of the Tongue
+20.04.01	Caution against Worldly-Mindedness and Its Consequences
+20.05.01	Various Admonitions in View of the Nearness of the Judgment
+21.01.01	Address and Salutation
+21.01.03	A Praise of God for His Manifold Blessings
+21.01.13	An Admonition to Lead a Godly Life
+21.02.01	Further Practical Admonitions
+21.02.11	Specific Admonitions Concerning the Station of the Christians
+21.03.01	Exhortations to the Married
+21.03.08	Exhortations to Christians in General
+21.04.01	Admonitions in View of the Second Coming of Christ
+21.05.01	Final Admonitions and Concluding Greetings
+22.01.01	Address and Salutation
+22.01.03	The Obligations Imposed upon the Believers by the Rich Promises of God
+22.01.12	The Reliability of the Gospel and of Prophecy
+22.02.01	A Warning against the False Teachers of All Times
+22.03.01	The Certain Coming of Christ and Its Lessons
+23.01.01	Christ's Person and Office
+23.02.01	Christ's Propitiation and Its Influence upon the Life of the Christians
+23.03.01	The Glory, Privileges, and Obligations of Sonship
+23.04.01	The Attitude of Christians toward False Teachers and toward One Another
+23.05.01	The Power, Testimony, and Substance of Faith
+23.05.13	A Concluding Summary
+24.01.01	Address and Salutation
+24.01.04	Exhortation to Walk in Truth and Love
+24.01.07	Warning against False Teachers
+24.01.12	Conclusion
+25.01.01	Address and Commendation
+25.01.05	The Hospitality of Gaius
+25.01.09	The Insolence of Diotrephes
+25.01.12	Commendation of Demetrius and Conclusion
+26.01.01	Introductory Salutation
+26.01.03	An Exhortation to Constancy in Faith
+26.01.05	Examples of the Judgment of God
+26.01.08	The Character of the Seducing Teachers
+26.01.14	God's Coming Judgment Upon the False Teachers
+26.01.17	An Admonition to Holy Steadfastness
+26.01.24	Concluding Doxology
+27.01.01	The Mystery of the Seven Stars and the Seven Lampstands
+27.02.01	Pastoral Letters to Congregations at Ephesus, Smyrna, Pergamum, and Thyatira
+27.03.01	Pastoral Letters to the Congregations at Sardis, at Philadelphia, and at Laodicea
+27.04.01	The Vision of God's Throne of Majesty and Glory
+27.05.01	Christ, the Lion and the Lamb, Praised with a New Song
+27.06.01	The Opening of Six Seals of the Scroll
+27.07.01	The Comfort of the Church in Spiritual Afflictions
+27.08.01	The Third Vision and the Opening of the Seventh Seal
+27.09.01	The Sounding of the Fifth and Sixth Trumpets
+27.10.01	The Seer Eats a Book
+27.11.01	Of the Two Witnesses and the Sounding of the Seventh Trumpet
+27.12.01	The Battle of Michael with the Dragon
+27.13.01	The Seven-Headed Beast of Blasphemy and the Two-Horned Beast of Deceit
+27.14.01	Of the Church of the Reformation and the Fall of Spiritual Babylon
+27.15.01	The Angels with the Seven Vials and the Opening of the Temple
+27.16.01	The Seven Vials of Wrath are Poured Out
+27.17.01	The Kingdom of Antichrist Symbolized by the Great Harlot
+27.18.01	The Fall and Destruction of Antichrist's Kingdom
+27.19.01	The Triumph of the Elect in Heaven
+27.20.01	Of the Dragon Bound and Loosed, of Gog and Magog, and of the Last Judgment
+27.21.01	The Seventh Vision: Of the Heavenly Jerusalem
+27.22.01	Of the Certain Bliss of Eternal Life

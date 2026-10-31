@@ -1,0 +1,26 @@
+{
+  "name": "lexiko",
+  "short_name": "lexiko",
+  "description": "Learn to read the Greek New Testament: spaced-repetition vocabulary, a tap-for-parsing reader and passage readiness. Free, offline, no login.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f6f2ea",
+  "theme_color": "#f6f2ea",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "books", "reference"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Today's session", "short_name": "Study", "url": "./#/learn/daily" },
+    { "name": "Read", "short_name": "Read", "url": "./#/read" },
+    { "name": "Progress", "short_name": "Progress", "url": "./#/progress" }
+  ]
+}
