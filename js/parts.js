@@ -200,7 +200,7 @@ function runSession(view, queue, { scope, restart, practice }) {
       const step1 = h('div.opts', { style: { marginTop: '.8rem' } }), step2 = h('div.opts.two', { hidden: true }), tail2 = h('div');
       const opts = verbOptions(entry);
       opts.forEach((o) => step1.append(optBtn((o.lemma + ' — ' + ((lexeme(o.n).short) || lexeme(o.n).brief)), (ev) => {
-        verbOK = o.n === entry.n; [...step1.children].forEach((b, i) => settleBtn(b, opts[i].n === entry.n, b === ev.currentTarget));
+        verbOK = o.n === entry.n; [...step1.children].forEach((b, i) => { settleBtn(b, opts[i].n === entry.n, b === ev.currentTarget); b.hidden = !(b === ev.currentTarget || opts[i].n === entry.n); });   // keep only the picked and the correct verb
         card.append(h('div.qmeta', { style: { marginTop: '.6rem' } }, 'Which part is it?')); step2.hidden = false; setKeys(null);
       })));
       SLOT_NAMES.forEach((name, i) => step2.append(optBtn(name, (ev) => {
