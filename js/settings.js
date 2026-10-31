@@ -73,16 +73,18 @@ export function renderSettings(view) {
         h('button.btn.ghost', { onclick: () => dlg.close() }, 'Cancel')));
     document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   });
+  const markBackedUp = async () => {
+    await setSetting('lastBackup', Date.now());
+    const el = document.querySelector('#bk-last'); if (el) el.textContent = 'Last backup: ' + new Date(K.settings.lastBackup).toLocaleString();
+  };
   const doBackup = async () => {
     const data = await makeBackup(), json = JSON.stringify(data), name = backupName();
     const blob = new Blob([json], { type: 'application/json' });
-    await setSetting('lastBackup', Date.now());
     try {
       const file = new File([blob], name, { type: 'application/json' });
-      if (navigator.canShare && navigator.canShare({ files: [file] }) && /iPhone|iPad|Android/.test(navigator.userAgent)) { await navigator.share({ files: [file], title: 'lexiko backup' }); return toast('Backup shared'); }
-    } catch (e) { if (e && e.name === 'AbortError') return; }
-    download(blob, name); toast('Backup downloaded');
-    document.querySelector('#bk-last') && (document.querySelector('#bk-last').textContent = 'Last backup: just now');
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && /iPhone|iPad|Android/.test(navigator.userAgent)) { await navigator.share({ files: [file], title: 'lexiko backup' }); await markBackedUp(); return toast('Backup shared'); }
+    } catch (e) { if (e && e.name === 'AbortError') return; }      // cancelled the share sheet: not a backup
+    download(blob, name); await markBackedUp(); toast('Backup downloaded');
   };
 
   const installBtn = h('button.btn', { hidden: !window.__installEvt, onclick: async () => { const e = window.__installEvt; if (!e) return; e.prompt(); await e.userChoice; window.__installEvt = null; installBtn.hidden = true; } }, icon('download', 18), 'Install app');
