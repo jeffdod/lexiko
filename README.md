@@ -6,7 +6,7 @@ Learn to read the Greek New Testament. A free, offline-first Progressive Web App
 **Planned:** parsing module (guided tense → voice → mood… tree, per-slot scoring, stem-change explanations), principal parts, pericope divisions, form-level SRS.
 
 ## Use it
-Open `https://jeffdod.github.io/lexiko/` and "Add to Home Screen" / "Install app". It then runs full-screen and fully offline.
+Open `https://lexiko.org/` and "Add to Home Screen" / "Install app". It then runs full-screen and fully offline.
 
 ## Deploy (GitHub Pages)
 1. Push this folder's contents to the repo root (`main`).
