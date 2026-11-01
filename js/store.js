@@ -47,6 +47,19 @@ export const store = {
     const tx = db.transaction('cards', 'readwrite'); const os = tx.objectStore('cards');
     cards.forEach((c) => os.put(c)); await txDone(tx);
   },
+  async deleteCard(id) {
+    const db = await open();
+    if (!db) { memory.cards.delete(id); return; }
+    const tx = db.transaction('cards', 'readwrite'); tx.objectStore('cards').delete(id); await txDone(tx);
+  },
+  async dropLastLog() {
+    const db = await open();
+    if (!db) { memory.log.pop(); return; }
+    const tx = db.transaction('log', 'readwrite');
+    const req = tx.objectStore('log').openCursor(null, 'prev');
+    req.onsuccess = () => { const c = req.result; if (c) c.delete(); };
+    await txDone(tx);
+  },
   async addLog(entries) {
     const db = await open();
     if (!db) { memory.log.push(...entries); return; }

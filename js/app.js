@@ -52,6 +52,10 @@ async function registerSW() {
       const w = reg.installing; if (!w) return;
       w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w); });
     });
+    // look for a new version when the app comes back to the front and once an hour, not only at launch (an installed app can stay open for days)
+    const check = () => { reg.update().catch(() => {}); };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    setInterval(check, 60 * 60 * 1000);
     let reloaded = false;
     // reload only when an existing worker was replaced (user tapped “Reload”); never on first install
     navigator.serviceWorker.addEventListener('controllerchange', () => { if ((hadController || wantReload) && !reloaded) { reloaded = true; location.reload(); } });

@@ -1,9 +1,9 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, status, setting, setSetting, rate, getCard, dueCards, buildSession, scopeReadiness, newToday, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, studiedCount } from './know.js';
+import { K, status, setting, setSetting, rate, undoRate, getCard, dueCards, buildSession, scopeReadiness, newToday, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, studiedCount } from './know.js';
 import * as F from './fsrs.js';
 import { decode } from './morph.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner, fold, startButton } from './util.js';
+import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner, fold, startButton, toast } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
@@ -79,6 +79,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   const onKey = (e) => {
     if (view.dataset.sess !== sid) { document.removeEventListener('keydown', onKey); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if ((e.key === 'u' || e.key === 'U') && undoState) { e.preventDefault(); undo(); return; }
     const go = e.key === ' ' || e.key === 'Enter';
     if (go && e.target.closest && e.target.closest('button,a')) return;            // let the focused button do its own thing
     if (keyAct && keyAct(e, go)) e.preventDefault();
@@ -104,7 +105,17 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   const advance = () => { current = queue.shift(); if (!current) return finish(); show(current); };
   const requeue = (item, gap) => queue.splice(Math.min(queue.length, gap), 0, item);
 
+  let undoState = null;                                   // the one answer that can be taken back
+  async function undo() {
+    const u = undoState; if (!u) return; undoState = null;
+    if (u.rated) await undoRate();
+    Object.assign(stats, u.stats); u.item.seen = u.wasSeen;
+    const at = queue.indexOf(u.item); if (at >= 0) queue.splice(at, 1);          // a missed card that was queued to come back
+    if (current) queue.unshift(current);
+    current = u.item; show(current); toast('Last answer undone');
+  }
   async function grade(item, g) {
+    undoState = { item, wasSeen: !!item.seen, stats: { ...stats }, rated: !practice };
     if (!practice) await rate(item.n, g, item.type, Date.now() - t0);
     if (!item.seen) {                       // first time this card is answered in the session
       item.seen = true;
@@ -122,7 +133,8 @@ function runSession(view, items, { title, scope, back, practice = false }) {
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })), chartsButton(),
         h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
-      practice ? practiceBanner(item.type === 'preview') : null, inner));
+      practice ? practiceBanner(item.type === 'preview') : null, inner,
+      undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));
   }
 
   function show(item) {
