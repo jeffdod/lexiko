@@ -70,6 +70,13 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.keyboard.press('Escape');
   await page.goto(URL + '#/help'); await page.waitForSelector('summary:has-text("Reading")'); ok(await page.locator('details').count() >= 5, 'help page has sections');
   await page.goto(URL + '#/settings'); await page.waitForSelector('summary:has-text("Advanced")'); ok(!(await page.locator('text=Memory target').first().isVisible()), 'advanced settings start folded');
+  // phone width: the reader (with its Previous / Mark as read / Next footer) must not stretch the page
+  { const pctx = await b.newContext({ viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true }); const pp = await pctx.newPage();
+    await pp.goto(URL); await pp.waitForSelector('#loading', { state: 'detached' });
+    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Skip for now")'); await pp.waitForSelector('.hero');
+    await pp.goto(URL + '#/read/JHN/1'); await pp.waitForSelector('[data-t]');
+    const o = await pp.evaluate(() => ({ cw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth }));
+    ok(o.sw <= o.cw + 1, 'reader fits a 320px phone without sideways scrolling ' + JSON.stringify(o)); await pctx.close(); }
   ok(errors.length === 0, 'no console/page errors ' + errors.join('|'));
   await b.close();
   console.log(fails ? '\n' + fails + ' FAILURES' : '\nALL PASSED'); process.exit(fails ? 1 : 0);
