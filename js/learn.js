@@ -129,7 +129,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })), chartsButton(),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })), h('span.qcount', { 'aria-label': 'Item ' + Math.min(stats.done + 1, total) + ' of ' + total }, Math.min(stats.done + 1, total) + ' / ' + total), chartsButton(),
         h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
       practice ? practiceBanner(item.type === 'preview') : null, inner,
       undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));
