@@ -12,6 +12,7 @@ import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 import { chartsButton, chartRowFor } from './charts.js';
+const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
 const fmt = (n) => n.toLocaleString('en-US');
 export const SLOT_NAMES = ['Present', 'Future', 'Aorist active', 'Perfect active', 'Perfect middle/passive', 'Aorist passive'];
@@ -197,7 +198,7 @@ function runSession(view, queue, { scope, restart, practice }) {
         partOK = i === c.slot; [...step2.children].forEach((b, j) => settleBtn(b, j === c.slot, b === ev.currentTarget));
         c.revealed = true; const g = verbOK && partOK ? 3 : verbOK || partOK ? 2 : 1;
         clear(tail2).append(verbPanel(entry, c.slot), continueBtn(g, g === 3 ? 'Continue' : 'Continue (I’ll see this again)'));
-        tail2.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        tail2.scrollIntoView({ block: 'nearest', behavior: SMOOTH });
       })));
       frame(c, entry, [card, step1, step2], tail2); setKeys(null); return;
     }
@@ -210,7 +211,7 @@ function runSession(view, queue, { scope, restart, practice }) {
       choices.forEach((f) => optsEl.append(optBtn(f, (ev) => {
         const ok = f === form; [...optsEl.children].forEach((b, i) => settleBtn(b, choices[i] === form, b === ev.currentTarget));
         c.revealed = true; clear(tail2).append(verbPanel(entry, c.slot), continueBtn(ok ? 3 : 1, ok ? 'Continue' : 'Continue (I’ll see this again)'));
-        tail2.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        tail2.scrollIntoView({ block: 'nearest', behavior: SMOOTH });
       }, true)));
       const idk = h('button.btn.ghost.sm', { onclick: () => { [...optsEl.children].forEach((b, i) => settleBtn(b, choices[i] === form, false)); c.revealed = true; clear(tail2).append(verbPanel(entry, c.slot), continueBtn(1, 'Continue (I’ll see this again)')); idk.remove(); } }, 'I don’t know');
       frame(c, entry, [card, optsEl, h('div.row', idk)], tail2); setKeys(null); return;
