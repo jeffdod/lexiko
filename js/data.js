@@ -174,10 +174,14 @@ function formCases(fi) {
 /** Which case does the preposition at toks[i] govern? Looks at the next case-bearing word(s). → { n, sure } */
 function pickSense(L, toks, i) {
   const allowed = new Set(L.senses.map((x) => x[0]));
-  let cand = null;
+  let cand = null, afterIndecl = false;
   for (let j = i + 1; j < Math.min(toks.length, i + 8); j++) {
     const cs = formCases(toks[j] >> 4);
-    if (!cs.size) { if (['CONJ', 'PRT', 'ADV', 'COND'].includes(cs.pos)) continue; break; }
+    if (!cs.size) {
+      if (!afterIndecl && ['N', 'A'].includes(cs.pos)) { afterIndecl = true; continue; }          // a name or number with no case ending: look at the word after it
+      if (!afterIndecl && ['CONJ', 'PRT', 'ADV', 'COND'].includes(cs.pos)) continue;
+      break;
+    }
     const hit = [...cs].filter((c) => allowed.has(c) && (cand === null || cand.has(c)));
     if (!hit.length) break;
     cand = new Set(hit);

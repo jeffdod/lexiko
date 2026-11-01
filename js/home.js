@@ -52,5 +52,6 @@ export function renderHome(view) {
   // 4. everything else stays one tap away, out of the way
   const sug = suggestions(3);
   if (sug.length) stack.append(fold('Good next reads', h('div.list', sug.map((r) => suggestionItem(r)))));
+  stack.append(h('a.small.center', { href: '#/help', style: { textAlign: 'center' } }, 'How lexiko works ›'));
   clear(view).append(stack);
 }

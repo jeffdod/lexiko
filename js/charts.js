@@ -1,6 +1,8 @@
 // Reference charts, shown in a sheet that can be opened from any verb quiz: the master verb chart (indicative)
 // and the primary / secondary personal endings. Plain data tables, themed and available offline.
 import { h, clear, icon } from './util.js';
+import { D } from './data.js';
+import { decode, CASE } from './morph.js';
 
 /* tense | augment/reduplication | tense stem | tense formative | connecting vowel | personal endings | 1st singular */
 const MASTER = [
@@ -56,7 +58,42 @@ function endingsTable(title, act, mp, alt) {
     h('div.clabel', 'Middle / passive'), h('div.cscroll', h('table.ctable', head(false), h('tbody', rows(mp, false)))));
 }
 
-const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings']];
+/* ---------- noun and adjective endings, counted from the text itself ---------- */
+const END_RE = /(αι|ει|οι|υι|ου|[αεηιουω])([νς])?$/;
+/** The ending of a form: its last vowel (or diphthong) and a following ν/ς; accents and breathings dropped, iota subscript kept. */
+function endingOf(w) {
+  const t = w.normalize('NFD').replace(/[\u0300-\u0344\u0346-\u036f]/g, '').normalize('NFC').toLowerCase().replace(/σ$/, 'ς');
+  const m = END_RE.exec(t); return m ? m[0] : null;
+}
+let nounCache = null;
+function nounEndings() {
+  if (nounCache) return nounCache;
+  const cells = {};                                           // 'NSM' -> Map(ending -> occurrences)
+  for (const f of D.forms) {
+    const a = f.an[0]; if (!a) continue;
+    const d = decode(a.m); if ((d.pos !== 'N' && d.pos !== 'A') || !d.slots.case || !d.slots.gender) continue;
+    const e = endingOf(f.plain); if (!e) continue;
+    const k = d.slots.case + d.slots.number + d.slots.gender, m = (cells[k] ||= new Map());
+    m.set(e, (m.get(e) || 0) + f.count);
+  }
+  return (nounCache = cells);
+}
+function nounEndingsTables() {
+  const cells = nounEndings(), GEN = [['M', 'Masculine'], ['F', 'Feminine'], ['N', 'Neuter']];
+  const table = (num, title) => h('div.cblock', h('h3', title), h('div.cscroll', h('table.ctable',
+    h('thead', h('tr', h('th', ''), GEN.map(([, g]) => h('th', g)))),
+    h('tbody', ['N', 'G', 'D', 'A', 'V'].map((c) => h('tr', h('th', { scope: 'row' }, CASE[c]),
+      GEN.map(([g]) => {
+        const m = cells[c + num + g]; if (!m) return h('td', '–');
+        const tot = [...m.values()].reduce((x, y) => x + y, 0);
+        const top = [...m.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).filter(([, n], i) => i === 0 || n / tot >= 0.05);
+        return h('td', top.map(([e, n], i) => h('div', h('span', { lang: 'grc' }, e), h('span.muted.small', ' ' + Math.round(100 * n / tot) + '%'))));
+      })))))));
+  return [h('p.small.muted', 'Counted from every noun and adjective in the text: the endings that occur most often in each case, number and gender, with how much of that group each makes up. A word’s own ending depends on its declension, so this shows the pattern, not one paradigm. A few very common words (such as the name Jesus) weigh heavily in these counts.'),
+    table('S', 'Singular'), table('P', 'Plural')];
+}
+
+const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings']];
 
 /** Open the charts sheet. `highlight` is a master-chart row key (see chartRowFor). */
 export function openCharts({ tab = 'master', highlight = null } = {}) {
@@ -64,6 +101,7 @@ export function openCharts({ tab = 'master', highlight = null } = {}) {
   const draw = (t) => {
     clear(body);
     if (t === 'master') body.append(h('p.small.muted', 'Indicative, with λύω as the model. Any verb’s principal part follows one of these rows.'), masterTable(highlight));
+    else if (t === 'nouns') body.append(...nounEndingsTables());
     else body.append(endingsTable('Primary endings', PRIMARY_ACT, PRIMARY_MP, true), endingsTable('Secondary endings', SECOND_ACT, SECOND_MP, true));
     const row = body.querySelector('tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
   };

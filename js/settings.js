@@ -2,7 +2,7 @@
 import { D } from './data.js';
 import { K, setting, setSetting, setLevel, studiedCount } from './know.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup, ENC_FORMAT, canLock, lockBackup, unlockBackup } from './store.js';
-import { h, clear, toast, icon, pct } from './util.js';
+import { h, clear, toast, icon, pct, fold } from './util.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
 export const LEVELS = [null, 1000, 500, 250, 100, 50, 30, 20, 10, 5];
@@ -103,30 +103,32 @@ export function renderSettings(view) {
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   clear(view).append(h('div.pagehead', h('h1', 'Settings')), h('div.stack',
+    h('a.card.flat.row.between', { href: '#/help', style: { textDecoration: 'none', color: 'inherit' } }, h('b', 'How lexiko works'), h('span.muted', '›')),
     h('div.card', h('h2', 'Appearance'), seg([['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']], setting('theme'), async (v) => { await setSetting('theme', v); applyTheme(v); })),
     h('div.card.stack', h('h2', 'Your level'), h('p.muted.small', 'I already know every word that occurs at least this many times. lexiko will still spot-check some of them now and then.'),
-      levelPicker(),
-      h('div.row.between', h('div', h('b', 'Spot-checks'), h('div.muted.small', 'How often words you’ve claimed to know are mixed into sessions.')),
-        seg([[0, 'Off'], [0.06, 'Light'], [0.12, 'Normal'], [0.2, 'More']], setting('probeRate'), (v) => setSetting('probeRate', v)))),
+      levelPicker()),
     h('div.card.stack', h('h2', 'Studying'),
       h('div.row.between', h('b', 'Quiz style'), seg([['flash', 'Flashcards'], ['choice', 'Multiple choice']], setting('mode'), (v) => setSetting('mode', v))),
-      h('div.row.between', h('b', 'New words per day'), h('input', { type: 'number', min: 0, max: 100, value: setting('newPerDay'), style: { width: '5rem' }, onchange: (e) => setSetting('newPerDay', Math.max(0, Math.min(100, +e.target.value || 0))) })),
+      h('div.row.between', h('b', 'New words per day'), h('input', { type: 'number', min: 0, max: 100, 'aria-label': 'New words per day', value: setting('newPerDay'), style: { width: '5rem' }, onchange: (e) => setSetting('newPerDay', Math.max(0, Math.min(100, +e.target.value || 0))) }))),
+    fold('Advanced',
+      h('div.row.between', h('div', h('b', 'Spot-checks'), h('div.muted.small', 'How often words you’ve said you know are mixed into sessions to check them.')),
+        seg([[0, 'Off'], [0.06, 'Light'], [0.12, 'Normal'], [0.2, 'More']], setting('probeRate'), (v) => setSetting('probeRate', v))),
       h('div.row.between', h('div', h('b', 'Memory target'), h('div.muted.small', 'Higher = more reviews, fewer forgotten words.')),
         seg([[0.85, '85%'], [0.9, '90%'], [0.95, '95%']], setting('retention'), (v) => setSetting('retention', v)))),
-    h('div.card.stack', h('h2', 'Your data'), persistLine,
-      canLock() ? h('div.stack', { style: { gap: '.3rem' } }, h('label.field', 'Lock the backup with a passphrase (optional)', passIn),
+    h('div.card.stack', h('h2', 'Your data'),
+      h('div.muted.small', { id: 'bk-last' }, lastBackup ? 'Last backup: ' + new Date(lastBackup).toLocaleString() : 'No backup yet. Your progress lives only on this device — back it up now and then.'),
+      h('div.row.wrap', h('button.btn.primary', { onclick: doBackup }, icon('download', 18), 'Back up progress'), h('button.btn', { onclick: () => fileIn.click() }, icon('upload', 18), 'Restore…'), fileIn),
+      canLock() ? fold('Lock the backup with a passphrase (optional)', h('label.field', 'Passphrase', passIn),
         h('div.muted.small', 'Leave it empty for an ordinary backup. If you set one, you’ll need the same passphrase to restore, and lexiko can’t recover it for you: it isn’t stored anywhere.')) : null,
-      h('div.row.wrap', h('button.btn', { onclick: () => refreshPersist(true) }, 'Protect my data'),
-        h('button.btn.primary', { onclick: doBackup }, icon('download', 18), 'Back up progress'), h('button.btn', { onclick: () => fileIn.click() }, icon('upload', 18), 'Restore…'), fileIn),
-      h('p.muted.small', { id: 'bk-where' }, ios ? 'On iPhone/iPad: tap Back up progress, then choose “Save to Files” in the menu that appears, and pick a folder in iCloud Drive (a folder named lexiko works well). To restore later, tap Restore… and choose that file. Backup names start with “lex” and end with the date, so the newest is easy to find.'
+      fold('Where backups go, and storage', h('p.muted.small', { id: 'bk-where' }, ios ? 'On iPhone/iPad: tap Back up progress, then choose “Save to Files” in the menu that appears, and pick a folder in iCloud Drive (a folder named lexiko works well). To restore later, tap Restore… and choose that file. Backup names start with “lex” and end with the date, so the newest is easy to find.'
         : /Android/.test(navigator.userAgent) ? 'On Android: tap Back up progress, then choose where to save it (for example Drive or Files). To restore later, tap Restore… and choose that file. Backup names start with “lex” and end with the date.'
         : 'On a computer the backup is saved to your Downloads folder. Copy it somewhere safe (a cloud drive or a USB stick). To restore later, click Restore… and choose that file. Backup names start with “lex” and end with the date.'),
-      h('div.muted.small', { id: 'bk-last' }, lastBackup ? 'Last backup: ' + new Date(lastBackup).toLocaleString() : 'No backup yet. Your progress lives only on this device — back it up now and then.'),
-      h('div.muted.small', store.usingMemory ? '⚠ This browser is blocking storage, so progress will be lost when you close the page.' : 'Stored in this browser (IndexedDB). No account, no server.')),
+        persistLine, h('div.row.wrap', h('button.btn.sm', { onclick: () => refreshPersist(true) }, 'Protect my data')),
+        h('div.muted.small', store.usingMemory ? '⚠ This browser is blocking storage, so progress will be lost when you close the page.' : 'Stored in this browser (IndexedDB). No account, no server.'))),
     h('div.card.stack', h('h2', 'Install'), installBtn,
       h('p.muted.small', standalone ? '✓ You’re running the installed app.' : ios ? 'On iPhone/iPad: tap the Share button, then “Add to Home Screen”. It then opens full-screen and works offline.' : 'Use your browser’s “Install app” / “Add to Home Screen” option to run lexiko full-screen, offline, with no browser bars.')),
     h('div.card.stack', h('h2', 'About'),
-      h('p.small', 'lexiko — free, offline, no login. Greek text: Robinson–Pierpont Byzantine Textform with Strong’s numbers and RP morphology. Glosses: a Dodson Greek–English Lexicon derivative (public domain). Type: Gentium Porsonic by SIL Global, SIL Open Font License 1.1, modified web subset renamed “Lexiko Serif”.'),
+      h('p.small', 'lexiko — free, offline, no login. Greek text: Robinson–Pierpont Byzantine Textform with Strong’s numbers and RP morphology. Glosses: a Dodson Greek–English Lexicon derivative (public domain), with case notes added for prepositions. Type: Gentium Porsonic by SIL Global, SIL Open Font License 1.1, modified web subset renamed “Lexiko Serif”.'),
       h('p.small.muted', 'Scheduling uses the open FSRS algorithm. ' + fmt(D.lex.length) + ' words · ' + fmt(D.totalTokens) + ' tokens · ' + (studiedCount('w:') ? studiedCount('w:') + ' words studied.' : 'nothing studied yet.')),
       h('div.row.wrap', h('button.btn.sm', { onclick: showLicense }, 'Font license'), h('a.btn.sm', { href: 'https://github.com/jeffdod/lexiko', target: '_blank', rel: 'noopener' }, 'Source'),
         h('button.btn.sm.danger', { onclick: async () => { if (confirm('Erase ALL progress and settings on this device? Back up first if unsure.') && confirm('Really erase everything?')) { await store.clearAll(); try { localStorage.removeItem('lexiko-theme'); } catch { /* ignore */ } location.reload(); } } }, 'Erase everything')))));

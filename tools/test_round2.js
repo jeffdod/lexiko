@@ -50,6 +50,14 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   });
   ok(r.fmt === 'lexiko-backup-locked' && !r.leaks && r.back === 'world' && r.bad === 'wrong', 'a locked backup hides its contents, opens with the right passphrase and refuses a wrong one');
 
+  // noun and adjective endings chart, counted from the text; help page; settings fold
+  await page.goto(URL + '#/parse'); await page.waitForSelector('button:has-text("Charts")'); await page.click('button:has-text("Charts")'); await page.click('button:has-text("Noun endings")');
+  ok(await page.locator('dialog.charts .cblock').count() === 2, 'noun endings chart shows singular and plural');
+  const first = await page.locator('dialog.charts .cblock').first().locator('tbody tr').first().textContent();
+  ok(/ος/.test(first) && /%/.test(first), 'noun chart counts real endings (nominative row: ' + first.slice(0, 30) + ')');
+  await page.keyboard.press('Escape');
+  await page.goto(URL + '#/help'); await page.waitForSelector('summary:has-text("Reading")'); ok(await page.locator('details').count() >= 5, 'help page has sections');
+  await page.goto(URL + '#/settings'); await page.waitForSelector('summary:has-text("Advanced")'); ok(!(await page.locator('text=Memory target').first().isVisible()), 'advanced settings start folded');
   ok(errors.length === 0, 'no console/page errors ' + errors.join('|'));
   await b.close();
   console.log(fails ? '\n' + fails + ' FAILURES' : '\nALL PASSED'); process.exit(fails ? 1 : 0);
