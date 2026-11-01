@@ -83,6 +83,8 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
       out.variant = { before, after }; return out; });
     ok(r.JHN.uniq === r.JHN.n && r.MRK.uniq === r.MRK.n && r.JHN.ids === r.JHN.n, 'a passage session never repeats a form ' + JSON.stringify(r));
     ok(r.variant.before === true && r.variant.after === false, 'progress on a capitalised or differently accented variant counts for the merged form ' + JSON.stringify(r.variant)); }
+  await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcount');
+  ok(/^\d+ \/ \d+$/.test(await page.textContent('.qcount')), 'quiz shows item count');
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');
