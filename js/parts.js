@@ -126,9 +126,9 @@ function runSession(view, queue, { scope, restart, practice }) {
 
   const finish = () => {
     stop();
-    clear(view).append(h('div.pagehead', h('h1', practice ? (S.previewOnly ? 'Preview complete' : 'Practice complete') : 'Session complete')),
+    clear(view).append(h('div.pagehead', h('h1', practice ? (S.previewOnly ? 'Look-ahead complete' : 'Practice complete') : 'Session complete')),
       h('div.card.stack',
-        practice ? h('p.muted.small', 'Reinforce is practice only — your review schedule is unchanged.') : null,
+        practice ? h('p.muted.small', 'Strengthening is practice only — your review schedule is unchanged.') : null,
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'parts done')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'answered correctly')), practice ? null : h('div.kpi', h('b', S.fresh), h('span', 'new parts started'))),
         h('div.row.wrap', h('button.btn.primary', { onclick: restart }, practice ? 'Another round' : 'Practise more'),
           h('a.btn', { href: '#/parts' }, 'Back to Principal parts'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
@@ -147,7 +147,7 @@ function runSession(view, queue, { scope, restart, practice }) {
   }
 
   function frame(c, entry, inner, ctl) {
-    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Reinforce'] : c.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
+    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
@@ -251,7 +251,7 @@ export function renderParts(view, params) {
     if (!queue.length) {
       if (!scope && !practice) { const alt = smart('parts'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }
       clear(view).append(h('div.pagehead', h('h1', 'Principal parts')), h('div.card.stack',
-        h('p', practice ? (rest[1] === 'preview' ? 'You’ve already started every part available right now.' : 'Study a few principal parts first; Reinforce will then pick out your shakiest.')
+        h('p', practice ? (rest[1] === 'preview' ? 'You’ve already started every part available right now.' : 'Study a few principal parts first; Strengthen weak spots will then pick out your shakiest.')
           : scope ? 'There are no principal parts to learn in ' + scopeLabel(scope) + '.' : 'You’re all caught up. 🎉'), h('a.btn', { href: '#/parts' }, 'Back')));
       return;
     }
@@ -270,7 +270,7 @@ function landing(view) {
   clear(view).append(h('div.pagehead', h('h1', 'Principal parts')),
     h('div.stack',
       startButton(smart('parts')),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Preview new parts'), chartsButton()),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Look ahead at new parts'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/parts/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal, {

@@ -27,7 +27,7 @@ export function hidePop() {
 }
 function scheduleHide() { clearTimeout(hideTimer); hideTimer = setTimeout(() => { if (!popPinned) hidePop(); }, 280); }
 
-function statusChip(n) {
+export function statusChip(n) {
   const s = status(n), c = K.cards.get('w:' + n);
   if (s === 'known') return h('span.chip.good', c ? '✓ Known' : '✓ Assumed known');
   if (s === 'learning') return h('span.chip.warn', '◐ Learning');
@@ -148,7 +148,7 @@ export function renderReader(view, params) {
     const sc = { book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 }, rd = scopeReadiness(sc);
     clear(meta).append(
       h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' known · ' + readinessLabel(rd.known)),
-      h('span.row', rd.distinctUnknown ? h('a.btn.sm', { href: '#/learn/passage/' + [book.code, ch, 1, ch, 999].join('/') }, icon('learn', 16), 'Study ' + rd.distinctUnknown + ' words') : h('span.chip.good', 'No new words'),
+      h('span.row', rd.distinctUnknown ? h('a.btn.sm', { href: '#/learn/passage/' + [book.code, ch, 1, ch, 999].join('/') }, icon('learn', 16), 'Learn the ' + rd.distinctUnknown + ' new word' + (rd.distinctUnknown === 1 ? '' : 's')) : h('span.chip.good', 'No new words'),
         h('button.btn.sm' + (setting('glossMode') ? '.primary' : ''), { 'aria-pressed': !!setting('glossMode'), onclick: async () => { await setSetting('glossMode', !setting('glossMode')); draw(); } }, 'Glosses')),
     );
     const read = !!K.read[book.code + ':' + ch];

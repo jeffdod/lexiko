@@ -12,13 +12,30 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   const errors = []; page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached', timeout: 20000 });
   ok(await page.title() === 'lexiko — build your Greek vocabulary and read the Greek New Testament better', 'title');
-  ok(/Where are you starting/.test(await page.textContent('#view')), 'home shows level onboarding');
+  ok(/How much Greek do you know/.test(await page.textContent('#view')), 'first run asks how much Greek you know');
   await page.screenshot({ path: out + '/01-home-light.png' });
 
-  // choose level 100+
-  await page.click('.lvl:has-text("100+")');
-  await page.waitForFunction(() => !/Where are you starting/.test(document.querySelector('#view').textContent));
-  ok(/Today/.test(await page.textContent('#view')), 'home after level');
+  // two plain questions, then Skip lands on Home
+  await page.click('.choice:has-text("I know the basics")');
+  await page.click('button:has-text("Continue")');
+  ok(/What would you like to do first/.test(await page.textContent('#view')), 'step 2 asks what to do first');
+  await page.click('button:has-text("Skip for now")');
+  await page.waitForFunction(() => /Today/.test(document.querySelector('#view').textContent));
+  ok(/Today/.test(await page.textContent('#view')), 'home after first run');
+
+  // search: by Greek form without accents, by Beta Code, by English, by Strong's number
+  const found = async (q) => { await page.goto(URL + '#/search'); await page.waitForSelector('#sq'); await page.fill('#sq', q); await page.waitForTimeout(150); return page.locator('.list .li b').allTextContents(); };
+  const g1 = await found('logos'); ok(g1.some((t) => /λόγος/.test(t)), 'Beta Code "logos" finds the word: ' + g1.slice(0, 3));
+  const g2 = await found('λογος'); ok(g2.some((t) => /λόγος/.test(t)), 'unaccented Greek finds the accented word');
+  const g3 = await found('lo/gou'); ok(g3.some((t) => /λόγος/.test(t)), 'Beta Code with accent marks, genitive form, finds the word');
+  const g3b = await found('lo/gos'); ok(g3b.some((t) => /λόγος/.test(t)), 'Beta Code with the right accent finds the word');
+  const g3c = await found('logo/s'); ok(!g3c.some((t) => /λόγος/.test(t)), 'Beta Code with a different accent does not');
+  const g2b = await found('λόγος'); ok(g2b.some((t) => /λόγος/.test(t)), 'accented Greek finds the word');
+  const g2c = await found('λογός'); ok(!g2c.some((t) => /λόγος/.test(t)), 'accented Greek with another accent does not');
+  const g4 = await found('peace'); ok(g4.length > 0, 'English meaning finds words');
+  const g5 = await found('G1519'); ok(g5.length === 1, 'Strong\'s number finds one word');
+  await page.click('.list .li'); await page.waitForSelector('h2:has-text("Where it appears")');
+  ok(await page.locator('.card mark').count() > 0, 'word detail highlights it in a verse');
 
   // reader
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
@@ -89,7 +106,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
 
   // learn: passage session
   await page.goto(URL + '#/learn'); await page.waitForSelector('.start');
-  ok(await page.locator('.topics .tile').count() === 3 && /Start|Reinforce|Preview/.test(await page.textContent('.start')), 'Learn shows one start button and three topics');
+  ok(await page.locator('.topics .tile').count() === 3 && /Review|Learn new|Practise|Strengthen|Look ahead/.test(await page.textContent('.start')), 'Learn shows one start button and three topics');
   await page.screenshot({ path: out + '/05-learn.png' });
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
   await page.selectOption('select[aria-label=Book]', 'JHN'); await page.selectOption('select[aria-label=Section]', { index: 1 });

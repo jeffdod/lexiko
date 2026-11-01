@@ -16,7 +16,7 @@ export function applyTheme(t) {
   });
 }
 
-function levelStats(level) {
+export function levelStats(level) {
   if (level == null) return { words: 0, cov: 0 };
   let words = 0, tok = 0;
   for (const L of D.lex) if (L.freq >= level) { words++; tok += L.freq; }

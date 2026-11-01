@@ -79,6 +79,7 @@ button { font: inherit; color: inherit; }
 .btn.icon { padding: 0; width: 2.75rem; } .btn.icon.sm { width: 2.2rem; }
 .btn[disabled] { opacity: .45; pointer-events: none; }
 .btn.block { display: flex; width: 100%; }
+mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding: 0 .15em; }
 .chip { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
 .chip.good { background: var(--good-soft); color: var(--good); } .chip.warn { background: var(--warn-soft); color: var(--warn); } .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.accent { background: var(--accent-soft); color: var(--accent); } .chip.gold { background: var(--gold-soft); color: var(--gold); }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; gap: 2px; max-width: 100%; }
@@ -269,3 +270,15 @@ dialog.charts { width: min(60rem, 96vw); max-width: 96vw; max-height: 90dvh; ove
 .cardparts { margin-top: .8rem; text-align: left; width: 100%; max-width: 34rem; display: grid; gap: .3rem; } .cardparts .partsgrid { grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
 
 .qcard details.more { margin-top: .3rem; text-align: left; max-width: 34rem; } .qcard details.more summary { cursor: pointer; font-size: .85rem; font-weight: 700; color: var(--accent); text-align: center; }
+
+/* ---- first run ---- */
+.welcome { max-width: 32rem; margin-inline: auto; padding-top: .5rem; }
+.welcome h1 { font-size: 1.9rem; line-height: 1.15; margin: 0; }
+.welcome .center { text-align: center; }
+.brand-word { font-family: var(--greek); font-weight: 700; font-size: 1.5rem; color: var(--accent); }
+.choices { display: grid; gap: .6rem; }
+.choice { display: flex; flex-direction: column; gap: .15rem; text-align: left; padding: .85rem 1rem; min-height: 4rem; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; font: inherit; }
+.choice b { font-size: 1.02rem; } .choice span { font-size: .88rem; color: var(--muted); }
+.choice[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
+.betagrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: .3rem .8rem; margin: .6rem 0; }
+.betarow { display: flex; gap: .4rem; align-items: baseline; } .betarow code { font-weight: 700; min-width: 1rem; } .betarow span[lang] { font-size: 1.2rem; }
