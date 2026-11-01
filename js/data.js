@@ -1,6 +1,7 @@
 // Loads the static data (lexicon, word forms, text) and builds lookup indexes.
 import { strip, PUNCT } from './util.js';
 import { decode } from './morph.js';
+import { PREP_CASES } from './prep-cases.js';
 
 const BASE = new URL('../data/', import.meta.url);
 const getJSON = async (p) => {
@@ -193,6 +194,22 @@ function pickSense(L, toks, i) {
   return { n: SENSE_BASE * CASE_ORDER[first] + L.n, sure: false };
 }
 
+let overrides = null;                                              // WeakMap: a verse's token array -> Map(token index -> 'G' | 'D' | 'A' | '-')
+function prepOverrides() {
+  if (overrides) return overrides;
+  overrides = new WeakMap();
+  for (const [code, ch, vs, n, occ, c] of PREP_CASES) {
+    const chap = D.text[code] && D.text[code].find((x) => x[0] === ch), verse = chap && chap[1].find((x) => x[0] === vs);
+    if (!verse) { console.warn('prep-cases: verse not found', code, ch, vs); continue; }
+    let seen = 0, at = -1;
+    verse[1].forEach((t, k) => { if (D.forms[t >> 4].an[0].s === n && ++seen === occ) at = k; });
+    if (at < 0) { console.warn('prep-cases: preposition not found', code, ch, vs, n, occ); continue; }
+    if (!overrides.has(verse[1])) overrides.set(verse[1], new Map());
+    overrides.get(verse[1]).set(at, c);
+  }
+  return overrides;
+}
+
 const senseCache = new WeakMap();
 /** For one verse's tokens: the effective Strong's-or-sense id of each token, and whether the case was a guess. */
 export function senseNs(toks) {
@@ -200,7 +217,12 @@ export function senseNs(toks) {
   const ns = new Int32Array(toks.length), unsure = new Uint8Array(toks.length);
   for (let k = 0; k < toks.length; k++) {
     const s = D.forms[toks[k] >> 4].an[0].s, L = D.lexByN.get(s);
-    if (L && L.senses) { const p = pickSense(L, toks, k); ns[k] = p.n; unsure[k] = p.sure ? 0 : 1; } else ns[k] = s;
+    if (L && L.senses) {
+      const o = prepOverrides().get(toks), c = o && o.get(k);
+      if (c === '-') { ns[k] = L.n; unsure[k] = 0; }                                      // not acting as a preposition: no case
+      else if (c && L.senses.some((x) => x[0] === c)) { ns[k] = SENSE_BASE * CASE_ORDER[c] + L.n; unsure[k] = 0; }
+      else { const p = pickSense(L, toks, k); ns[k] = p.n; unsure[k] = p.sure ? 0 : 1; }
+    } else ns[k] = s;
   }
   r = { ns, unsure }; senseCache.set(toks, r); return r;
 }
