@@ -65,3 +65,11 @@ A brand-new user (no level chosen, nothing studied) sees two plain questions fir
 * **Study by how common** (Learn › Vocabulary): `#/learn/set/<min>/<max>` teaches the words you don't know yet that occur between min and max times.
 * **Learning curve** (`js/growth.js`, Home and Progress): cumulative words started, rebuilt from the per-day counts lexiko already keeps (so it has history from day one).
 * **Locked backups**: in Settings an optional passphrase encrypts the backup file (AES-GCM, key from PBKDF2-SHA256, 250,000 rounds; `js/store.js`). The passphrase is never stored; restoring asks for it. Needs a secure context (https or localhost).
+
+## Settings, help, noun endings and accessibility
+* **Settings** keeps the everyday choices up front (look, level, quiz style, new words per day, backup). Spot-check rate and memory target sit under *Advanced*; the passphrase, where backups go and storage status are folded under *Your data*.
+* **How lexiko works** (`#/help`, `js/help.js`) is a short, plain-language page linked from Home and Settings.
+* **Noun endings** (Charts › Noun endings) lists, for each case, number and gender, the endings that occur most often in the text and their share, counted from the data (`js/charts.js`).
+* **Preposition cases:** a preposition that governs a name or number with no case ending (for example a proper name) looks at the word after it; about 25 occurrences (idioms and the like) remain "unsure" and the reader then shows every sense.
+* **Accessibility checks:** `node tools/test_a11y.js` checks, in light and dark at phone size, that every control has a name, tap targets are at least 40px and text contrast is at least 4.5:1 (3:1 for large text).
+* The Dodson-Ulrik file supplies every gloss; `sources/lexicon/user-lexicon.txt` still supplies the headwords.

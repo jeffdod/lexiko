@@ -6,9 +6,9 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f6f2ea; --surface: #fffdf8; --surface-2: #efe9dc; --ink: #1d2430; --ink-2: #4b5563; --muted: #727a89;
+  --bg: #f6f2ea; --surface: #fffdf8; --surface-2: #efe9dc; --ink: #1d2430; --ink-2: #4b5563; --muted: #596172;
   --line: #ddd5c4; --accent: #1f6f8f; --accent-ink: #ffffff; --accent-soft: #dcebf1; --gold: #9a6a14; --gold-soft: #f3e6c8;
-  --good: #2c7a4b; --good-soft: #dcefe2; --warn: #a8661a; --warn-soft: #f6e6cf; --bad: #b0384a; --bad-soft: #f6dde1;
+  --good: #256a40; --good-soft: #dcefe2; --warn: #8a510f; --warn-soft: #f6e6cf; --bad: #b0384a; --bad-soft: #f6dde1;
   --shadow: 0 1px 2px rgba(29, 36, 48, .06), 0 6px 20px rgba(29, 36, 48, .08);
   --greek: 'Lexiko Serif', 'Gentium Plus', 'Cardo', 'Palatino Linotype', 'Times New Roman', serif;
   --ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -17,7 +17,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #12161b; --surface: #1a2027; --surface-2: #232b34; --ink: #ebe7df; --ink-2: #b9bfc8; --muted: #8b94a1;
+    --bg: #12161b; --surface: #1a2027; --surface-2: #232b34; --ink: #ebe7df; --ink-2: #b9bfc8; --muted: #9aa3b0;
     --line: #2f3944; --accent: #6bb8d8; --accent-ink: #0c1a22; --accent-soft: #1d3442; --gold: #e0b765; --gold-soft: #3a2f18;
     --good: #6cc28b; --good-soft: #1b3326; --warn: #e3a553; --warn-soft: #3a2b14; --bad: #ee8a9a; --bad-soft: #3c1d25;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
@@ -25,7 +25,7 @@
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #12161b; --surface: #1a2027; --surface-2: #232b34; --ink: #ebe7df; --ink-2: #b9bfc8; --muted: #8b94a1;
+  --bg: #12161b; --surface: #1a2027; --surface-2: #232b34; --ink: #ebe7df; --ink-2: #b9bfc8; --muted: #9aa3b0;
   --line: #2f3944; --accent: #6bb8d8; --accent-ink: #0c1a22; --accent-soft: #1d3442; --gold: #e0b765; --gold-soft: #3a2f18;
   --good: #6cc28b; --good-soft: #1b3326; --warn: #e3a553; --warn-soft: #3a2b14; --bad: #ee8a9a; --bad-soft: #3c1d25;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
@@ -75,15 +75,15 @@ button { font: inherit; color: inherit; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; } .btn.primary:hover { filter: brightness(1.07); background: var(--accent); }
 .btn.ghost { background: transparent; border-color: transparent; } .btn.ghost:hover { background: var(--surface-2); }
 .btn.danger { color: var(--bad); }
-.btn.sm { min-height: 2.2rem; padding: .3rem .8rem; font-size: .88rem; }
-.btn.icon { padding: 0; width: 2.75rem; } .btn.icon.sm { width: 2.2rem; }
+.btn.sm { min-height: 2.5rem; padding: .3rem .8rem; font-size: .88rem; }
+.btn.icon { padding: 0; width: 2.75rem; } .btn.icon.sm { width: 2.5rem; }
 .btn[disabled] { opacity: .45; pointer-events: none; }
 .btn.block { display: flex; width: 100%; }
 mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding: 0 .15em; }
 .chip { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
 .chip.good { background: var(--good-soft); color: var(--good); } .chip.warn { background: var(--warn-soft); color: var(--warn); } .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.accent { background: var(--accent-soft); color: var(--accent); } .chip.gold { background: var(--gold-soft); color: var(--gold); }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; gap: 2px; max-width: 100%; }
-.seg button { flex: 1 1 auto; white-space: nowrap; border: 0; background: transparent; padding: .4rem .85rem; border-radius: 999px; font-weight: 600; font-size: .88rem; color: var(--ink-2); cursor: pointer; min-height: 2.2rem; }
+.seg button { flex: 1 1 auto; white-space: nowrap; border: 0; background: transparent; padding: .4rem .85rem; border-radius: 999px; font-weight: 600; font-size: .88rem; color: var(--ink-2); cursor: pointer; min-height: 2.5rem; }
 /* a label beside a segmented control: when they don't fit side by side, the control drops below and spans the row */
 .row.between { flex-wrap: wrap; } .row.between > .seg { flex: 1 1 15rem; }
 .seg button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
@@ -284,3 +284,7 @@ dialog.charts { width: min(60rem, 96vw); max-width: 96vw; max-height: 90dvh; ove
 .betarow { display: flex; gap: .4rem; align-items: baseline; } .betarow code { font-weight: 700; min-width: 1rem; } .betarow span[lang] { font-size: 1.2rem; }
 .kbhint { display: none; text-align: center; margin-top: .6rem; }
 @media (hover: hover) and (pointer: fine) { .kbhint { display: block; } }
+.charts .seg { flex-wrap: wrap; border-radius: 1.1rem; justify-content: center; } .charts .seg button { flex: 1 1 auto; }
+
+summary { padding-block: .6rem; }
+.readbar .title { min-height: 2.5rem; }
