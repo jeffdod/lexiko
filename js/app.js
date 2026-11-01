@@ -84,6 +84,10 @@ async function boot() {
   buildNav();
   window.addEventListener('hashchange', route);
   route();
+  // keep the brand screen up long enough to register, not a flash (skipped under test automation)
+  bar.style.width = '100%';
+  const MIN_MS = navigator.webdriver ? 0 : 1800, wait = MIN_MS - performance.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   document.getElementById('loading').classList.add('done'); setTimeout(() => document.getElementById('loading').remove(), 400);
   registerSW();
   requestPersistence();                                               // ask the OS to keep our storage
