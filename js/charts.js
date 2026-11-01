@@ -93,7 +93,7 @@ function nounEndingsTables(hi) {
 const CONTRACT_SINGLE = { cols: ['α', 'ε', 'η', 'ι', 'υ', 'ο', 'ω'], common: ['ε+ε', 'ε+ο', 'ο+ε', 'ο+ο'], rows: [
   ['α', ['α', 'α', 'α', 'αι', 'αυ', 'ω', 'ω']], ['ε', ['η', 'ει', 'η', 'ει', 'ευ', 'ου', 'ω']], ['η', ['η', 'η', 'η', 'ῃ', 'ηυ', 'ω', 'ω']],
   ['ο', ['ω', 'ου', 'ω', 'οι', 'ου', 'ου', 'ω']], ['ω', ['ω', 'ω', 'ω', 'ῳ', 'ωυ', 'ω', 'ω']]] };
-const CONTRACT_DIPH = { cols: ['αι', 'ει³', 'ει⁴', 'ῃ', 'οι', 'ου⁴', 'ῳ'], rows: [
+const CONTRACT_DIPH = { cols: ['αι', 'ει', 'ει*', 'ῃ', 'οι', 'ου*', 'ῳ'], rows: [
   ['α', ['ᾳ', 'ᾳ', 'α', 'ᾳ', 'ῳ', 'ω', 'ῳ']], ['ε', ['ῃ', 'ει', 'ει', 'ῃ', 'οι', 'ου', 'ῳ']], ['η', ['ῃ', 'ῃ', 'η', 'ῃ', 'ῳ', '–', 'ῳ']],
   ['ο', ['ῳ', 'οι', 'ου', 'οι', 'οι', 'ου', 'ῳ']]] };
 function contractionTables() {
@@ -103,7 +103,7 @@ function contractionTables() {
   return [
     h('p.small.muted', 'Read across: the vowel on the left joined to the vowel or diphthong at the top.'),
     h('div.cblock', h('h3', 'Single vowels'), h('p.small.muted', 'All possible contractions of single vowels. The four most common are shaded.'), grid(CONTRACT_SINGLE, CONTRACT_SINGLE.common)),
-    h('div.cblock', h('h3', 'Vowels and diphthongs'), grid(CONTRACT_DIPH), h('p.small.muted', '³ “Genuine” diphthong (not formed by a contraction). ⁴ “Spurious” diphthong (formed by a contraction).')),
+    h('div.cblock', h('h3', 'Vowels and diphthongs'), grid(CONTRACT_DIPH), h('p.small.muted', '* Formed by contraction, not an original diphthong.')),
   ];
 }
 
