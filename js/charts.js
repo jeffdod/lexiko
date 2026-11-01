@@ -87,9 +87,9 @@ function nounEndingsTables() {
         const m = cells[c + num + g]; if (!m) return h('td', '–');
         const tot = [...m.values()].reduce((x, y) => x + y, 0);
         const top = [...m.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).filter(([, n], i) => i === 0 || n / tot >= 0.05);
-        return h('td', top.map(([e, n], i) => h('div', h('span', { lang: 'grc' }, e), h('span.muted.small', ' ' + Math.round(100 * n / tot) + '%'))));
+        return h('td', top.map(([e]) => h('div', h('span', { lang: 'grc' }, e))));
       })))))));
-  return [h('p.small.muted', 'Counted from every noun and adjective in the text: the endings that occur most often in each case, number and gender, with how much of that group each makes up. A word’s own ending depends on its declension, so this shows the pattern, not one paradigm. A few very common words (such as the name Jesus) weigh heavily in these counts.'),
+  return [h('p.small.muted', 'Counted from every noun and adjective in the text: the endings that occur most often in each case, number and gender, most common first. A word’s own ending depends on its declension, so this shows the pattern, not one paradigm. A few very common words (such as the name Jesus) weigh heavily in these counts.'),
     table('S', 'Singular'), table('P', 'Plural')];
 }
 
