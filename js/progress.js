@@ -29,6 +29,20 @@ export const suggestionItem = (r, withChip = true) => h('a.li', { href: readHref
   h('div.grow', h('div.t', r.p.title), h('div.s', periRef(r.p) + (r.distinctUnknown ? ' · ' + r.distinctUnknown + ' new word' + (r.distinctUnknown === 1 ? '' : 's') : ' · all familiar'))),
   withChip ? h('span.rdy.' + readinessClass(r.known), pct(r.known)) : null);
 
+const MILESTONES = [50, 100, 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000];
+/** One calm sentence about where the person stands: their goal passage if they have one, else the whole text. */
+function milestone(goal, known, ratio) {
+  if (!known) return null;
+  const next = MILESTONES.find((m) => m > known);
+  const nextLine = next ? ' ' + fmt(next - known) + ' more word' + (next - known === 1 ? '' : 's') + ' to reach ' + fmt(next) + '.' : '';
+  if (goal) {
+    const rd = scopeReadiness(goal), lab = scopeLabel(goal);
+    return rd.known >= 0.98 ? 'You’re ready to read ' + lab + ': you know ' + pct(rd.known) + ' of its words.'
+      : 'You know ' + pct(rd.known) + ' of the words in ' + lab + '.' + (rd.distinctUnknown ? ' ' + fmt(rd.distinctUnknown) + ' word' + (rd.distinctUnknown === 1 ? '' : 's') + ' still to learn.' : '');
+  }
+  return 'You know ' + fmt(known) + ' word' + (known === 1 ? '' : 's') + ', which makes up ' + pct(ratio) + ' of the New Testament text.' + nextLine;
+}
+
 export function renderProgress(view) {
   const chs = allChapters();
   const rows = periRows(), rowOf = new Map(rows.map((r) => [r.p.id, r]));
@@ -79,7 +93,9 @@ export function renderProgress(view) {
     days.map((d) => h('div', { title: d.k + ': ' + d.r + ' reviews', style: { flex: 1, height: Math.max(3, 100 * d.r / mx) + '%', background: d.r ? 'var(--accent)' : 'var(--surface-2)', borderRadius: '4px' } })));
 
   const sug = suggestions(5, rows);
+  const mile = milestone(K.goal && K.goal.book ? K.goal : null, wc.known, kTok / tot);
   clear(view).append(h('div.pagehead', h('h1', 'Progress')), h('div.stack',
+    mile ? h('p.milestone', mile) : null,
     h('div.kpis',
       h('div.kpi', h('b', pct(kTok / tot)), h('span', 'of NT words you can read')),
       h('div.kpi', h('b', fmt(wc.known)), h('span', 'of ' + fmt(wc.total) + ' words known')),

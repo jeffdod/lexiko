@@ -71,12 +71,15 @@ const NOUN_CHARTS = [
     s3: [['Nominative', 'ς', '–'], ['Genitive', 'ος', 'ος'], ['Dative', 'ι', 'ι'], ['Accusative', 'α / ν', '–'], ['Vocative', '–', '–']],
     p3: [['Nominative / vocative', 'ες', 'α'], ['Genitive', 'ων', 'ων'], ['Dative', 'σι(ν)', 'σι(ν)'], ['Accusative', 'ας', 'α']] },
 ];
-function nounEndingsTables() {
+function nounEndingsTables(hi) {
+  const CASES = ['N', 'G', 'D', 'A', 'V'];
+  const PROW = { N: 0, V: 0, G: 1, D: 2, A: 3 };
+  const on = (num, i) => !!hi && typeof hi === 'object' && hi.number === num && (num === 'S' ? CASES[i] === hi.case : PROW[hi.case] === i);
   const grid = (cols, sing, plur) => h('div.cscroll', h('table.ctable',
     h('thead', h('tr', h('th', ''), cols.map((c) => h('th', c)))),
     h('tbody',
-      h('tr', h('th.c', { colspan: cols.length + 1 }, 'Singular')), sing.map(([r, ...v]) => h('tr', h('th', { scope: 'row' }, r), v.map((x) => h('td', { lang: 'grc' }, x)))),
-      h('tr', h('th.c', { colspan: cols.length + 1 }, 'Plural')), plur.map(([r, ...v]) => h('tr', h('th', { scope: 'row' }, r), v.map((x) => h('td', { lang: 'grc' }, x)))))));
+      h('tr', h('th.c', { colspan: cols.length + 1 }, 'Singular')), sing.map(([r, ...v], i) => h('tr' + (on('S', i) ? '.hi' : ''), h('th', { scope: 'row' }, r), v.map((x) => h('td', { lang: 'grc' }, x)))),
+      h('tr', h('th.c', { colspan: cols.length + 1 }, 'Plural')), plur.map(([r, ...v], i) => h('tr' + (on('P', i) ? '.hi' : ''), h('th', { scope: 'row' }, r), v.map((x) => h('td', { lang: 'grc' }, x)))))));
   const out = [];
   for (const c of NOUN_CHARTS) {
     out.push(h('h2.csec', c.title), h('p.small.muted', c.note),
@@ -86,15 +89,35 @@ function nounEndingsTables() {
   return out;
 }
 
-const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings']];
+/* ---------- contractions: the chart from the user's grammar ---------- */
+const CONTRACT_SINGLE = { cols: ['α', 'ε', 'η', 'ι', 'υ', 'ο', 'ω'], common: ['ε+ε', 'ε+ο', 'ο+ε', 'ο+ο'], rows: [
+  ['α', ['α', 'α', 'α', 'αι', 'αυ', 'ω', 'ω']], ['ε', ['η', 'ει', 'η', 'ει', 'ευ', 'ου', 'ω']], ['η', ['η', 'η', 'η', 'ῃ', 'ηυ', 'ω', 'ω']],
+  ['ο', ['ω', 'ου', 'ω', 'οι', 'ου', 'ου', 'ω']], ['ω', ['ω', 'ω', 'ω', 'ῳ', 'ωυ', 'ω', 'ω']]] };
+const CONTRACT_DIPH = { cols: ['αι', 'ει³', 'ει⁴', 'ῃ', 'οι', 'ου⁴', 'ῳ'], rows: [
+  ['α', ['ᾳ', 'ᾳ', 'α', 'ᾳ', 'ῳ', 'ω', 'ῳ']], ['ε', ['ῃ', 'ει', 'ει', 'ῃ', 'οι', 'ου', 'ῳ']], ['η', ['ῃ', 'ῃ', 'η', 'ῃ', 'ῳ', '–', 'ῳ']],
+  ['ο', ['ῳ', 'οι', 'ου', 'οι', 'οι', 'ου', 'ῳ']]] };
+function contractionTables() {
+  const grid = (T, common) => h('div.cscroll', h('table.ctable.ccontr',
+    h('thead', h('tr', h('th', ''), T.cols.map((c) => h('th', { lang: 'grc' }, c)))),
+    h('tbody', T.rows.map(([r, v]) => h('tr', h('th', { scope: 'row', lang: 'grc' }, r), v.map((x, i) => h('td' + (common && common.includes(r + '+' + T.cols[i]) ? '.hi' : ''), { lang: 'grc' }, x)))))));
+  return [
+    h('p.small.muted', 'Read across: the vowel on the left joined to the vowel or diphthong at the top.'),
+    h('div.cblock', h('h3', 'Single vowels'), h('p.small.muted', 'All possible contractions of single vowels. The four most common are shaded.'), grid(CONTRACT_SINGLE, CONTRACT_SINGLE.common)),
+    h('div.cblock', h('h3', 'Vowels and diphthongs'), grid(CONTRACT_DIPH), h('p.small.muted', '³ “Genuine” diphthong (not formed by a contraction). ⁴ “Spurious” diphthong (formed by a contraction).')),
+  ];
+}
+
+const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings'], ['contr', 'Contractions']];
 
 /** Open the charts sheet. `highlight` is a master-chart row key (see chartRowFor). */
 export function openCharts({ tab = 'master', highlight = null } = {}) {
+  if (highlight && typeof highlight === 'object') tab = 'nouns';
   const dlg = h('dialog.sheet.charts', { 'aria-label': 'Charts' }), body = h('div.cbody');
   const draw = (t) => {
     clear(body);
     if (t === 'master') body.append(h('p.small.muted', 'Indicative, with λύω as the model. Any verb’s principal part follows one of these rows.'), masterTable(highlight));
-    else if (t === 'nouns') body.append(...nounEndingsTables());
+    else if (t === 'nouns') body.append(...nounEndingsTables(highlight));
+    else if (t === 'contr') body.append(...contractionTables());
     else body.append(endingsTable('Primary endings', PRIMARY_ACT, PRIMARY_MP, true), endingsTable('Secondary endings', SECOND_ACT, SECOND_MP, true));
     const row = body.querySelector('tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
   };
