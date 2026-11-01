@@ -59,38 +59,62 @@ function endingsTable(title, act, mp, alt) {
 }
 
 /* ---------- noun and adjective endings, counted from the text itself ---------- */
-const END_RE = /(αι|ει|οι|υι|ου|[αεηιουω])([νς])?$/;
+const END_RE = /(αι|ει|οι|υι|ου|[αεηιουωᾳῃῳ])([νς])?$/;
 /** The ending of a form: its last vowel (or diphthong) and a following ν/ς; accents and breathings dropped, iota subscript kept. */
 function endingOf(w) {
   const t = w.normalize('NFD').replace(/[\u0300-\u0344\u0346-\u036f]/g, '').normalize('NFC').toLowerCase().replace(/σ$/, 'ς');
   const m = END_RE.exec(t); return m ? m[0] : null;
 }
+const strip = (w) => w.normalize('NFD').replace(/[̀-̈́͆-ͯ]/g, '').normalize('NFC').toLowerCase().replace(/σ$/, 'ς');
+const ART = { 'ὁ': 'M', 'ἡ': 'F', 'τό': 'N' };
+/** Which pattern a noun follows, read from its dictionary entry (nominative, genitive, article): [group order, title, gender]. */
+function patternOf(head) {
+  const parts = head.split(',').map((x) => x.trim()), nom = strip(parts[0]), gen = strip(parts[1] || ''), art = parts.slice(2).filter((x) => ART[x]);
+  if (art.length !== 1) return null;                              // common-gender and unusual entries are left out
+  const g = ART[art[0]], ne = (/(ας|ης|α|η)$/.exec(nom) || /(ος|ον)$/.exec(nom) || [])[0];
+  if (/^(ας|ης|ου)$/.test(gen) && /(ας|ης|α|η)$/.test(nom)) return ['1', 'First declension', g, '-' + ne + ', -' + gen];
+  if (gen === 'ου' && /(ος|ον)$/.test(nom)) return ['2', 'Second declension', g, '-' + ne + ', -ου'];
+  return ['3', 'Third declension', g, ''];
+}
 let nounCache = null;
 function nounEndings() {
   if (nounCache) return nounCache;
-  const cells = {};                                           // 'NSM' -> Map(ending -> occurrences)
+  const groups = {};                                             // key -> {order, title, gender, sub, cells}
+  const memo = new Map();
   for (const f of D.forms) {
     const a = f.an[0]; if (!a) continue;
-    const d = decode(a.m); if ((d.pos !== 'N' && d.pos !== 'A') || !d.slots.case || !d.slots.gender) continue;
+    const d = decode(a.m); if (d.pos !== 'N' || !d.slots.case || !d.slots.number) continue;
+    const L = D.lexByN.get(a.s); if (!L) continue;
+    if (!memo.has(L.head)) memo.set(L.head, patternOf(L.head));
+    const pat = memo.get(L.head); if (!pat) continue;
     const e = endingOf(f.plain); if (!e) continue;
-    const k = d.slots.case + d.slots.number + d.slots.gender, m = (cells[k] ||= new Map());
+    const key = pat[0] + pat[2] + pat[3];
+    const g = (groups[key] ||= { order: pat[0], title: pat[1], gender: pat[2], sub: pat[3], cells: {}, words: new Set() });
+    g.words.add(L.head);
+    const m = (g.cells[d.slots.case + d.slots.number] ||= new Map());
     m.set(e, (m.get(e) || 0) + f.count);
   }
-  return (nounCache = cells);
+  return (nounCache = Object.values(groups).filter((g) => g.words.size >= 3));
 }
 function nounEndingsTables() {
-  const cells = nounEndings(), GEN = [['M', 'Masculine'], ['F', 'Feminine'], ['N', 'Neuter']];
-  const table = (num, title) => h('div.cblock', h('h3', title), h('div.cscroll', h('table.ctable',
-    h('thead', h('tr', h('th', ''), GEN.map(([, g]) => h('th', g)))),
-    h('tbody', ['N', 'G', 'D', 'A', 'V'].map((c) => h('tr', h('th', { scope: 'row' }, CASE[c]),
-      GEN.map(([g]) => {
-        const m = cells[c + num + g]; if (!m) return h('td', '–');
-        const tot = [...m.values()].reduce((x, y) => x + y, 0);
-        const top = [...m.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).filter(([, n], i) => i === 0 || n / tot >= 0.05);
-        return h('td', top.map(([e]) => h('div', h('span', { lang: 'grc' }, e))));
-      })))))));
-  return [h('p.small.muted', 'Counted from every noun and adjective in the text: the endings that occur most often in each case, number and gender, most common first. A word’s own ending depends on its declension, so this shows the pattern, not one paradigm. A few very common words (such as the name Jesus) weigh heavily in these counts.'),
-    table('S', 'Singular'), table('P', 'Plural')];
+  const GN = { M: 'masculine', F: 'feminine', N: 'neuter' }, ORD = { M: 0, F: 1, N: 2 };
+  const groups = nounEndings().sort((x, y) => x.order.localeCompare(y.order) || ORD[x.gender] - ORD[y.gender] || x.sub.localeCompare(y.sub));
+  const cell = (m) => {
+    if (!m) return '–';
+    const tot = [...m.values()].reduce((x, y) => x + y, 0);
+    const keep = [...m.entries()].filter(([, n]) => n >= 2 && n / tot >= 0.15).map(([e]) => e).sort((x, y) => x.localeCompare(y, 'el'));
+    return keep.length ? h('span', { lang: 'grc' }, keep.map((e) => '-' + e).join(', ')) : '–';
+  };
+  const out = [h('p.small.muted', 'Counted from every noun in the text and grouped by declension and gender. Each table shows the endings that really occur for nouns of that pattern, so it can differ a little from a grammar’s ideal paradigm. Nouns with two genders and some irregular ones are left out.')];
+  let last = '';
+  for (const g of groups) {
+    if (g.order !== last) { out.push(h('h2.csec', g.title)); last = g.order; }
+    const label = GN[g.gender][0].toUpperCase() + GN[g.gender].slice(1) + (g.sub ? ' · ' + g.sub : '');
+    out.push(h('div.cblock', h('h3', label), h('div.cscroll', h('table.ctable',
+      h('thead', h('tr', h('th', ''), h('th', 'Singular'), h('th', 'Plural'))),
+      h('tbody', ['N', 'G', 'D', 'A', 'V'].map((c) => h('tr', h('th', { scope: 'row' }, CASE[c]), h('td', cell(g.cells[c + 'S'])), h('td', cell(g.cells[c + 'P'])))))))));
+  }
+  return out;
 }
 
 const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings']];
