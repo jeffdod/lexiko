@@ -199,6 +199,7 @@ export function passagePicker(view, initial, o = {}) {
   const v2 = h('input', { type: 'number', min: 1, placeholder: 'end', 'aria-label': 'To verse', style: { width: '5.5rem' } });
   const sec = h('select', { 'aria-label': 'Section' });
   const info = h('div.muted.small'), go = h('a.btn.primary', o.label || 'Study these words');
+  const also = (o.also || []).map((a) => ({ a, el: h('a.btn', a.label) }));            // extra one-click buttons beside the main one, e.g. “Verbs only”
   let applying = false;
   const fillSecs = () => { clear(sec).append(h('option', { value: '' }, 'Custom range…'), ...periBook(bookSel.value).map((p) => h('option', { value: p.id }, periRange(p) + ' · ' + p.title))); };
   const fillChs = () => {
@@ -210,6 +211,7 @@ export function passagePicker(view, initial, o = {}) {
     sc.v1 = +v1.value || 1; sc.v2 = +v2.value || 999;
     if (sc.c1 !== sc.c2 || sc.v2 < sc.v1) { if (sc.c1 === sc.c2 && sc.v2 < sc.v1) sc.v2 = 999; }
     const rd = scopeReadiness(sc), words = passageWords(sc);
+    also.forEach(({ a, el }) => { el.href = a.href(sc); });
     if (o.info) { clear(info).append(o.info(sc)); go.href = o.href(sc); return; }
     clear(info).append(h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' known · ' + readinessLabel(rd.known)), ' ', words.length + ' word' + (words.length === 1 ? '' : 's') + ' to learn · ' + fmt(rd.tokens) + ' words of text');
     go.href = o.href ? o.href(sc) : '#/learn/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/');
@@ -227,7 +229,7 @@ export function passagePicker(view, initial, o = {}) {
   return h('div.card.stack', h('h2', o.title || 'Prepare a passage'), h('p.muted.small', o.blurb || 'Pick the text you want to read. lexiko teaches the words in it that you don’t know yet, most useful first.'),
     h('div.row.wrap', h('label.field', 'Book', bookSel)), h('label.field', 'Section', sec),
     h('div.row.wrap', h('label.field', 'From chapter', c1), h('label.field', 'verse (optional)', v1)),
-    h('div.row.wrap', h('label.field', 'To chapter', c2), h('label.field', 'verse (optional)', v2)), info, go);
+    h('div.row.wrap', h('label.field', 'To chapter', c2), h('label.field', 'verse (optional)', v2)), info, h('div.row.wrap', go, ...also.map((x) => x.el)));
 }
 
 /** A few words you haven't started: from your goal passage if you have one, else the most common you don't know yet. */
