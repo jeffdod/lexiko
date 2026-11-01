@@ -24,6 +24,17 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.keyboard.press('3'); await page.waitForTimeout(300);
   ok(await page.locator('.qcard').count() === 1 && !(await page.locator('.grades').count()), '3 rates Good and shows the next card');
 
+  // undo: taking back the last answer restores the card, the counts and the previous question
+  { const snap = () => page.evaluate(async () => { const k = await import('./js/know.js'); const st = await import('./js/store.js'); return { cards: k.K.cards.size, log: (await st.store.allLog()).length, r: (k.K.daily[Object.keys(k.K.daily).pop()] || {}).r || 0 }; });
+    await page.goto(URL + '#/home'); await page.waitForSelector('.hero'); await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcard');
+    ok(await page.locator('.undorow').count() === 0, 'no Undo before the first answer');
+    const before = await snap(), firstWord = await page.textContent('.qgreek');
+    await page.keyboard.press(' '); await page.waitForSelector('.grades'); await page.keyboard.press('3'); await page.waitForSelector('.undorow');
+    const mid = await snap(); ok(mid.log === before.log + 1, 'rating writes one log entry');
+    await page.keyboard.press('u'); await page.waitForSelector('.qcard');
+    const after = await snap();
+    ok(await page.textContent('.qgreek') === firstWord && after.log === before.log && after.cards === before.cards && after.r === before.r, 'Undo brings back the same card and restores the log, cards and daily counts ' + JSON.stringify({ before, mid, after }));
+    ok(await page.locator('.undorow').count() === 0, 'Undo is used up after one press'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');

@@ -295,3 +295,4 @@ summary { padding-block: .6rem; }
 .ccontr td, .ccontr th { text-align: center; }
 .ccontr thead th, .ccontr tbody th { text-transform: none; letter-spacing: 0; font-family: var(--greek); font-size: 1.05rem; color: var(--text); }
 .ccontr td.hi { background: var(--good-soft); font-weight: 700; }
+.undorow { display: flex; justify-content: center; margin-top: .6rem; }

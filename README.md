@@ -74,3 +74,5 @@ A brand-new user (no level chosen, nothing studied) sees two plain questions fir
 * **Accessibility checks:** `node tools/test_a11y.js` checks, in light and dark at phone size, that every control has a name, tap targets are at least 40px and text contrast is at least 4.5:1 (3:1 for large text).
 * The Dodson-Ulrik file supplies every gloss; `sources/lexicon/user-lexicon.txt` still supplies the headwords.
 * **Progress** opens with one calm sentence: how much of the goal passage is known (or, with no goal, how many words you know and how much of the New Testament text they cover, and how far to the next round number).
+* **Undo**: a vocabulary session shows “Undo last answer” (or the U key) after each answer; it restores the card, the review log and today's counts (`undoRate` in `js/know.js`). One step only; parsing and principal-parts answers are graded automatically, so they have no undo.
+* **Updates**: the app re-checks for a new version whenever it returns to the front and once an hour, and offers “Update ready”.

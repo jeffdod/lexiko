@@ -51,9 +51,21 @@ function bumpDaily(field) {
 }
 
 /** Record a review. kind: 'new' | 'review' | 'probe'. */
+let lastRate = null;
+export const canUndoRate = () => !!lastRate;
+/** Take back the most recent word rating: the card, today's counts and the review log go back to how they were. */
+export async function undoRate() {
+  const u = lastRate; if (!u) return false; lastRate = null;
+  if (u.before) await saveCard(u.before); else { K.cards.delete(u.id); await store.deleteCard(u.id); }
+  const d = K.daily[u.day]; if (d) { d.r = Math.max(0, (d.r || 0) - 1); if (u.wasNew) d.n = Math.max(0, (d.n || 0) - 1); if (u.grade >= 3) d.c = Math.max(0, (d.c || 0) - 1); await store.set('daily', K.daily); }
+  await store.dropLastLog();
+  return true;
+}
+
 export async function rate(n, grade, kind = 'review', ms = 0) {
   const now = Date.now();
   const prev = K.cards.get('w:' + n) || F.newCard('w:' + n);
+  lastRate = { id: 'w:' + n, before: K.cards.has('w:' + n) ? { ...K.cards.get('w:' + n) } : null, grade, wasNew: prev.state === 'new', day: todayKey() };
   const next = F.review(prev, grade, now, K.settings.retention);
   next.src = prev.src || kind;
   await saveCard(next);
