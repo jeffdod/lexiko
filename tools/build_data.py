@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build lexiko's static data from the RP text + Dodson lexicon.
 
-usage: build_data.py RP_DIR DODSON_XML USER_LEXICON OUT_DIR
+usage: build_data.py RP_DIR DODSON USER_LEXICON OUT_DIR     (DODSON = Dodson-Ulrik.txt, tab-separated, or the older dodson.xml)
 Outputs (all UTF-8 JSON, compact):
   lexicon.json   lexemes keyed by Strong's number (Dodson headword/gloss + RP frequency)
   forms.json     every distinct word form (soft-hyphenated) with its RP analyses and count
@@ -38,16 +38,50 @@ def load_user_lexicon(path):
     return out
 
 
-def norm_head(s):
-    return unicodedata.normalize('NFC', s).lower()
+CASE_TAG = re.compile(r'\b(gen|dat|acc):\s*', re.I)
+TRAIL_MARK = re.compile(r'[,;]?\s*\((?:[a-z]|\d+)\)\s*$')     # a following "(b)" / "(2)" belongs to the next sense
+
+def tagged_parts(text):
+    """'gen: from; acc: through' -> {'G': 'from', 'A': 'through'} (first part of each case wins)."""
+    ms = list(CASE_TAG.finditer(text)); out = {}
+    for i, m in enumerate(ms):
+        end = ms[i + 1].start() if i + 1 < len(ms) else len(text)
+        t = TRAIL_MARK.sub('', text[m.end():end].strip()).strip().rstrip(';,. ').strip()
+        c = m.group(1).lower()[0].upper()
+        if t and c not in out: out[c] = t
+    return out
+
+def case_tags(text):
+    return {m.group(1).lower() for m in CASE_TAG.finditer(text)}
+
+def strip_tags(text):
+    """Remove the case tags but keep the words: 'acc: before, in front of' -> 'before, in front of'."""
+    return re.sub(r'\s{2,}', ' ', CASE_TAG.sub('', text)).strip()
+
+def split_senses(brief, full=''):
+    """Short gloss tagged with 2+ different cases -> [['G', short, long], ['A', short, long]]; otherwise []."""
+    b = tagged_parts(brief)
+    if len(b) < 2: return []
+    f = tagged_parts(full)
+    return [[c, b[c], f.get(c, '')] for c in 'GDA' if c in b]
 
 
-def main(rp_dir, dodson_xml, user_lex, out_dir):
-    books = rp.load_all(rp_dir)
-    # ---- Dodson ----
+def load_dodson(path):
+    """n -> (Unicode headword, brief gloss, full definition). Accepts the tab-separated Dodson-Ulrik.txt or the TEI dodson.xml."""
+    out = {}
+    if path.lower().endswith('.txt'):
+        import csv
+        with open(path, encoding='utf-8', newline='') as f:
+            r = csv.reader(f, delimiter='\t'); next(r)
+            for row in r:
+                if len(row) < 5 or not row[0].strip().isdigit(): continue
+                def conv(w): return w.lower() if w.startswith('(') and w.endswith(')') else to_unicode(w.upper())
+                try: orth = ', '.join(' '.join(conv(w) for w in x.strip().split(' ')) for x in row[2].split(','))
+                except ValueError: orth = ''
+                out[int(row[0])] = (orth, re.sub(r'\s+', ' ', row[3]).strip(), re.sub(r'\s+', ' ', row[4]).strip())
+        return out
     ns = '{http://www.crosswire.org/2008/TEIOSIS/namespace}'
-    dodson = {}
-    for e in ET.parse(dodson_xml).getroot().iter(ns + 'entry'):
+    for e in ET.parse(path).getroot().iter(ns + 'entry'):
         n = int(e.get('n').split('|')[1].strip())
         orth = (e.find(ns + 'orth').text or '').strip()
         brief = full = ''
@@ -55,7 +89,18 @@ def main(rp_dir, dodson_xml, user_lex, out_dir):
             txt = re.sub(r'\s+', ' ', ''.join(d.itertext())).strip()
             if d.get('role') == 'brief': brief = txt
             elif d.get('role') == 'full': full = txt
-        dodson[n] = (orth, brief, full)
+        out[n] = (orth, brief, full)
+    return out
+
+
+def norm_head(s):
+    return unicodedata.normalize('NFC', s).lower()
+
+
+def main(rp_dir, dodson_xml, user_lex, out_dir):
+    books = rp.load_all(rp_dir)
+    # ---- Dodson ----
+    dodson = load_dodson(dodson_xml)
     user = load_user_lexicon(user_lex)
     head_mismatch = []
     # ---- frequencies / pos / forms ----
@@ -91,9 +136,15 @@ def main(rp_dir, dodson_xml, user_lex, out_dir):
         orth, d_brief, full = dodson[n]
         u_head, brief = user[n]
         if u_head is not None and norm_head(u_head) != norm_head(orth): head_mismatch.append((n, u_head, orth))
-        if not brief: brief = d_brief
+        brief = d_brief                 # short + long readings (with case tags) both come from Dodson-Ulrik.txt
         p = pos[n].most_common(1)[0][0]
-        lex.append([n, u_head or orth, brief, full if full != brief else '', freq[n], p])
+        full = full if full != brief else ''
+        sn = []
+        if p == 'PREP':
+            sn = split_senses(brief, full)          # a preposition with several tagged cases is reviewed as one word per case
+        row = [n, u_head or orth, brief, full, freq[n], p]
+        if sn: row.append(sn)
+        lex.append(row)
     os.makedirs(os.path.join(out_dir, 'text'), exist_ok=True)
     def dump(name, obj):
         with open(os.path.join(out_dir, name), 'w', encoding='utf-8') as f:

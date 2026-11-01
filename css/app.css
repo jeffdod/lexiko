@@ -267,3 +267,5 @@ dialog.charts { width: min(60rem, 96vw); max-width: 96vw; max-height: 90dvh; ove
 .ctxfold { margin-top: .6rem; width: 100%; max-width: 34rem; text-align: left; } .ctxfold summary { cursor: pointer; font-size: .85rem; color: var(--accent); font-weight: 700; text-align: center; }
 
 .cardparts { margin-top: .8rem; text-align: left; width: 100%; max-width: 34rem; display: grid; gap: .3rem; } .cardparts .partsgrid { grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
+
+.qcard details.more { margin-top: .3rem; text-align: left; max-width: 34rem; } .qcard details.more summary { cursor: pointer; font-size: .85rem; font-weight: 700; color: var(--accent); text-align: center; }

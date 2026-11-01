@@ -1,6 +1,6 @@
 // Home: where you are, what to do today, what to read next.
 import { D, scopeLabel } from './data.js';
-import { K, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel } from './know.js';
+import { K, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel, studiedCount } from './know.js';
 import { h, clear, pct, icon, startButton } from './util.js';
 import { smartAll, counts } from './smart.js';
 import { levelPicker } from './settings.js';
@@ -12,7 +12,7 @@ const DAY = 86400000;
 export function renderHome(view) {
   const lvl = setting('level');
   const cnt = counts(), due = cnt.words.due + cnt.parse.due + cnt.parts.due;
-  const studied = [...K.cards.keys()].filter((k) => k.startsWith('w:')).length;
+  const studied = studiedCount('w:');
   const newLeft = Math.max(0, setting('newPerDay') - newToday());
   const goal = K.goal && K.goal.book ? K.goal : null;
   const lastBackup = K.settings.lastBackup;

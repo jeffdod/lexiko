@@ -1,11 +1,21 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
-import { D, lexeme, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
+import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
 import { K, status, setting, setSetting, rate, getCard, dueCards, buildSession, scopeReadiness, newToday, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, studiedCount } from './know.js';
 import * as F from './fsrs.js';
 import { decode } from './morph.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner, fold, startButton } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
+
+/** The long definition, only when it adds something to the short gloss: shown outright when short, otherwise behind a "More" tap. */
+const FILLER = new Set(['a', 'an', 'the', 'of', 'to', 'in', 'and', 'or', 'for', 'is', 'as', 'i', 'definite', 'article', 'particle', 'pronoun', 'preposition', 'conjunction', 'adverb', 'indeclinable']);
+const wordsOf = (t) => (t.toLowerCase().match(/[a-z']+/g) || []).filter((w) => !FILLER.has(w));
+function longDef(L) {
+  if (!L.full) return null;
+  const have = new Set(wordsOf(L.brief));
+  if (!wordsOf(L.full).some((w) => !have.has(w))) return null;                    // nothing new
+  return L.full.length <= 100 ? h('div.qdef', L.full) : h('details.more', h('summary', 'More'), h('div.qdef', L.full));
+}
 
 /** A verb's principal parts as a small grid, shown with the answer (only when the verb has parts beyond the present). */
 const PART_NAMES = ['Present', 'Future', 'Aorist active', 'Perfect active', 'Perfect mid/pas', 'Aorist passive'];
@@ -34,12 +44,13 @@ export function contextFor(n, scope) {
   }).filter((o) => o.toks.length);
   if (!sample.length) return null;
   // prefer a compact verse (6–16 words) made mostly of words the learner already knows
-  const score = (o) => { const len = o.toks.length; const known = o.toks.filter((t) => status(tokenForm(t).an[0].s) === 'known').length / len; return Math.abs(len - 11) * 0.12 - known * 2; };
+  const score = (o) => { const len = o.toks.length; const known = [...senseNs(o.toks).ns].filter((s) => status(s) === 'known').length / len; return Math.abs(len - 11) * 0.12 - known * 2; };
   sample.sort((a, b) => score(a) - score(b));
   const best = sample[0];
   const el = h('div.qctx', { lang: 'grc' }, h('span.ref', D.bookByCode.get(best.code).name + ' ' + best.ch + ':' + best.vs));
-  best.toks.forEach((t) => {
-    const f = tokenForm(t), w = f.w, hit = f.an[0].s === n;
+  const ens = senseNs(best.toks).ns;
+  best.toks.forEach((t, k) => {
+    const f = tokenForm(t), w = f.w, hit = ens[k] === n;
     el.append(hit ? h('mark', w) : w, tokenPunct(t) + (tokenFlag(t) ? '\u2014' : ' '));
   });
   el.append(h('a.small', { href: readHref(best.code, best.ch, best.vs), style: { display: 'block', fontFamily: 'var(--ui)', marginTop: '.3rem' } }, 'Read in context →'));
@@ -105,11 +116,11 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     t0 = Date.now();
     const L = lexeme(item.n), flash = setting('mode') !== 'choice';
     const pos = POSNAME[L.pos] || L.pos;
-    const head = [h('div.qgreek', { lang: 'grc' }, L.head), h('div.qmeta', pos + ' · G' + L.n + ' · ' + fmt(L.freq) + '×')];
+    const head = [h('div.qgreek', { lang: 'grc' }, L.head), h('div.qmeta', pos + ' · G' + (L.base || L.n) + ' · ' + fmt(L.freq) + '×')];
     const reveal = (extra) => {
       const card = getCard(item.n) || F.newCard('w:' + item.n);
       const pv = F.preview(card, Date.now(), setting('retention'));
-      const answer = [h('div.qgloss', L.brief), L.full ? h('div.qdef', L.full) : null, partsBlock(L), contextFor(L.n, scope)];
+      const answer = [h('div.qgloss', L.brief), longDef(L), partsBlock(L), contextFor(L.n, scope)];
       const grades = h('div.grades' + (practice ? '.two' : ''),
         (practice ? [[1, 'Again'], [3, 'Got it']] : [[1, 'Again'], [2, 'Hard'], [3, 'Good'], [4, 'Easy']]).map(([g, name]) => h('button.g' + g, { onclick: () => grade(item, g) }, name, practice ? null : h('small', fmtInterval(pv[g])))));
       return { answer, grades };
