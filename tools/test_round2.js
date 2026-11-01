@@ -57,7 +57,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   ok(/Master case endings/.test(txt) && /ος/.test(txt) && /ῳ/.test(txt) && /σι\(ν\)/.test(txt) && !/%/.test(txt), 'noun charts show the grammar’s endings');
   await page.click('dialog button:has-text("Contractions")');
   const ct = await page.locator('dialog.charts .cbody').innerText();
-  ok(/Single vowels/.test(ct) && /Vowels and diphthongs/.test(ct) && await page.locator('dialog.charts td.hi').count() === 4, 'contractions chart shows both tables with the four common ones shaded');
+  ok(/Single vowels/.test(ct) && /Vowels and diphthongs/.test(ct) && await page.locator('dialog.charts td.hi').count() === 0, 'contractions chart shows both tables, nothing highlighted');
   await page.keyboard.press('Escape');
   // opening the noun chart from parse feedback highlights the case/number row in both charts
   await page.evaluate(async () => { const m = await import('./js/charts.js'); m.openCharts({ tab: 'nouns', highlight: { case: 'G', number: 'P' } }); });
