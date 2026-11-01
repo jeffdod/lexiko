@@ -8,6 +8,7 @@ import { chartsButton, openCharts, chartRowForSlots } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
+const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
 const fmt = (n) => n.toLocaleString('en-US');
 const KINDS = { all: ['verb', 'nominal'], verb: ['verb'], noun: ['nominal'] };
@@ -177,7 +178,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     go.focus({ preventScroll: true });
     keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
     document.addEventListener('keydown', keyHandler);
-    window.scrollTo({ top: fb.offsetTop - 80, behavior: 'smooth' });
+    window.scrollTo({ top: fb.offsetTop - 80, behavior: SMOOTH });
   }
 
   function show(c) {
