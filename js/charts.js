@@ -1,8 +1,6 @@
 // Reference charts, shown in a sheet that can be opened from any verb quiz: the master verb chart (indicative)
 // and the primary / secondary personal endings. Plain data tables, themed and available offline.
 import { h, clear, icon } from './util.js';
-import { D } from './data.js';
-import { decode, CASE } from './morph.js';
 
 /* tense | augment/reduplication | tense stem | tense formative | connecting vowel | personal endings | 1st singular */
 const MASTER = [
@@ -58,62 +56,32 @@ function endingsTable(title, act, mp, alt) {
     h('div.clabel', 'Middle / passive'), h('div.cscroll', h('table.ctable', head(false), h('tbody', rows(mp, false)))));
 }
 
-/* ---------- noun and adjective endings, counted from the text itself ---------- */
-const END_RE = /(αι|ει|οι|υι|ου|[αεηιουωᾳῃῳ])([νς])?$/;
-/** The ending of a form: its last vowel (or diphthong) and a following ν/ς; accents and breathings dropped, iota subscript kept. */
-function endingOf(w) {
-  const t = w.normalize('NFD').replace(/[\u0300-\u0344\u0346-\u036f]/g, '').normalize('NFC').toLowerCase().replace(/σ$/, 'ς');
-  const m = END_RE.exec(t); return m ? m[0] : null;
-}
-const strip = (w) => w.normalize('NFD').replace(/[̀-̈́͆-ͯ]/g, '').normalize('NFC').toLowerCase().replace(/σ$/, 'ς');
-const ART = { 'ὁ': 'M', 'ἡ': 'F', 'τό': 'N' };
-/** Which pattern a noun follows, read from its dictionary entry (nominative, genitive, article): [group order, title, gender]. */
-function patternOf(head) {
-  const parts = head.split(',').map((x) => x.trim()), nom = strip(parts[0]), gen = strip(parts[1] || ''), art = parts.slice(2).filter((x) => ART[x]);
-  if (art.length !== 1) return null;                              // common-gender and unusual entries are left out
-  const g = ART[art[0]], ne = (/(ας|ης|α|η)$/.exec(nom) || /(ος|ον)$/.exec(nom) || [])[0];
-  if (/^(ας|ης|ου)$/.test(gen) && /(ας|ης|α|η)$/.test(nom)) return ['1', 'First declension', g, '-' + ne + ', -' + gen];
-  if (gen === 'ου' && /(ος|ον)$/.test(nom)) return ['2', 'Second declension', g, '-' + ne + ', -ου'];
-  const cls = /εως$/.test(gen) ? 'genitive -εως' : /ους$/.test(gen) ? 'genitive -ους' : /υος$/.test(gen) ? 'genitive -υος' : /ος$/.test(gen) && gen.length > 2 ? 'consonant stems, genitive -ος' : null;
-  return cls ? ['3', 'Third declension', g, cls] : null;      // grouped by what the genitive shows about the stem
-}
-let nounCache = null;
-function nounEndings() {
-  if (nounCache) return nounCache;
-  const groups = {};                                             // key -> {order, title, gender, sub, cells}
-  const memo = new Map();
-  for (const f of D.forms) {
-    const a = f.an[0]; if (!a) continue;
-    const d = decode(a.m); if (d.pos !== 'N' || !d.slots.case || !d.slots.number) continue;
-    const L = D.lexByN.get(a.s); if (!L) continue;
-    if (!memo.has(L.head)) memo.set(L.head, patternOf(L.head));
-    const pat = memo.get(L.head); if (!pat) continue;
-    const e = endingOf(f.plain); if (!e) continue;
-    const key = pat[0] + pat[2] + pat[3];
-    const g = (groups[key] ||= { order: pat[0], title: pat[1], gender: pat[2], sub: pat[3], cells: {}, words: new Set() });
-    g.words.add(L.head);
-    const m = (g.cells[d.slots.case + d.slots.number] ||= new Map());
-    m.set(e, (m.get(e) || 0) + f.count);
-  }
-  return (nounCache = Object.values(groups).filter((g) => g.words.size >= 3));
-}
+/* ---------- noun case endings: the two charts from the user's grammar (Master Case Ending Chart, pp. 67-68) ---------- */
+const NOUN_CHARTS = [
+  { title: 'Master case endings', note: 'The endings by themselves.',
+    cols12: ['Masculine', 'Feminine', 'Neuter'], cols3: ['Masc / fem', 'Neuter'],
+    s12: [['Nominative', 'ς', '–', 'ν'], ['Genitive', 'υ', 'ς', 'υ'], ['Dative', 'ι', 'ι', 'ι'], ['Accusative', 'ν', 'ν', 'ν'], ['Vocative', 'ε', '–', 'ν']],
+    p12: [['Nominative / vocative', 'ι', 'ι', 'α'], ['Genitive', 'ων', 'ων', 'ων'], ['Dative', 'ις', 'ις', 'ις'], ['Accusative', 'υς', 'ς', 'α']],
+    s3: [['Nominative', 'ς', '–'], ['Genitive', 'ος', 'ος'], ['Dative', 'ι', 'ι'], ['Accusative', 'α / ν', '–'], ['Vocative', '–', '–']],
+    p3: [['Nominative / vocative', 'ες', 'α'], ['Genitive', 'ων', 'ων'], ['Dative', 'σι(ν)', 'σι(ν)'], ['Accusative', 'ας', 'α']] },
+  { title: 'Endings with the stem vowel', note: 'What the case endings look like when attached to the final stem vowel.',
+    cols12: ['Masculine', 'Feminine (α)', 'Feminine (η)', 'Neuter'], cols3: ['Masc / fem', 'Neuter'],
+    s12: [['Nominative', 'ος', 'α', 'η', 'ον'], ['Genitive', 'ου', 'ας', 'ης', 'ου'], ['Dative', 'ῳ', 'ᾳ', 'ῃ', 'ῳ'], ['Accusative', 'ον', 'αν', 'ην', 'ον'], ['Vocative', 'ε', 'α', 'η', 'ον']],
+    p12: [['Nominative / vocative', 'οι', 'αι', 'αι', 'α'], ['Genitive', 'ων', 'ων', 'ων', 'ων'], ['Dative', 'οις', 'αις', 'αις', 'οις'], ['Accusative', 'ους', 'ας', 'ας', 'α']],
+    s3: [['Nominative', 'ς', '–'], ['Genitive', 'ος', 'ος'], ['Dative', 'ι', 'ι'], ['Accusative', 'α / ν', '–'], ['Vocative', '–', '–']],
+    p3: [['Nominative / vocative', 'ες', 'α'], ['Genitive', 'ων', 'ων'], ['Dative', 'σι(ν)', 'σι(ν)'], ['Accusative', 'ας', 'α']] },
+];
 function nounEndingsTables() {
-  const GN = { M: 'masculine', F: 'feminine', N: 'neuter' }, ORD = { M: 0, F: 1, N: 2 };
-  const groups = nounEndings().sort((x, y) => x.order.localeCompare(y.order) || ORD[x.gender] - ORD[y.gender] || x.sub.localeCompare(y.sub));
-  const cell = (m) => {
-    if (!m) return '–';
-    const tot = [...m.values()].reduce((x, y) => x + y, 0);
-    const keep = [...m.entries()].filter(([, n]) => n >= 2 && n / tot >= 0.15).map(([e]) => e).sort((x, y) => x.localeCompare(y, 'el'));
-    return keep.length ? h('span', { lang: 'grc' }, keep.map((e) => '-' + e).join(', ')) : '–';
-  };
-  const out = [h('p.small.muted', 'Counted from every noun in the text and grouped by declension and gender. Each table shows the endings that really occur for nouns of that pattern, so it can differ a little from a grammar’s ideal paradigm. Third-declension nouns are grouped by the stem type their genitive shows. Nouns with two genders and rare or irregular patterns are left out.')];
-  let last = '';
-  for (const g of groups) {
-    if (g.order !== last) { out.push(h('h2.csec', g.title)); last = g.order; }
-    const label = GN[g.gender][0].toUpperCase() + GN[g.gender].slice(1) + (g.sub ? ' · ' + g.sub : '');
-    out.push(h('div.cblock', h('h3', label), h('div.cscroll', h('table.ctable',
-      h('thead', h('tr', h('th', ''), h('th', 'Singular'), h('th', 'Plural'))),
-      h('tbody', ['N', 'G', 'D', 'A', 'V'].map((c) => h('tr', h('th', { scope: 'row' }, CASE[c]), h('td', cell(g.cells[c + 'S'])), h('td', cell(g.cells[c + 'P'])))))))));
+  const grid = (cols, sing, plur) => h('div.cscroll', h('table.ctable',
+    h('thead', h('tr', h('th', ''), cols.map((c) => h('th', c)))),
+    h('tbody',
+      h('tr', h('th.c', { colspan: cols.length + 1 }, 'Singular')), sing.map(([r, ...v]) => h('tr', h('th', { scope: 'row' }, r), v.map((x) => h('td', { lang: 'grc' }, x)))),
+      h('tr', h('th.c', { colspan: cols.length + 1 }, 'Plural')), plur.map(([r, ...v]) => h('tr', h('th', { scope: 'row' }, r), v.map((x) => h('td', { lang: 'grc' }, x)))))));
+  const out = [];
+  for (const c of NOUN_CHARTS) {
+    out.push(h('h2.csec', c.title), h('p.small.muted', c.note),
+      h('div.cblock', h('h3', 'First and second declension'), grid(c.cols12, c.s12, c.p12)),
+      h('div.cblock', h('h3', 'Third declension'), grid(c.cols3, c.s3, c.p3)));
   }
   return out;
 }
