@@ -72,6 +72,18 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   const total = queue.length;
   const stats = { done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
   let current = null, t0 = 0;
+  /* keyboard: Space/Enter shows the answer or continues, 1–4 choose or rate. Skipped when a button has focus or a dialog is open. */
+  const sid = Math.random().toString(36).slice(2); view.dataset.sess = sid;
+  let keyAct = null;
+  const onKey = (e) => {
+    if (view.dataset.sess !== sid) { document.removeEventListener('keydown', onKey); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const go = e.key === ' ' || e.key === 'Enter';
+    if (go && e.target.closest && e.target.closest('button,a')) return;            // let the focused button do its own thing
+    if (keyAct && keyAct(e, go)) e.preventDefault();
+  };
+  document.addEventListener('keydown', onKey);
+  const kbHint = (t) => h('div.kbhint.muted.small', t);
 
   const finish = () => {
     const previewed = items.filter((i) => i.type === 'preview').map((i) => i.n);
@@ -127,10 +139,13 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     };
     if (flash) {
       const card = h('div.qcard', ...head, h('div', { id: 'ans' }));
-      const ctl = h('div', h('button.btn.primary.block', { onclick: () => {
+      const showBtn = h('button.btn.primary.block', { onclick: () => {
         const r = reveal(); card.querySelector('#ans').append(...r.answer.filter(Boolean)); clear(ctl).append(r.grades);
-      } }, 'Show answer'));
-      frame(item, [card, ctl]);
+        keyAct = (e, go) => { const bs = [...ctl.querySelectorAll('.grades button')], k = +e.key; if (k >= 1 && k <= bs.length) { bs[k - 1].click(); return true; } if (go) { bs[practice ? 1 : 2].click(); return true; } return false; };
+      } }, 'Show answer');
+      const ctl = h('div', showBtn);
+      keyAct = (e, go) => { if (go) { showBtn.click(); return true; } return false; };
+      frame(item, [card, ctl, kbHint(practice ? 'Space shows the answer · 1 Again · 2 Got it' : 'Space shows the answer · 1 Again · 2 Hard · 3 Good · 4 Easy')]);
     } else {
       const opts = shuffle([L, ...distractors(L)]);
       const card = h('div.qcard', ...head, h('div.opts', { id: 'opts', style: { marginTop: '.8rem' } }));
@@ -141,18 +156,21 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         const ok = pickedN === L.n;
         const r = reveal(); card.append(...r.answer.filter(Boolean));
         const g = ok ? (item.type === 'probe' && !item.seen ? 4 : 3) : 1;
-        clear(ctl).append(h('button.btn.primary.block', { onclick: () => grade(item, g) }, ok ? 'Continue' : 'Continue (I’ll see this again)'));
+        const next = h('button.btn.primary.block', { onclick: () => grade(item, g) }, ok ? 'Continue' : 'Continue (I’ll see this again)');
+        clear(ctl).append(next);
+        keyAct = (e, go) => { if (go) { next.click(); return true; } return false; };
       };
       opts.forEach((o) => optsEl.append(h('button.opt', { dataset: { n: o.n }, onclick: () => settle(o.n) }, h('span', o.brief), h('span.mark', ''))));
-      frame(item, [card, h('div.row.between', h('button.btn.ghost.sm', { onclick: () => settle(-1) }, 'I don’t know'), h('span')), ctl]);
+      keyAct = (e) => { const b = [...optsEl.querySelectorAll('button:not([disabled])')][+e.key - 1]; if (b && +e.key >= 1) { b.click(); return true; } return false; };
+      frame(item, [card, h('div.row.between', h('button.btn.ghost.sm', { onclick: () => settle(-1) }, 'I don’t know'), h('span')), ctl, kbHint('Press 1–4 to choose · Space continues')]);
     }
   }
   advance();
 }
 
 /* ---------- Learn tab ---------- */
-function startFrom(view, kind, scope, title) {
-  const items = buildSession({ scope, kind });
+function startFrom(view, kind, scope, title, only = null) {
+  const items = buildSession({ scope, only, kind });
   if (!items.length) {
     if (!scope) { const alt = smart('words'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }       // caught up: go to something useful instead
     clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉' : 'You’re all caught up. 🎉'),
@@ -212,6 +230,7 @@ export function renderLearn(view, params) {
   if (mode === 'words') return void wordsPage(view);
   if (mode === 'daily') return void startFrom(view, 'daily', null, 'Today’s session');
   if (mode === 'review') return void startFrom(view, 'review', null, 'Review');
+  if (mode === 'set') { const [lo, hi] = rest.map(Number); return void startFrom(view, 'daily', null, bandLabel([lo, hi]), new Set(D.lex.filter((L) => L.freq >= lo && L.freq <= hi).map((L) => L.n))); }
   if (mode === 'practice') {                                   // extra practice: never touches the schedule
     const preview = rest[0] === 'preview';
     const goal = K.goal && K.goal.book ? K.goal : null;
@@ -237,6 +256,19 @@ export function renderLearn(view, params) {
 }
 
 /* ---------- Vocabulary page ---------- */
+/* ---------- study words by how common they are ---------- */
+const BANDS = [[1000, 1e9], [500, 999], [250, 499], [100, 249], [50, 99], [30, 49], [20, 29], [10, 19], [5, 9], [2, 4], [1, 1]];
+const bandLabel = ([lo, hi]) => hi >= 1e9 ? 'Words used ' + lo.toLocaleString('en-US') + '+ times' : lo === hi ? 'Words used once' : 'Words used ' + lo + '–' + hi + ' times';
+function bandsCard() {
+  const rows = BANDS.map((b) => {
+    const ws = D.lex.filter((L) => L.freq >= b[0] && L.freq <= b[1]);
+    const fresh = ws.filter((L) => status(L.n) === 'unknown').length;
+    return h('div.li', { style: { gap: '.7rem' } }, h('div.grow', h('b', bandLabel(b)), h('div.muted.small', ws.length.toLocaleString('en-US') + ' words · ' + (fresh ? fresh.toLocaleString('en-US') + ' new to you' : 'you know them all'))),
+      fresh ? h('a.btn.sm.primary', { href: '#/learn/set/' + b[0] + '/' + (b[1] >= 1e9 ? 999999 : b[1]) }, 'Study') : h('span.chip.good', '✓'));
+  });
+  return h('div.list', rows);
+}
+
 function wordsPage(view) {
   const goal = K.goal && K.goal.book ? K.goal : null;
   clear(view).append(
@@ -247,6 +279,7 @@ function wordsPage(view) {
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal)),
+      fold('Study by how common the words are', h('p.muted.small', 'Pick a group of words by how often they occur in the New Testament. lexiko teaches the ones in it you don’t know yet.'), bandsCard()),
       fold('Options',
         h('div.row.between', h('div', h('b', 'Quiz style'), h('div.muted.small', 'How you answer each word.')),
           h('div.seg', [['flash', 'Flashcards'], ['choice', 'Multiple choice']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('mode') === v), onclick: async (e) => { await setSetting('mode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); } }, t)))),

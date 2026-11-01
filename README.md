@@ -58,3 +58,10 @@ Vocabulary, parsing and principal parts each have *Strengthen weak spots* (your 
 
 ## First run and search
 A brand-new user (no level chosen, nothing studied) sees two plain questions first (`js/welcome.js`): how much Greek they know (which sets the level) and what they want to do first. **Search** (`#/search`, `js/search.js`, the magnifier on Home) finds a word by Greek form with or without accents, by English meaning, or by Strong's number, and shows its meaning, where it occurs and its forms; all Greek shown comes from the text and lexicon data.
+
+## Home, shortcuts, word groups, learning curve, locked backups
+* **Home** leads with one main button (what to do now), then your reading goal (or where you left off), a small learning-curve chart, and a folded "Good next reads".
+* **Keyboard** (computers): in vocabulary sessions Space shows the answer, 1–4 rate it (or choose an option), Space continues; parsing and principal-parts quizzes already take Enter and 1–4.
+* **Study by how common** (Learn › Vocabulary): `#/learn/set/<min>/<max>` teaches the words you don't know yet that occur between min and max times.
+* **Learning curve** (`js/growth.js`, Home and Progress): cumulative words started, rebuilt from the per-day counts lexiko already keeps (so it has history from day one).
+* **Locked backups**: in Settings an optional passphrase encrypts the backup file (AES-GCM, key from PBKDF2-SHA256, 250,000 rounds; `js/store.js`). The passphrase is never stored; restoring asks for it. Needs a secure context (https or localhost).

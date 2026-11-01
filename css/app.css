@@ -87,7 +87,7 @@ mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding
 /* a label beside a segmented control: when they don't fit side by side, the control drops below and spans the row */
 .row.between { flex-wrap: wrap; } .row.between > .seg { flex: 1 1 15rem; }
 .seg button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
-select, input[type='number'], input[type='text'] { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .5rem .7rem; min-height: 2.6rem; max-width: 100%; }
+select, input[type='number'], input[type='text'], input[type='password'], input[type='search'] { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .5rem .7rem; min-height: 2.6rem; max-width: 100%; }
 label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--ink-2); } label.field > * { margin-top: .25rem; }
 .switch { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-top: 1px solid var(--line); cursor: pointer; }
 .switch:first-child { border-top: 0; } .switch .t { font-weight: 600; } .switch .d { font-size: .85rem; color: var(--muted); }
@@ -282,3 +282,5 @@ dialog.charts { width: min(60rem, 96vw); max-width: 96vw; max-height: 90dvh; ove
 .choice[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
 .betagrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: .3rem .8rem; margin: .6rem 0; }
 .betarow { display: flex; gap: .4rem; align-items: baseline; } .betarow code { font-weight: 700; min-width: 1rem; } .betarow span[lang] { font-size: 1.2rem; }
+.kbhint { display: none; text-align: center; margin-top: .6rem; }
+@media (hover: hover) and (pointer: fine) { .kbhint { display: block; } }
