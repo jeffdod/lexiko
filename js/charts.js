@@ -74,7 +74,8 @@ function patternOf(head) {
   const g = ART[art[0]], ne = (/(ας|ης|α|η)$/.exec(nom) || /(ος|ον)$/.exec(nom) || [])[0];
   if (/^(ας|ης|ου)$/.test(gen) && /(ας|ης|α|η)$/.test(nom)) return ['1', 'First declension', g, '-' + ne + ', -' + gen];
   if (gen === 'ου' && /(ος|ον)$/.test(nom)) return ['2', 'Second declension', g, '-' + ne + ', -ου'];
-  return ['3', 'Third declension', g, ''];
+  const cls = /εως$/.test(gen) ? 'genitive -εως' : /ους$/.test(gen) ? 'genitive -ους' : /υος$/.test(gen) ? 'genitive -υος' : /ος$/.test(gen) && gen.length > 2 ? 'consonant stems, genitive -ος' : null;
+  return cls ? ['3', 'Third declension', g, cls] : null;      // grouped by what the genitive shows about the stem
 }
 let nounCache = null;
 function nounEndings() {
@@ -105,7 +106,7 @@ function nounEndingsTables() {
     const keep = [...m.entries()].filter(([, n]) => n >= 2 && n / tot >= 0.15).map(([e]) => e).sort((x, y) => x.localeCompare(y, 'el'));
     return keep.length ? h('span', { lang: 'grc' }, keep.map((e) => '-' + e).join(', ')) : '–';
   };
-  const out = [h('p.small.muted', 'Counted from every noun in the text and grouped by declension and gender. Each table shows the endings that really occur for nouns of that pattern, so it can differ a little from a grammar’s ideal paradigm. Nouns with two genders and some irregular ones are left out.')];
+  const out = [h('p.small.muted', 'Counted from every noun in the text and grouped by declension and gender. Each table shows the endings that really occur for nouns of that pattern, so it can differ a little from a grammar’s ideal paradigm. Third-declension nouns are grouped by the stem type their genitive shows. Nouns with two genders and rare or irregular patterns are left out.')];
   let last = '';
   for (const g of groups) {
     if (g.order !== last) { out.push(h('h2.csec', g.title)); last = g.order; }
