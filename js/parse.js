@@ -10,6 +10,8 @@ import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
+/** Answer codes that have no button of their own, and the button that stands for them. */
+const NEAREST = { voice: { N: 'E', Q: 'A' } };
 const KINDS = { all: ['verb', 'nominal'], verb: ['verb'], noun: ['nominal'] };
 const KIND_TITLE = { all: 'Mixed practice', verb: 'Verbs', noun: 'Nouns, adjectives & pronouns' };
 
@@ -208,7 +210,10 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       grid.querySelectorAll('button').forEach((b) => { b.disabled = true; });
       btn.classList.add(ok ? 'right' : 'wrong');
       const expected = (ok ? matching : cands)[0].slots[slot];
-      if (!ok) grid.querySelector('[data-code="' + expected + '"]')?.classList.add('right');
+      if (!ok) {                                       // light up the right answer; a code with no button of its own (middle or passive deponent) lights its nearest button
+        const show = grid.querySelector('[data-code="' + expected + '"]') || grid.querySelector('[data-code="' + (NEAREST[slot] || {})[expected] + '"]');
+        show?.classList.add('right');
+      }
       if (ok) { cands = matching; setTimeout(draw, 320); }
       else {
         const cont = h('button.btn.primary.block', { onclick: () => { cont.remove(); draw(); } }, 'Continue');
