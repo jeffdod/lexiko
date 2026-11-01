@@ -1,5 +1,6 @@
 // Loads the static data (lexicon, word forms, text) and builds lookup indexes.
 import { strip, PUNCT } from './util.js';
+import { decode } from './morph.js';
 
 const BASE = new URL('../data/', import.meta.url);
 const getJSON = async (p) => {
@@ -31,9 +32,10 @@ export function shortGloss(b) {
 export async function loadData(onProgress = () => {}) {
   const [lex, forms, books, peri, parts] = await Promise.all([getJSON('lexicon.json'), getJSON('forms.json'), getJSON('books.json'), getJSON('pericopes.json'), getJSON('parts.json')]);
   onProgress(0.25);
-  D.lex = lex.map((r, i) => ({ n: r[0], head: r[1], brief: r[2], full: r[3], freq: r[4], pos: r[5], short: shortGloss(r[2]) }));
+  D.lex = lex.map((r, i) => ({ n: r[0], head: r[1], brief: r[2], full: r[3], freq: r[4], pos: r[5], short: shortGloss(r[2]), senses: r[6] || null }));
   D.lex.sort((a, b) => b.freq - a.freq || a.n - b.n);
   D.lex.forEach((l, i) => { l.rank = i + 1; D.lexByN.set(l.n, l); });
+  const senseLex = makeSenses();
   D.forms = forms.map((r) => {
     const an = [];
     for (let i = 2; i < r.length; i += 2) an.push({ s: r[i], m: r[i + 1] });
@@ -52,8 +54,10 @@ export async function loadData(onProgress = () => {}) {
     for (const [ch, verses] of D.text[b.code]) {
       const arr = [];
       for (const [vs, toks] of verses) {
-        for (const t of toks) {
-          const s = D.forms[t >> 4].an[0].s;
+        const ns = senseNs(toks).ns;
+        for (let k = 0; k < toks.length; k++) {
+          const s = ns[k];
+          if (s >= SENSE_BASE) D.lexByN.get(s).freq++;
           arr.push(s);
           let o = D.occ.get(s); if (!o) D.occ.set(s, (o = []));
           o.push(pack(b.i, ch, vs));
@@ -62,6 +66,10 @@ export async function loadData(onProgress = () => {}) {
       D.chap.set(b.code + ':' + ch, { book: b.code, ch, strongs: Int32Array.from(arr), verses: verses.length });
       D.totalTokens += arr.length;
     }
+  }
+  if (senseLex.length) {                 // a preposition with several cases is reviewed as one word per case
+    D.lex = D.lex.filter((l) => !l.senses).concat(senseLex.filter((l) => l.freq > 0));
+    D.lex.sort((a, b) => b.freq - a.freq || a.n - b.n); D.lex.forEach((l, i) => { l.rank = i + 1; });
   }
   buildPericopes(peri);
   D.ready = true;
@@ -117,9 +125,7 @@ export function scopeVerses(scope) {
 /** Map(strongs -> count) for primary analyses in scope. */
 export function scopeCounts(scope) {
   const m = new Map();
-  for (const { toks } of scopeVerses(scope)) for (const t of toks) {
-    const s = D.forms[t >> 4].an[0].s; m.set(s, (m.get(s) || 0) + 1);
-  }
+  for (const { toks } of scopeVerses(scope)) { const ns = senseNs(toks).ns; for (let k = 0; k < toks.length; k++) m.set(ns[k], (m.get(ns[k]) || 0) + 1); }
   return m;
 }
 
@@ -136,4 +142,61 @@ export function scopeLabel(sc) {
   if (wholeFrom && wholeTo) return b.name + ' ' + (sc.c1 === sc.c2 ? sc.c1 : sc.c1 + '–' + sc.c2);
   const to = sc.c1 === sc.c2 ? '–' + (sc.v2 >= 999 ? lastV(sc.c2) : sc.v2) : '–' + sc.c2 + ':' + (sc.v2 >= 999 ? lastV(sc.c2) : sc.v2);
   return b.name + ' ' + sc.c1 + ':' + (sc.v1 || 1) + to;
+}
+
+/* ---------- prepositions with several cases: one reviewable "word" per case ---------- */
+export const SENSE_BASE = 100000;                                  // sense id = SENSE_BASE * (1 gen, 2 dat, 3 acc) + Strong's number
+const CASE_ORDER = { G: 1, D: 2, A: 3 }, CASE_WORD = { G: 'genitive', D: 'dative', A: 'accusative' };
+
+function makeSenses() {
+  const out = [];
+  for (const L of D.lex) {
+    if (!L.senses) continue;
+    L.senseNs = [];
+    for (const [c, text, lng] of L.senses) {
+      const n = SENSE_BASE * CASE_ORDER[c] + L.n;
+      const sl = { n, base: L.n, case: c, head: L.head + ' + ' + CASE_WORD[c], brief: text, full: lng || '', freq: 0, pos: L.pos, short: shortGloss(text), rank: 0, senses: null };
+      out.push(sl); D.lexByN.set(n, sl); L.senseNs.push(n);
+    }
+  }
+  return out;
+}
+
+const caseCache = new Map();                                       // form index -> Set of case letters its readings can have
+function formCases(fi) {
+  let r = caseCache.get(fi); if (r) return r;
+  r = new Set(); let pos = '';
+  for (const a of D.forms[fi].an) { const d = decode(a.m); if (d.slots && d.slots.case) r.add(d.slots.case); pos = pos || d.pos; }
+  r.pos = D.forms[fi].an.length ? decode(D.forms[fi].an[0].m).pos : '';
+  caseCache.set(fi, r); return r;
+}
+
+/** Which case does the preposition at toks[i] govern? Looks at the next case-bearing word(s). → { n, sure } */
+function pickSense(L, toks, i) {
+  const allowed = new Set(L.senses.map((x) => x[0]));
+  let cand = null;
+  for (let j = i + 1; j < Math.min(toks.length, i + 8); j++) {
+    const cs = formCases(toks[j] >> 4);
+    if (!cs.size) { if (['CONJ', 'PRT', 'ADV', 'COND'].includes(cs.pos)) continue; break; }
+    const hit = [...cs].filter((c) => allowed.has(c) && (cand === null || cand.has(c)));
+    if (!hit.length) break;
+    cand = new Set(hit);
+    if (cand.size === 1) break;
+  }
+  const order = L.senses.map((x) => x[0]);
+  if (cand && cand.size === 1) return { n: SENSE_BASE * CASE_ORDER[[...cand][0]] + L.n, sure: true };
+  const first = cand ? order.find((c) => cand.has(c)) : order[0];
+  return { n: SENSE_BASE * CASE_ORDER[first] + L.n, sure: false };
+}
+
+const senseCache = new WeakMap();
+/** For one verse's tokens: the effective Strong's-or-sense id of each token, and whether the case was a guess. */
+export function senseNs(toks) {
+  let r = senseCache.get(toks); if (r) return r;
+  const ns = new Int32Array(toks.length), unsure = new Uint8Array(toks.length);
+  for (let k = 0; k < toks.length; k++) {
+    const s = D.forms[toks[k] >> 4].an[0].s, L = D.lexByN.get(s);
+    if (L && L.senses) { const p = pickSense(L, toks, k); ns[k] = p.n; unsure[k] = p.sure ? 0 : 1; } else ns[k] = s;
+  }
+  r = { ns, unsure }; senseCache.set(toks, r); return r;
 }

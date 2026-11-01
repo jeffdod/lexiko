@@ -1,5 +1,5 @@
 // The reader: Greek text with tap/click word popups, optional glosses for unknown words, readiness per chapter.
-import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, scopeLabel, periScope, periRange } from './data.js';
+import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, scopeLabel, periScope, periRange } from './data.js';
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, readinessLabel, readinessClass, markRead, setReadKey } from './know.js';
 import { h, clear, toAcute, pct, toast, icon } from './util.js';
@@ -34,15 +34,21 @@ function statusChip(n) {
   return h('span.chip.bad', '○ New to you');
 }
 
-export function popupBody(token, { onStatus } = {}) {
+export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
   const f = tokenForm(token);
   const wrap = h('div', h('div.form', { lang: 'grc' }, toAcute(f.plain)));
+  // a preposition that is learned per case shows the sense for the case it governs here (or every sense when that is unclear)
+  const entries = [];
   f.an.forEach((a, i) => {
-    const L = lexeme(a.s), m = decode(a.m);
+    const L0 = lexeme(a.s);
+    if (i === 0 && L0.senses && eff) { (unsure ? L0.senseNs : [eff]).forEach((n) => entries.push({ L: lexeme(n), a, sense: true })); } else entries.push({ L: L0, a });
+  });
+  entries.forEach(({ L, a }, i) => {
+    const m = decode(a.m);
     const block = h('div', { style: i ? { marginTop: '.8rem', paddingTop: '.7rem', borderTop: '1px dashed var(--line)' } : {} });
     if (i) block.append(h('div.muted.small', { style: { marginBottom: '.2rem', fontWeight: 700 } }, 'Also possible'));
     block.append(
-      h('div.row.wrap', h('span.head', { lang: 'grc' }, L.head), h('span.chip.accent', 'G' + L.n), statusChip(L.n)),
+      h('div.row.wrap', h('span.head', { lang: 'grc' }, L.head), h('span.chip.accent', 'G' + (L.base || L.n)), statusChip(L.n)),
       h('div.gloss', L.brief),
       h('div.parse', h('b', m.posName), m.summary ? ' · ' + m.summary : '', h('div', h('code', m.code))),
       h('div.muted.small', 'Occurs ' + fmt(L.freq) + '× in the text · frequency rank ' + fmt(L.rank)),
@@ -68,7 +74,7 @@ function showPop(el, pinned, rerender) {
   if (popAnchor && popAnchor !== el) popAnchor.classList.remove('sel');
   popAnchor = el; popPinned = pinned; el.classList.add('sel');
   clear(pop);
-  pop.append(h('button.btn.ghost.icon.sm.x', { 'aria-label': 'Close', onclick: hidePop }, icon('close', 18)), popupBody(+el.dataset.t, { onStatus: () => { hidePop(); rerender(); } }));
+  pop.append(h('button.btn.ghost.icon.sm.x', { 'aria-label': 'Close', onclick: hidePop }, icon('close', 18)), popupBody(+el.dataset.t, { eff: +el.dataset.s, unsure: el.dataset.u === '1', onStatus: () => { hidePop(); rerender(); } }));
   pop.hidden = false;
   if (matchMedia('(min-width: 700px)').matches) {
     const r = el.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
@@ -81,11 +87,13 @@ function showPop(el, pinned, rerender) {
 function verseHTML(vs, toks, seenGloss, opts) {
   let out = '<span class="verse" id="v' + vs + '">';
   if (opts.verseNums) out += '<span class="vn">' + vs + '</span>';
-  for (const t of toks) {
-    const f = tokenForm(t), s = f.an[0].s, st = status(s);
+  const sn = senseNs(toks);
+  for (let k = 0; k < toks.length; k++) {
+    const t = toks[k];
+    const f = tokenForm(t), s = sn.ns[k], st = status(s);
     const cls = 'w' + (st === 'unknown' ? ' u' : st === 'learning' ? ' l' : '');
     const dash = tokenFlag(t);                         // source marker: an em-dash follows, with no space after it
-    out += '<span class="' + cls + '" data-t="' + t + '" data-s="' + s + '">' + esc(f.w) + '</span>' + tokenPunct(t) + (dash ? '\u2014' : '');
+    out += '<span class="' + cls + '" data-t="' + t + '" data-s="' + s + '"' + (sn.unsure[k] ? ' data-u="1"' : '') + '>' + esc(f.w) + '</span>' + tokenPunct(t) + (dash ? '\u2014' : '');
     let glossed = false;
     if (opts.gloss && st !== 'known' && (opts.glossRepeat || !seenGloss.has(s))) {
       seenGloss.add(s); glossed = true; out += ' <span class="gl">(' + esc(lexeme(s).short) + ')</span>';

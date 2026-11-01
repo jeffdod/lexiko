@@ -98,14 +98,16 @@ export function scopeReadiness(scope) {
 export const readinessLabel = (p) => (p >= 0.98 ? 'Ready' : p >= 0.95 ? 'Comfortable' : p >= 0.9 ? 'Stretch' : p >= 0.8 ? 'Challenging' : 'Not yet');
 export const readinessClass = (p) => (p >= 0.98 ? 'r4' : p >= 0.95 ? 'r3' : p >= 0.9 ? 'r2' : p >= 0.8 ? 'r1' : 'r0');
 
+/** A word card that is still in use (a preposition that is now reviewed per case no longer uses its old single card). */
+const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const L = D.lexByN.get(+c.id.slice(2)); return !L || !L.senses; };
 export function dueCards(now = Date.now()) {
   const out = [];
-  for (const c of K.cards.values()) if (c.id.startsWith('w:') && c.state !== 'new' && c.due <= now) out.push(c);
+  for (const c of K.cards.values()) if (liveWord(c) && c.state !== 'new' && c.due <= now) out.push(c);
   return out.sort((a, b) => a.due - b.due);
 }
 export function dueSoonCount(hours = 24) {
   const lim = Date.now() + hours * 3600000; let n = 0;
-  for (const c of K.cards.values()) if (c.id.startsWith('w:') && c.due <= lim && c.state !== 'new') n++;
+  for (const c of K.cards.values()) if (liveWord(c) && c.due <= lim && c.state !== 'new') n++;
   return n;
 }
 export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
@@ -205,9 +207,9 @@ export const savePartsStats = (st) => store.set('partsStats', st);
 export function troubleScore(c, now = Date.now()) { return (c.lapses || 0) * 2 + ((c.difficulty || 5) - 5) / 2 + (1 - F.retrievability(c, now)) * 3; }
 export function troubleCards(prefix, limit = 15) {
   const now = Date.now();
-  return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new').map((c) => ({ c, s: troubleScore(c, now) }))
+  return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new' && (prefix !== 'w:' || liveWord(c))).map((c) => ({ c, s: troubleScore(c, now) }))
     .sort((a, b) => b.s - a.s).slice(0, limit).map((x) => x.c);
 }
-export const studiedCount = (prefix) => { let n = 0; for (const c of K.cards.values()) if (c.id.startsWith(prefix) && c.state !== 'new') n++; return n; };
+export const studiedCount = (prefix) => { let n = 0; for (const c of K.cards.values()) if (c.id.startsWith(prefix) && c.state !== 'new' && (prefix !== 'w:' || liveWord(c))) n++; return n; };
 
 export { scopeVerses };

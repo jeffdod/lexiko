@@ -15,7 +15,7 @@ Open `https://lexiko.org/` and "Add to Home Screen" / "Install app". It then run
 
 ## Rebuild after changes (needs Python 3 + fontTools, Node)
 ```
-python3 tools/build_data.py sources/rp sources/lexicon/dodson.xml sources/lexicon/user-lexicon.txt data   # RP + lexicon -> data/*.json
+python3 tools/build_data.py sources/rp sources/lexicon/Dodson-Ulrik.txt sources/lexicon/user-lexicon.txt data   # RP + lexicon -> data/*.json
 python3 tools/build_pericopes.py sources/pericopes/kretzmann.txt data                                  # section headings -> data/pericopes.json
 python3 tools/make_fonts.py <GentiumPorsonic dir> fonts                                               # subset + rename + woff2
 python3 tools/make_icons.py && node tools/render_icons.js                                              # icons, favicon, social card
@@ -23,6 +23,10 @@ python3 tools/build_sw.py        # ALWAYS run after changing any app file: regen
 node tools/serve.js &            # local test server at http://localhost:8123/lexiko/ (or double-click preview.command / preview.bat)
 node tools/test_smoke.js         # end-to-end test in headless Chromium (needs playwright)
 ```
+
+### Prepositions that take several cases
+`sources/lexicon/Dodson-Ulrik.txt` is the single source of both the short (brief) and long definitions. Tag the parts of a preposition's definition in either column with `gen:`, `dat:` or `acc:` (for example `(a) gen: through, (b) acc: on account of`). When the short gloss has two or more different cases, the preposition is learned as one word per case ("διά + genitive", "διά + accusative"), each with its own review schedule, short gloss and long definition. The reader popup shows the sense for the case the preposition governs in that verse (it looks at the next case-bearing word, and shows every sense when that is unclear). A preposition with only one case, or none, stays a single word: the question screen shows just the word (no "+ case"), and its definition is shown exactly as written in your file, tag included. Quizzes test the short gloss; the long definition appears after answering only when it adds something, and sits behind "More" when it is long. Rebuild the data (command above), then `python3 tools/build_sw.py`.
+
 Users get new versions automatically: the service worker notices a changed `sw-assets.js`, downloads the update, and shows an "Update ready — Reload" banner.
 
 ## How it works
