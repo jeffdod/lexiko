@@ -90,19 +90,19 @@ function nounEndingsTables(hi) {
 }
 
 /* ---------- contractions: the chart from the user's grammar ---------- */
-const CONTRACT_SINGLE = { cols: ['α', 'ε', 'η', 'ι', 'υ', 'ο', 'ω'], common: ['ε+ε', 'ε+ο', 'ο+ε', 'ο+ο'], rows: [
+const CONTRACT_SINGLE = { cols: ['α', 'ε', 'η', 'ι', 'υ', 'ο', 'ω'], rows: [
   ['α', ['α', 'α', 'α', 'αι', 'αυ', 'ω', 'ω']], ['ε', ['η', 'ει', 'η', 'ει', 'ευ', 'ου', 'ω']], ['η', ['η', 'η', 'η', 'ῃ', 'ηυ', 'ω', 'ω']],
   ['ο', ['ω', 'ου', 'ω', 'οι', 'ου', 'ου', 'ω']], ['ω', ['ω', 'ω', 'ω', 'ῳ', 'ωυ', 'ω', 'ω']]] };
 const CONTRACT_DIPH = { cols: ['αι', 'ει', 'ει*', 'ῃ', 'οι', 'ου*', 'ῳ'], rows: [
   ['α', ['ᾳ', 'ᾳ', 'α', 'ᾳ', 'ῳ', 'ω', 'ῳ']], ['ε', ['ῃ', 'ει', 'ει', 'ῃ', 'οι', 'ου', 'ῳ']], ['η', ['ῃ', 'ῃ', 'η', 'ῃ', 'ῳ', '–', 'ῳ']],
   ['ο', ['ῳ', 'οι', 'ου', 'οι', 'οι', 'ου', 'ῳ']]] };
 function contractionTables() {
-  const grid = (T, common) => h('div.cscroll', h('table.ctable.ccontr',
+  const grid = (T) => h('div.cscroll', h('table.ctable.ccontr',
     h('thead', h('tr', h('th', ''), T.cols.map((c) => h('th', { lang: 'grc' }, c)))),
-    h('tbody', T.rows.map(([r, v]) => h('tr', h('th', { scope: 'row', lang: 'grc' }, r), v.map((x, i) => h('td' + (common && common.includes(r + '+' + T.cols[i]) ? '.hi' : ''), { lang: 'grc' }, x)))))));
+    h('tbody', T.rows.map(([r, v]) => h('tr', h('th', { scope: 'row', lang: 'grc' }, r), v.map((x) => h('td', { lang: 'grc' }, x)))))));
   return [
     h('p.small.muted', 'Read across: the vowel on the left joined to the vowel or diphthong at the top.'),
-    h('div.cblock', h('h3', 'Single vowels'), h('p.small.muted', 'All possible contractions of single vowels. The four most common are shaded.'), grid(CONTRACT_SINGLE, CONTRACT_SINGLE.common)),
+    h('div.cblock', h('h3', 'Single vowels'), h('p.small.muted', 'All possible contractions of single vowels.'), grid(CONTRACT_SINGLE)),
     h('div.cblock', h('h3', 'Vowels and diphthongs'), grid(CONTRACT_DIPH), h('p.small.muted', '* Formed by contraction, not an original diphthong.')),
   ];
 }
