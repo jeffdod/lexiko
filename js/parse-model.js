@@ -74,11 +74,21 @@ export function groupForms(forms) {
   // The same word often appears capitalised at the start of a sentence, or with a different accent (ἐστιν / ἔστιν / ἐστὶν).
   // When those have the same lexeme and exactly the same readings they are one form to practise, so merge them.
   const bare = (w) => w.replace(/\u00ad/g, '').normalize('NFD').replace(/[\u0300\u0301\u0342]/g, '').normalize('NFC').toLowerCase();
-  const merged = new Map();
+  const groups = [];                                               // {ids, codes, bucket}: written forms that share lexeme and readings
+  const sig = new Map();
   for (const ids of by.values()) {
     const codes = new Set(); for (const i of ids) for (const a of forms[i].an) codes.add(a.s + ':' + a.m);
-    const k = bare(forms[ids[0]].w) + '|' + (forms[ids[0]].an[0] && forms[ids[0]].an[0].s) + '|' + [...codes].sort().join(',');
-    (merged.get(k) || merged.set(k, []).get(k)).push(...ids);
+    const bucket = bare(forms[ids[0]].w) + '|' + (forms[ids[0]].an[0] && forms[ids[0]].an[0].s), key = bucket + '|' + [...codes].sort().join(',');
+    const g = sig.get(key); if (g) g.ids.push(...ids); else { const n = { ids: ids.slice(), codes, bucket }; sig.set(key, n); groups.push(n); }
+  }
+  // ...and a variant whose readings are only some of another variant's (εἶδον has two readings, εἶδόν one) belongs with it
+  const buckets = new Map(); for (const g of groups) (buckets.get(g.bucket) || buckets.set(g.bucket, []).get(g.bucket)).push(g);
+  const merged = new Map();
+  for (const list of buckets.values()) {
+    list.sort((x, y) => y.codes.size - x.codes.size);
+    const keep = [];
+    for (const g of list) { const host = keep.find((k) => [...g.codes].every((c) => k.codes.has(c))); if (host) host.ids.push(...g.ids); else keep.push(g); }
+    keep.forEach((g, n) => merged.set(g.bucket + '#' + n, g.ids));
   }
   for (const ids of merged.values()) {
     ids.sort((a, b) => forms[b].count - forms[a].count || a - b);
