@@ -48,6 +48,7 @@ Users get new versions automatically: the service worker notices a changed `sw-a
 Vocabulary, parsing and principal parts each have *Strengthen weak spots* (your shakiest cards) and *Look ahead* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Every quiz screen has a **Charts** button (`js/charts.js`) with four tabs: the master verb chart, personal endings, noun endings (the first/second and third declension charts from the user's grammar) and contractions. After a verb or noun answer, the matching row is highlighted, and the parsing feedback has a button that opens it.
 
 ## Parsing practice
+Parsing a passage (Study a passage) has two one-click buttons for the same text: all forms, or **Verbs only**.
 `#/parse` quizzes the parts of a form in a fixed order (verbs: tense → voice → mood → person → number; infinitives stop after mood; participles continue with case → number → gender; other words: case → number → gender). Every parsing listed for the form under the same lexeme is accepted, each part is scored separately, and every form has its own FSRS card (`f:<form>:<strongs>`). *Guided* asks one part at a time with instant feedback and a hint; *Quick* shows all parts at once; *Auto* starts guided and switches (per verbs / other words) once you're ≥85 % reliable over 20 forms, and back below 60 %. Code: `js/parse-model.js` (slots, matching, grading), `js/parse.js` (UI). `node tools/test_stem.mjs [form…]` checks them against the whole text.
 
 ## Sources and licences

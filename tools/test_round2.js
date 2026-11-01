@@ -40,6 +40,11 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
     ok(left === 0, 'no preposition is left with an unsure case (' + left + ')');
     await page.goto(URL + '#/read/MAT/2'); await page.waitForSelector('[data-t]'); await page.locator('[data-t]', { hasText: /^κατ’$/ }).first().click();
     ok(/\+ accusative/.test(await page.locator('#pop').innerText()), 'κατ’ ὄναρ shows the accusative sense'); await page.keyboard.press('Escape'); }
+  // parsing a passage: one click for everything, one click for verbs only
+  await page.goto(URL + '#/parse'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
+  { const all = await page.locator('details a:has-text("Practise these forms")').getAttribute('href'), vb = await page.locator('details a.btn:has-text("Verbs only")').first().getAttribute('href');
+    ok(/\/all$/.test(all) && /\/verb$/.test(vb) && all.replace(/all$/, '') === vb.replace(/verb$/, ''), 'passage parsing offers all forms and verbs only for the same text: ' + all + ' | ' + vb);
+    await page.goto(URL + vb); await page.waitForSelector('.qcard'); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');
