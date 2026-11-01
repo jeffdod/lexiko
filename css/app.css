@@ -288,3 +288,5 @@ dialog.charts { width: min(60rem, 96vw); max-width: 96vw; max-height: 90dvh; ove
 
 summary { padding-block: .6rem; }
 .readbar .title { min-height: 2.5rem; }
+.charts .csec { font-size: 1.15rem; margin: 1.4rem 0 .2rem; padding-top: .8rem; border-top: 1px solid var(--line, #e2dacb); }
+.charts .csec:first-of-type { border-top: 0; margin-top: .6rem; }
