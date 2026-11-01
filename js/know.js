@@ -148,24 +148,25 @@ export function probeCandidates(limit, exclude = new Set()) {
 }
 
 /** Build a session: due reviews + new words + probes, interleaved. */
-export function buildSession({ scope = null, kind = 'daily', size = K.settings.sessionSize, newLimit = null }) {
+export function buildSession({ scope = null, only = null, kind = 'daily', size = K.settings.sessionSize, newLimit = null }) {
   const items = []; const seen = new Set();
   const push = (n, type) => { if (!seen.has(n)) { seen.add(n); items.push({ n, type }); } };
   const due = dueCards().map((c) => +c.id.slice(2));
   const inScope = scope ? new Set(scopeCounts(scope).keys()) : null;
-  const dueList = inScope ? due.filter((n) => inScope.has(n)) : due;
+  const dueList = inScope ? due.filter((n) => inScope.has(n)) : only ? due.filter((n) => only.has(n)) : due;
   let fresh;
   if (kind === 'review') fresh = [];
+  else if (only) fresh = D.lex.filter((L) => only.has(L.n) && (!K.cards.has('w:' + L.n) || getCard(L.n).state === 'new') && status(L.n) === 'unknown').map((L) => L.n);
   else if (scope) fresh = passageWords(scope).filter((x) => !K.cards.has('w:' + x.n) || getCard(x.n).state === 'new').map((x) => x.n);
   else fresh = nextByLevel(200).map((x) => x.n);
-  const cap = newLimit != null ? newLimit : Math.max(0, K.settings.newPerDay - (scope ? 0 : newToday()));
+  const cap = newLimit != null ? newLimit : Math.max(0, K.settings.newPerDay - (scope || only ? 0 : newToday()));
   dueList.slice(0, Math.max(size, 30)).forEach((n) => push(n, 'review'));
   fresh.slice(0, cap).forEach((n) => push(n, 'new'));
-  if (kind !== 'review' && K.settings.level != null) {
+  if (kind !== 'review' && !only && K.settings.level != null) {
     const nProbe = Math.round(items.length * K.settings.probeRate / (1 - K.settings.probeRate)) || (items.length ? 1 : 0);
     probeCandidates(nProbe, seen).forEach((x) => push(x.n, 'probe'));
   }
-  return shuffle(items).slice(0, scope ? 400 : Math.max(size, 40));
+  return shuffle(items).slice(0, scope || only ? 400 : Math.max(size, 40));
 }
 /* ---------- parsing practice: form-level cards ('f:<form>:<strongs>') ---------- */
 export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;

@@ -1,7 +1,8 @@
 // Home: where you are, what to do today, what to read next.
 import { D, scopeLabel } from './data.js';
 import { K, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel, studiedCount } from './know.js';
-import { h, clear, pct, icon, startButton } from './util.js';
+import { h, clear, pct, icon, startButton, fold } from './util.js';
+import { growthCard } from './growth.js';
 import { smartAll, counts } from './smart.js';
 import { renderWelcome } from './welcome.js';
 import { suggestions, suggestionItem } from './progress.js';
@@ -26,25 +27,30 @@ export function renderHome(view) {
 
   if (needsBackup) stack.append(h('div.banner', icon('download', 22), h('div.grow', h('b', 'Back up your progress'), h('div.small', 'It lives only on this device. A backup takes two seconds.')), h('a.btn.sm', { href: '#/settings' }, 'Back up')));
 
-  stack.append(h('div.card.stack',
-    h('div.row.between', h('h2', 'Today'), streak() ? h('span.chip.gold', icon('flame', 14), streak() + '-day streak') : null),
-    h('div.kpis', h('div.kpi', h('b', due), h('span', 'due for review')), h('div.kpi', h('b', newLeft), h('span', 'new words left today')), h('div.kpi', h('b', studied), h('span', 'words studied'))),
-    startButton(smartAll())));
+  // 1. the one thing to do now
+  const parts = [due ? due + ' due' : '', newLeft ? newLeft + ' new today' : ''].filter(Boolean);
+  stack.append(h('div.card.stack.hero',
+    startButton(smartAll()),
+    (parts.length || streak()) ? h('div.row.between.muted.small', h('span', parts.join(' · ')), streak() ? h('span.chip.gold', icon('flame', 14), streak() + '-day streak') : null) : null));
 
+  // 2. reading: your goal, or where you left off
+  const book = D.bookByCode.get(K.settings.lastBook || 'JHN') || D.bookByCode.get('JHN'), ch = K.settings.lastCh || 1;
   if (goal) {
     const rd = scopeReadiness(goal);
-    stack.append(h('div.card.stack', h('div.row.between', h('h2', icon('target', 20), ' ' + scopeLabel(goal)), h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' · ' + readinessLabel(rd.known))),
+    stack.append(h('div.card.stack', h('div.row.between', h('b', icon('target', 18), ' ' + scopeLabel(goal)), h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' · ' + readinessLabel(rd.known))),
       h('div.bar', h('i.k', { style: { width: pct(rd.known) } }), h('i.l', { style: { width: pct(rd.learning) } })),
       h('div.muted.small', rd.distinctUnknown ? rd.distinctUnknown + ' words still to learn before this reads comfortably.' : 'You know every word. Go read it!'),
-      h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study its words'), h('a.btn.sm', { href: readHref(goal.book, goal.c1) }, 'Read'))));
+      h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, rd.distinctUnknown ? 'Learn the ' + rd.distinctUnknown + ' new words' : 'Study its words'), h('a.btn.sm', { href: readHref(goal.book, goal.c1) }, 'Read'))));
   } else {
-    stack.append(h('div.card.flat.row.between', h('div', h('b', 'Set a reading goal'), h('div.muted.small', 'Pick a passage and lexiko will aim your study at it.')), h('a.btn.sm', { href: '#/progress' }, 'Choose')));
+    stack.append(h('div.card.stack', h('div.row.between', h('div', h('b', 'Keep reading'), h('div.muted.small', book.name + ' ' + ch)), h('a.btn.primary.sm', { href: readHref(book.code, ch) }, icon('read', 16), 'Read')),
+      h('a.small', { href: '#/progress' }, 'Set a reading goal ›')));
   }
 
-  const sug = suggestions(3);
-  if (sug.length) stack.append(h('div.card.stack', h('h2', 'Good next reads'), h('div.list', sug.map((r) => suggestionItem(r)))));
-  else if (lvl != null || studied) stack.append(h('div.card.flat', h('b', 'Keep going'), h('div.muted.small', 'As you learn more words, passages within your reach will appear here.')));
+  // 3. how you're growing
+  if (studied) stack.append(growthCard({ compact: true }));
 
-  stack.append(h('div.row.wrap', h('a.btn', { href: '#/read/' + (K.settings.lastBook || 'JHN') + '/' + (K.settings.lastCh || 1) }, icon('read', 18), 'Continue reading')));
+  // 4. everything else stays one tap away, out of the way
+  const sug = suggestions(3);
+  if (sug.length) stack.append(fold('Good next reads', h('div.list', sug.map((r) => suggestionItem(r)))));
   clear(view).append(stack);
 }

@@ -3,6 +3,7 @@ import { D, scopeLabel, periScope, periRange, periRef } from './data.js';
 import { K, status, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak, setting } from './know.js';
 import { h, clear, pct, icon, todayKey } from './util.js';
 import { readHref } from './reader.js';
+import { growthCard } from './growth.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
 
@@ -87,6 +88,7 @@ export function renderProgress(view) {
       h('div.kpi', h('b', streak()), h('span', 'day streak'))),
     h('div.card', h('div.bar', h('i.k', { style: { width: pct(kTok / tot) } }), h('i.l', { style: { width: pct(lTok / tot) } })),
       h('div.legend', { style: { marginTop: '.5rem' } }, h('span', h('i', { style: { background: 'var(--good)' } }), 'known'), h('span', h('i', { style: { background: 'var(--warn)' } }), 'learning'), h('span', h('i', { style: { background: 'var(--bad)', opacity: .55 } }), 'new to you'))),
+    growthCard(),
     goalCard,
     sug.length ? h('div.card.stack', h('h2', 'Good next reads'), h('p.muted.small', 'Sections where you already know most of the words — the sweet spot for reading with a few lookups.'), h('div.list', sug.map((r) => suggestionItem(r)))) : null,
     h('div.card', h('h2', 'Passages within reach'), legend, h('div', { style: { marginTop: '.4rem' } }, books)),

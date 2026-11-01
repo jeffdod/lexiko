@@ -1,7 +1,7 @@
 // Settings: theme, level, study options, data protection / backup / restore, install help, about & licenses.
 import { D } from './data.js';
 import { K, setting, setSetting, setLevel, studiedCount } from './know.js';
-import { store, requestPersistence, makeBackup, importBackup, validateBackup } from './store.js';
+import { store, requestPersistence, makeBackup, importBackup, validateBackup, ENC_FORMAT, canLock, lockBackup, unlockBackup } from './store.js';
 import { h, clear, toast, icon, pct } from './util.js';
 
 const fmt = (n) => n.toLocaleString('en-US');
@@ -42,9 +42,9 @@ const seg = (opts, cur, onPick) => {
 };
 
 /** Short, sortable file name, e.g. lex-261031-0553.json (year-month-day, then time), so the newest is obvious in the Files app. */
-function backupName(d = new Date()) {
+function backupName(locked = false, d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return 'lex-' + p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+  return 'lex-' + p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + (locked ? '-locked' : '') + '.json';
 }
 
 function download(blob, name) {
@@ -65,7 +65,15 @@ export function renderSettings(view) {
   const fileIn = h('input', { type: 'file', accept: '.json,application/json', hidden: true });
   fileIn.addEventListener('change', async () => {
     const f = fileIn.files[0]; fileIn.value = ''; if (!f) return;
-    let data; try { data = validateBackup(JSON.parse(await f.text())); } catch (e) { return toast(e.message || 'That file can’t be read.'); }
+    let data;
+    try {
+      data = JSON.parse(await f.text());
+      if (data && data.format === ENC_FORMAT) {                                  // a passphrase-protected backup
+        if (!canLock()) return toast('This browser can’t open protected backups here. Open lexiko from its web address (https) instead.');
+        data = await askUnlock(data); if (!data) return;
+      }
+      data = validateBackup(data);
+    } catch (e) { return toast(e.message || 'That file can’t be read.'); }
     const dlg = h('dialog', h('h2', 'Restore backup'), h('p', 'Backup from ' + new Date(data.exported).toLocaleString() + ' with ' + data.cards.length + ' cards.'),
       h('p.small.muted', '“Merge” keeps the most recent result for each word on both sides. “Replace” wipes this device first.'),
       h('div.row.wrap', h('button.btn.primary', { onclick: async () => { dlg.close(); await importBackup(data, 'merge'); toast('Merged — reloading…'); setTimeout(() => location.reload(), 700); } }, 'Merge'),
@@ -73,12 +81,15 @@ export function renderSettings(view) {
         h('button.btn.ghost', { onclick: () => dlg.close() }, 'Cancel')));
     document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   });
+  const passIn = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Optional passphrase', 'aria-label': 'Optional passphrase for the backup', style: { width: '100%' } });
   const markBackedUp = async () => {
     await setSetting('lastBackup', Date.now());
     const el = document.querySelector('#bk-last'); if (el) el.textContent = 'Last backup: ' + new Date(K.settings.lastBackup).toLocaleString();
   };
   const doBackup = async () => {
-    const data = await makeBackup(), json = JSON.stringify(data), name = backupName();
+    const pass = passIn.value;
+    if (pass && pass.length < 6) return toast('Use a passphrase of at least 6 characters, or leave it empty.');
+    const plain = await makeBackup(), data = pass ? await lockBackup(plain, pass) : plain, json = JSON.stringify(data), name = backupName(!!pass);
     const blob = new Blob([json], { type: 'application/json' });
     try {
       const file = new File([blob], name, { type: 'application/json' });
@@ -103,6 +114,8 @@ export function renderSettings(view) {
       h('div.row.between', h('div', h('b', 'Memory target'), h('div.muted.small', 'Higher = more reviews, fewer forgotten words.')),
         seg([[0.85, '85%'], [0.9, '90%'], [0.95, '95%']], setting('retention'), (v) => setSetting('retention', v)))),
     h('div.card.stack', h('h2', 'Your data'), persistLine,
+      canLock() ? h('div.stack', { style: { gap: '.3rem' } }, h('label.field', 'Lock the backup with a passphrase (optional)', passIn),
+        h('div.muted.small', 'Leave it empty for an ordinary backup. If you set one, you’ll need the same passphrase to restore, and lexiko can’t recover it for you: it isn’t stored anywhere.')) : null,
       h('div.row.wrap', h('button.btn', { onclick: () => refreshPersist(true) }, 'Protect my data'),
         h('button.btn.primary', { onclick: doBackup }, icon('download', 18), 'Back up progress'), h('button.btn', { onclick: () => fileIn.click() }, icon('upload', 18), 'Restore…'), fileIn),
       h('p.muted.small', { id: 'bk-where' }, ios ? 'On iPhone/iPad: tap Back up progress, then choose “Save to Files” in the menu that appears, and pick a folder in iCloud Drive (a folder named lexiko works well). To restore later, tap Restore… and choose that file. Backup names start with “lex” and end with the date, so the newest is easy to find.'
@@ -117,6 +130,22 @@ export function renderSettings(view) {
       h('p.small.muted', 'Scheduling uses the open FSRS algorithm. ' + fmt(D.lex.length) + ' words · ' + fmt(D.totalTokens) + ' tokens · ' + (studiedCount('w:') ? studiedCount('w:') + ' words studied.' : 'nothing studied yet.')),
       h('div.row.wrap', h('button.btn.sm', { onclick: showLicense }, 'Font license'), h('a.btn.sm', { href: 'https://github.com/jeffdod/lexiko', target: '_blank', rel: 'noopener' }, 'Source'),
         h('button.btn.sm.danger', { onclick: async () => { if (confirm('Erase ALL progress and settings on this device? Back up first if unsure.') && confirm('Really erase everything?')) { await store.clearAll(); try { localStorage.removeItem('lexiko-theme'); } catch { /* ignore */ } location.reload(); } } }, 'Erase everything')))));
+}
+
+/** Ask for the passphrase of a locked backup; resolves with the decrypted backup, or null if cancelled. */
+function askUnlock(enc) {
+  return new Promise((resolve) => {
+    const pass = h('input', { type: 'password', autocomplete: 'current-password', 'aria-label': 'Backup passphrase', style: { width: '100%' } });
+    const msg = h('div.small', { style: { color: 'var(--bad)', minHeight: '1.2em' } });
+    const dlg = h('dialog', h('h2', 'This backup is locked'), h('p.small', 'Enter the passphrase you chose when you made it.'), pass, msg,
+      h('div.row.wrap', { style: { marginTop: '.6rem' } },
+        h('button.btn.primary', { onclick: async () => { try { const o = await unlockBackup(enc, pass.value); done = true; dlg.close(); resolve(o); } catch { msg.textContent = 'That passphrase doesn’t open this backup.'; } } }, 'Unlock'),
+        h('button.btn.ghost', { onclick: () => dlg.close() }, 'Cancel')));
+    let done = false;
+    dlg.addEventListener('close', () => { dlg.remove(); if (!done) resolve(null); });
+    pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') dlg.querySelector('.btn.primary').click(); });
+    document.body.append(dlg); dlg.showModal(); pass.focus();
+  });
 }
 
 /** The license opens inside the app (a plain link to the .txt file would leave the installed app with no way back). */

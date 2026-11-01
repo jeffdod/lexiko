@@ -94,6 +94,29 @@ export async function makeBackup() {
   return { format: BACKUP_FORMAT, version: 1, exported: new Date().toISOString(), kv, cards, log };
 }
 
+/* ---------- optional passphrase for backups: AES-GCM, key from PBKDF2 (SHA-256). The passphrase is never stored. ---------- */
+export const ENC_FORMAT = 'lexiko-backup-locked';
+export const canLock = () => !!(globalThis.crypto && crypto.subtle);
+const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+async function lockKey(pass, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+export async function lockBackup(obj, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), iter = 250000;
+  const key = await lockKey(pass, salt, iter);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj))));
+  return { format: ENC_FORMAT, version: 1, exported: obj.exported, kdf: 'PBKDF2-SHA256', iter, salt: b64(salt), iv: b64(iv), data: b64(ct) };
+}
+/** Throws 'wrong' when the passphrase does not open the file. */
+export async function unlockBackup(o, pass) {
+  try {
+    const key = await lockKey(pass, unb64(o.salt), o.iter);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(o.iv) }, key, unb64(o.data))));
+  } catch { throw new Error('wrong'); }
+}
+
 export function validateBackup(o) {
   if (!o || o.format !== BACKUP_FORMAT) throw new Error('This file is not a lexiko backup.');
   if (!o.kv || typeof o.kv !== 'object' || !Array.isArray(o.cards) || !Array.isArray(o.log)) throw new Error('The backup file is incomplete or damaged.');

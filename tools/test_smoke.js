@@ -20,8 +20,8 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.click('button:has-text("Continue")');
   ok(/What would you like to do first/.test(await page.textContent('#view')), 'step 2 asks what to do first');
   await page.click('button:has-text("Skip for now")');
-  await page.waitForFunction(() => /Today/.test(document.querySelector('#view').textContent));
-  ok(/Today/.test(await page.textContent('#view')), 'home after first run');
+  await page.waitForSelector('.hero');
+  ok(await page.locator('.hero .start').count() === 1, 'home after first run');
 
   // search: by Greek form without accents, by Beta Code, by English, by Strong's number
   const found = async (q) => { await page.goto(URL + '#/search'); await page.waitForSelector('#sq'); await page.fill('#sq', q); await page.waitForTimeout(150); return page.locator('.list .li b').allTextContents(); };
@@ -110,7 +110,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.screenshot({ path: out + '/05-learn.png' });
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
   await page.selectOption('select[aria-label=Book]', 'JHN'); await page.selectOption('select[aria-label=Section]', { index: 1 });
-  const href = await page.locator('.fold a.btn.primary').last().getAttribute('href');
+  const href = await page.locator('details:has(summary:has-text("Study a passage")) a.btn.primary').last().getAttribute('href');
   ok(/#\/learn\/passage\/JHN\/1\/1\/1\/18$/.test(href), 'section picker fills the range: ' + href);
   await page.goto(URL + '#/learn/passage/JHN/1/1/1/18'); await page.waitForSelector('.qcard');
   await page.screenshot({ path: out + '/06-quiz-front.png' });
