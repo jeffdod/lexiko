@@ -35,6 +35,11 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
     const after = await snap();
     ok(await page.textContent('.qgreek') === firstWord && after.log === before.log && after.cards === before.cards && after.r === before.r, 'Undo brings back the same card and restores the log, cards and daily counts ' + JSON.stringify({ before, mid, after }));
     ok(await page.locator('.undorow').count() === 0, 'Undo is used up after one press'); }
+  // prepositions whose case was settled by hand: none are left unsure, and an adverbial one shows its plain entry
+  { const left = await page.evaluate(async () => { const { D, senseNs } = await import('./js/data.js'); let u = 0; for (const bk of D.books) for (const [, vs] of D.text[bk.code]) for (const [, toks] of vs) u += senseNs(toks).unsure.reduce((a, b) => a + b, 0); return u; });
+    ok(left === 0, 'no preposition is left with an unsure case (' + left + ')');
+    await page.goto(URL + '#/read/MAT/2'); await page.waitForSelector('[data-t]'); await page.locator('[data-t]', { hasText: /^κατ’$/ }).first().click();
+    ok(/\+ accusative/.test(await page.locator('#pop').innerText()), 'κατ’ ὄναρ shows the accusative sense'); await page.keyboard.press('Escape'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');

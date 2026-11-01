@@ -76,3 +76,4 @@ A brand-new user (no level chosen, nothing studied) sees two plain questions fir
 * **Progress** opens with one calm sentence: how much of the goal passage is known (or, with no goal, how many words you know and how much of the New Testament text they cover, and how far to the next round number).
 * **Undo**: a vocabulary session shows “Undo last answer” (or the U key) after each answer; it restores the card, the review log and today's counts (`undoRate` in `js/know.js`). One step only; parsing and principal-parts answers are graded automatically, so they have no undo.
 * **Updates**: the app re-checks for a new version whenever it returns to the front and once an hour, and offers “Update ready”.
+* **Prepositions with an unclear case** (the few where the words around them can't settle it) are decided by hand in `js/prep-cases.js`: a case, or `-` for a preposition that is really an adverbial prefix and governs nothing (it then shows its plain entry).
