@@ -126,6 +126,7 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 .gl { font-family: var(--ui); font-size: .6em; color: var(--accent); margin: 0 .2em 0 .1em; font-weight: 600; line-height: 1.2; }
 .verse.focus { background: var(--gold-soft); border-radius: 6px; box-shadow: 0 0 0 4px var(--gold-soft); }
 .readfoot { display: flex; gap: .6rem; justify-content: space-between; margin-top: .5rem; }
+@media (max-width: 460px) { .readfoot { display: grid; grid-template-columns: 1fr 1fr; } .readfoot > button { grid-column: 1 / -1; order: -1; } }
 .rdy { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; font-weight: 700; padding: .2rem .65rem; border-radius: 999px; }
 .rdy.r4 { background: var(--good-soft); color: var(--good); } .rdy.r3 { background: color-mix(in srgb, var(--good-soft) 60%, var(--accent-soft)); color: var(--accent); }
 .rdy.r2 { background: var(--warn-soft); color: var(--warn); } .rdy.r1 { background: var(--bad-soft); color: var(--bad); } .rdy.r0 { background: var(--surface-2); color: var(--muted); }
