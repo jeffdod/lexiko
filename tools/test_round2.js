@@ -64,6 +64,25 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
       }
       ok(lit === 'Middle or passive', 'a wrong voice answer lights "Middle or passive" as the right one (lit: ' + lit + '; saw ' + seen.join(',') + ')');
     } }
+  // parsing a passage: each verbal form once, even when it is capitalised or accented differently, and old progress on a variant counts
+  { const r = await page.evaluate(async () => {
+      const { D } = await import('./js/data.js'); const pm = await import('./js/parse-model.js'); const pa = await import('./js/parse.js'); const k = await import('./js/know.js');
+      const bare = (w) => w.replace(/\u00ad/g, '').normalize('NFD').replace(/[\u0300\u0301\u0342]/g, '').normalize('NFC').toLowerCase();
+      const out = {};
+      for (const sc of [{ book: 'JHN', c1: 1, v1: 1, c2: 1, v2: 999 }, { book: 'MRK', c1: 1, v1: 1, c2: 1, v2: 999 }]) {
+        const ids = pa.buildParseSession({ scope: sc, kind: 'verb', size: 80, newLimit: 80 }).map((x) => x.id);
+        const keys = ids.map((i) => bare(D.forms[i].w) + '|' + D.forms[i].an[0].s + '|' + D.forms[i].an.map((a) => a.m).sort().join(','));
+        out[sc.book] = { n: ids.length, uniq: new Set(keys).size, ids: new Set(ids).size }; }
+      // progress on a non-main variant (made before variants were merged) still counts
+      const { canon, members } = pm.groupForms(D.forms); let main = -1, variant = -1;
+      for (const [c, ids] of members) if (ids.length > 1 && D.forms[c].an[0] && D.forms[c].an[0].s) { main = c; variant = ids[1]; break; }
+      let where = null; for (const bk of D.books) { for (const [ch, vs] of D.text[bk.code]) { for (const [v, toks] of vs) if (toks.some((t) => canon[t >> 4] === main)) { where = { book: bk.code, c1: ch, v1: v, c2: ch, v2: v }; break; } if (where) break; } if (where) break; }
+      const before = pa.planParseSession({ scope: where, kind: 'all', size: 50, newLimit: 50 }).fresh.some((x) => x.id === main);
+      await k.rateParse(k.parseId(D.forms[variant]), 3);
+      const after = pa.planParseSession({ scope: where, kind: 'all', size: 50, newLimit: 50 }).fresh.some((x) => x.id === main);
+      out.variant = { before, after }; return out; });
+    ok(r.JHN.uniq === r.JHN.n && r.MRK.uniq === r.MRK.n && r.JHN.ids === r.JHN.n, 'a passage session never repeats a form (John 1: ' + r.JHN.n + ' items, Mark 1: ' + r.MRK.n + ')');
+    ok(r.variant.before === true && r.variant.after === false, 'progress on a capitalised or differently accented variant counts for the merged form ' + JSON.stringify(r.variant)); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');

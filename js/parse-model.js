@@ -71,7 +71,16 @@ export function keySlots(d) {
 export function groupForms(forms) {
   const by = new Map(), canon = new Array(forms.length), members = new Map();
   forms.forEach((f, i) => { const k = f.w.replace(/\u00ad/g, '') + '|' + (f.an[0] && f.an[0].s); (by.get(k) || by.set(k, []).get(k)).push(i); });
+  // The same word often appears capitalised at the start of a sentence, or with a different accent (ἐστιν / ἔστιν / ἐστὶν).
+  // When those have the same lexeme and exactly the same readings they are one form to practise, so merge them.
+  const bare = (w) => w.replace(/\u00ad/g, '').normalize('NFD').replace(/[\u0300\u0301\u0342]/g, '').normalize('NFC').toLowerCase();
+  const merged = new Map();
   for (const ids of by.values()) {
+    const codes = new Set(); for (const i of ids) for (const a of forms[i].an) codes.add(a.s + ':' + a.m);
+    const k = bare(forms[ids[0]].w) + '|' + (forms[ids[0]].an[0] && forms[ids[0]].an[0].s) + '|' + [...codes].sort().join(',');
+    (merged.get(k) || merged.set(k, []).get(k)).push(...ids);
+  }
+  for (const ids of merged.values()) {
     ids.sort((a, b) => forms[b].count - forms[a].count || a - b);
     for (const i of ids) canon[i] = ids[0];
     members.set(ids[0], ids);

@@ -24,13 +24,20 @@ function ensureIndex() {
   keyMap = new Map();
   ({ canon, members } = groupForms(D.forms));                        // rows that are the same written form share one item
   D.forms.forEach((f, i) => { f.id = i; });
-  for (const i of members.keys()) { const k = parseId(D.forms[i]), j = keyMap.get(k); if (j == null || D.forms[i].count > D.forms[j].count) keyMap.set(k, i); }
+  for (const [c, ids] of members) for (const i of ids) keyMap.set(parseId(D.forms[i]), c);        // a card made for any variant of a form finds the form
   samples = new Map();
   for (const b of D.books) for (const [ch, verses] of D.text[b.code]) for (const [vs, toks] of verses) for (const t of toks) {
     const id = canon[t >> 4]; let a = samples.get(id); if (!a) samples.set(id, (a = []));
     if (a.length < 8 && !a.some((x) => x[2] === vs && x[1] === ch && x[0] === b.code)) a.push([b.code, ch, vs]);
   }
 }
+/** The card that holds this form's progress: the variant already practised the most (cards made before variants were merged), else the main one. */
+const cardIdFor = (id) => {
+  let best = parseId(D.forms[id]), bc = K.cards.get(best);
+  for (const r of members.get(id) || []) { const k = parseId(D.forms[r]), c = K.cards.get(k); if (c && (!bc || c.reps > bc.reps)) { best = k; bc = c; } }
+  return best;
+};
+const isFresh = (id) => { const c = K.cards.get(cardIdFor(id)); return !c || c.state === 'new'; };
 const itemOf = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
 
@@ -71,9 +78,9 @@ export function planParseSession({ scope = null, kind = 'all', size = setting('s
   const pool = candidatePool(scope, kinds), inPool = new Set(pool.map((x) => x.id));
   const due = parseCardsDue(now).map((c) => ({ c, id: keyMap.get(c.id) }))
     .filter((x) => x.id != null && itemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
-    .sort((a, b) => a.c.due - b.c.due);
+    .sort((a, b) => a.c.due - b.c.due).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);       // one entry per form
   const limit = newLimit != null ? newLimit : scope ? size : Math.max(0, setting('parseNewPerDay') - parseNewToday());
-  const fresh = pool.filter((x) => { const c = K.cards.get(parseId(D.forms[x.id])); return !c || c.state === 'new'; });
+  const fresh = pool.filter((x) => isFresh(x.id));
   return { due, fresh, limit, size };
 }
 
@@ -88,8 +95,8 @@ export function buildParseSession(opts) {
 /** Extra practice: never scheduled. 'trouble' = your shakiest forms; 'preview' = a few frequent forms you haven't started. */
 export function buildParseExtra(kind) {
   ensureIndex();
-  if (kind === 'trouble') return troubleCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'practice' })).filter((x) => x.id != null && itemOf(x.id));
-  const fresh = candidatePool(null, KINDS.all).filter((x) => { const c = K.cards.get(parseId(D.forms[x.id])); return !c || c.state === 'new'; });
+  if (kind === 'trouble') return troubleCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'practice' })).filter((x) => x.id != null && itemOf(x.id)).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);
+  const fresh = candidatePool(null, KINDS.all).filter((x) => isFresh(x.id));
   return fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s).slice(0, 6).map((o) => ({ id: o.x.id, type: 'preview' }));
 }
 
@@ -156,7 +163,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     const grade = gradeOf(res, { ms, aided });
     let next = null;
     if (first) {
-      if (!practice) next = await rateParse(parseId(it.form), grade, ms, { m: mode, w: res.wrong.join('') });
+      if (!practice) next = await rateParse(cardIdFor(c.id), grade, ms, { m: mode, w: res.wrong.join('') });
       S.done++; if (res.full) S.full++; if (c.type === 'new') S.fresh++;
       for (const [k, v] of Object.entries(res.perSlot)) { const s = (S.slots[k] ||= [0, 0]); s[1]++; if (v.ok) s[0]++; }
       if (!practice) await recordResult(st, it, res);
