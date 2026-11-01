@@ -55,6 +55,18 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   ok(await page.locator('dialog.charts .cblock').count() === 4 && await page.locator('dialog.charts .csec').count() === 2, 'noun endings: the two charts, each with first/second and third declension');
   const txt = await page.locator('dialog.charts .cbody').innerText();
   ok(/Master case endings/.test(txt) && /ος/.test(txt) && /ῳ/.test(txt) && /σι\(ν\)/.test(txt) && !/%/.test(txt), 'noun charts show the grammar’s endings');
+  await page.click('dialog button:has-text("Contractions")');
+  const ct = await page.locator('dialog.charts .cbody').innerText();
+  ok(/Single vowels/.test(ct) && /Vowels and diphthongs/.test(ct) && await page.locator('dialog.charts td.hi').count() === 4, 'contractions chart shows both tables with the four common ones shaded');
+  await page.keyboard.press('Escape');
+  // opening the noun chart from parse feedback highlights the case/number row in both charts
+  await page.evaluate(async () => { const m = await import('./js/charts.js'); m.openCharts({ tab: 'nouns', highlight: { case: 'G', number: 'P' } }); });
+  ok(await page.locator('dialog.charts tr.hi').count() === 4 && /Genitive/.test(await page.locator('dialog.charts tr.hi').first().innerText()), 'noun chart highlights the genitive plural row in each table');
+  await page.keyboard.press('Escape');
+  // progress milestone appears once some words are known
+  await page.evaluate(async () => { const k = await import('./js/know.js'); for (let n = 1; n <= 40; n++) await k.markKnown(n); });
+  await page.goto(URL + '#/progress'); await page.waitForSelector('.milestone');
+  ok(/You know \d+ words?, which makes up \d+(\.\d+)?% of the New Testament text/.test(await page.textContent('.milestone')), 'progress opens with one calm milestone sentence');
   await page.keyboard.press('Escape');
   await page.goto(URL + '#/help'); await page.waitForSelector('summary:has-text("Reading")'); ok(await page.locator('details').count() >= 5, 'help page has sections');
   await page.goto(URL + '#/settings'); await page.waitForSelector('summary:has-text("Advanced")'); ok(!(await page.locator('text=Memory target').first().isVisible()), 'advanced settings start folded');

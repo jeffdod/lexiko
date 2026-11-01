@@ -144,7 +144,8 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     return h('div.qcard.pcard', h('div.qask', 'Parse this word'), h('div.qgreek', { lang: 'grc' }, f.plain), h('div.qmeta', L.head + ' · ' + L.brief),
       ctx ? h('details.ctxfold', h('summary', 'See it in a verse'), ctx) : null);
   }
-  const chartLink = (it, d) => (it.group === 'V' ? h('button.btn.sm', { onclick: () => openCharts({ highlight: chartRowForSlots(d.slots) }) }, icon('table', 18), 'Verb chart') : null);
+  const chartLink = (it, d) => (it.group === 'V' ? h('button.btn.sm', { onclick: () => openCharts({ highlight: chartRowForSlots(d.slots) }) }, icon('table', 18), 'Verb chart')
+    : it.group === 'N' && (d.pos === 'N' || d.pos === 'A') && d.slots.case && d.slots.number ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'nouns', highlight: { case: d.slots.case, number: d.slots.number } }) }, icon('table', 18), 'Noun chart') : null);
 
   /* feedback shared by both modes */
   async function feedback(c, it, res, { ms, aided, mode }) {
