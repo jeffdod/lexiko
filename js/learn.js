@@ -6,6 +6,7 @@ import { decode } from './morph.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner, fold, startButton } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
+import { chartsButton } from './charts.js';
 
 /** The long definition, only when it adds something to the short gloss: shown outright when short, otherwise behind a "More" tap. */
 const FILLER = new Set(['a', 'an', 'the', 'of', 'to', 'in', 'and', 'or', 'for', 'is', 'as', 'i', 'definite', 'article', 'particle', 'pronoun', 'preposition', 'conjunction', 'adverb', 'indeclinable']);
@@ -119,7 +120,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })), chartsButton(),
         h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
       practice ? practiceBanner(item.type === 'preview') : null, inner));
   }
