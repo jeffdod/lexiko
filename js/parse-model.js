@@ -9,7 +9,6 @@ export const SLOT_TITLE = { tense: 'Tense', voice: 'Voice', mood: 'Mood', person
 const VOICE_OPTS = { A: 'Active', M: 'Middle', P: 'Passive', E: 'Middle or passive', D: 'Middle deponent', O: 'Passive deponent' };
 const PERSON_OPTS = { 1: '1st', 2: '2nd', 3: '3rd' };
 const POSS_OPTS = { S: 'Singular', P: 'Plural' };
-const SHORT = { Nominative: 'Nom', Genitive: 'Gen', Dative: 'Dat', Accusative: 'Acc', Vocative: 'Voc' };
 
 /** Option lists, in display order: [[code, label], ...]. */
 export const OPTIONS = {
@@ -22,7 +21,6 @@ export const OPTIONS = {
   gender: Object.entries(GEN),
   possessorNumber: Object.entries(POSS_OPTS),
 };
-export const shortCase = (c) => SHORT[CASE[c]] || c;
 
 const LABELS = {
   tense: TENSE, mood: MOOD, number: NUM, case: CASE, gender: GEN, person: PERSON_OPTS, possessorNumber: POSS_OPTS,

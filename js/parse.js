@@ -1,16 +1,15 @@
 // Parsing practice: pick the parts of a form in a fixed order (guided one-at-a-time, or quick all-at-once),
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards, studiedCount } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
-const fmt = (n) => n.toLocaleString('en-US');
 const KINDS = { all: ['verb', 'nominal'], verb: ['verb'], noun: ['nominal'] };
 const KIND_TITLE = { all: 'Mixed practice', verb: 'Verbs', noun: 'Nouns, adjectives & pronouns' };
 

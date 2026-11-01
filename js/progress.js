@@ -1,11 +1,10 @@
 // Progress: word knowledge, which parts of the NT are within reach, goals, recent activity.
 import { D, scopeLabel, periScope, periRange, periRef } from './data.js';
-import { K, status, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak, setting } from './know.js';
-import { h, clear, pct, icon, todayKey } from './util.js';
+import { K, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak } from './know.js';
+import { h, clear, pct, icon, todayKey, fmt } from './util.js';
 import { readHref } from './reader.js';
 import { growthCard } from './growth.js';
 
-const fmt = (n) => n.toLocaleString('en-US');
 
 /** Readiness for every chapter, computed once per render. */
 export function allChapters() {

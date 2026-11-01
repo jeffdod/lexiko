@@ -2,9 +2,8 @@
 import { D } from './data.js';
 import { K, setting, setSetting, setLevel, studiedCount } from './know.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup, ENC_FORMAT, canLock, lockBackup, unlockBackup } from './store.js';
-import { h, clear, toast, icon, pct, fold } from './util.js';
+import { h, clear, toast, icon, pct, fold, fmt } from './util.js';
 
-const fmt = (n) => n.toLocaleString('en-US');
 export const LEVELS = [null, 1000, 500, 250, 100, 50, 30, 20, 10, 5];
 
 export function applyTheme(t) {

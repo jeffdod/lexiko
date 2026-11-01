@@ -1,12 +1,11 @@
 // Small DOM + text helpers shared by all views.
-export const SHY = '­';
+/** 1234567 -> "1,234,567" */
+export const fmt = (n) => n.toLocaleString('en-US');
 export const strip = (s) => s.replace(/­/g, '');
 /** Isolated forms are shown with acute, not the running-text grave (καὶ, τὸν -> καί, τόν). */
 export const toAcute = (s) => s.normalize('NFD').replace(/̀/g, '́').normalize('NFC');
 export const PUNCT = ['', ',', '.', '·', ';'];
 
-export const $ = (sel, root = document) => root.querySelector(sel);
-export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 /** h('div.card#id', {onclick}, child, 'text', [more]) */
 export function h(spec, attrs, ...kids) {

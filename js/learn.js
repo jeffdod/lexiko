@@ -1,9 +1,8 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, status, setting, setSetting, rate, undoRate, getCard, dueCards, buildSession, scopeReadiness, newToday, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, studiedCount } from './know.js';
+import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { decode } from './morph.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, toAcute, practiceBanner, fold, startButton, toast } from './util.js';
+import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
@@ -27,7 +26,6 @@ function partsBlock(L) {
     h('div.partsgrid', PART_NAMES.map((name, i) => h('div.pp' + (e.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, e.parts[i] || '—')))));
 }
 
-const fmt = (n) => n.toLocaleString('en-US');
 const POSNAME = { N: 'noun', V: 'verb', A: 'adjective', T: 'article', P: 'pronoun', R: 'pronoun', D: 'pronoun', X: 'pronoun', I: 'pronoun', F: 'pronoun', S: 'pronoun', C: 'pronoun', K: 'pronoun', Q: 'pronoun', ADV: 'adverb', CONJ: 'conjunction', PREP: 'preposition', PRT: 'particle', COND: 'conditional', INJ: 'interjection', HEB: 'Hebrew', ARAM: 'Aramaic' };
 
 /* ---------- context sentence ---------- */

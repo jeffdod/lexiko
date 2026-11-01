@@ -1,6 +1,6 @@
 // Home: where you are, what to do today, what to read next.
 import { D, scopeLabel } from './data.js';
-import { K, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel, studiedCount } from './know.js';
+import { K, setting, newToday, streak, scopeReadiness, readinessClass, readinessLabel, studiedCount } from './know.js';
 import { h, clear, pct, icon, startButton, fold } from './util.js';
 import { growthCard } from './growth.js';
 import { smartAll, counts } from './smart.js';

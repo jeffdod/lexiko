@@ -4,17 +4,15 @@
 //   recall    — you're shown a verb and a part name: pick the form (multiple choice) or remember it (self-graded)
 // "Auto" starts with multiple choice and moves to self-graded flashcards once you're reliable.
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
-import { K, status, setting, setSetting, partsId, partsCardsDue, partsNewToday, rateParts, getPartsStats, savePartsStats, troubleCards, studiedCount } from './know.js';
+import { K, status, setting, setSetting, partsId, partsCardsDue, partsNewToday, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { decode } from './morph.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt } from './util.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
 import { chartsButton, chartRowFor } from './charts.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
-const fmt = (n) => n.toLocaleString('en-US');
 export const SLOT_NAMES = ['Present', 'Future', 'Aorist active', 'Perfect active', 'Perfect middle/passive', 'Aorist passive'];
 const LEARN_ORDER = [2, 1, 5, 3, 4];                    // the order a verb's parts are introduced (the present is the headword, so it isn't a card)
 const skel = (s) => s.normalize('NFD').replace(/[̀-ͯͅ]/g, '').toLowerCase().replace(/ς/g, 'σ');

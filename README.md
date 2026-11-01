@@ -2,8 +2,7 @@
 
 Build your Greek vocabulary. Read the Greek New Testament better. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
 
-**Status: phases 1–2.** Reader, vocabulary SRS (FSRS), levels, passage readiness, goals, backup/restore, PWA shell.
-**Planned:** more reference charts (participles, non-indicative moods).
+**What it has:** a tap-for-parsing reader, vocabulary spaced repetition (FSRS), parsing and principal-parts practice, passage readiness and goals, reference charts, search, backup/restore, and an offline PWA shell.
 
 ## Use it
 Open `https://lexiko.org/` and "Add to Home Screen" / "Install app". It then runs full-screen and fully offline.
@@ -22,6 +21,9 @@ python3 tools/make_icons.py && node tools/render_icons.js                       
 python3 tools/build_sw.py        # ALWAYS run after changing any app file: regenerates the offline precache list/version
 node tools/serve.js &            # local test server at http://localhost:8123/lexiko/ (or double-click preview.command / preview.bat)
 node tools/test_smoke.js         # end-to-end test in headless Chromium (needs playwright)
+node tools/test_round2.js        # home, keyboard, charts, undo, search-related checks, phone-width reader
+node tools/test_parts.js         # principal-parts practice
+node tools/test_a11y.js          # names, tap targets and contrast, light and dark
 ```
 
 ### Prepositions that take several cases
@@ -43,7 +45,7 @@ Users get new versions automatically: the service worker notices a changed `sw-a
 `#/learn` has one **Start** button and three topics (Vocabulary `#/learn/words`, Parsing `#/parse`, Principal parts `#/parts`). `js/smart.js` decides what Start does: reviews that are due, then new material, then **Reinforce** (your shakiest cards), then a preview — so it never says there is nothing to do. Each topic page has the same single button, a *Preview new* link, and collapsed *Study a passage* and *Options* sections.
 
 ## Strengthen weak spots, look ahead and charts
-Vocabulary, parsing and principal parts each have *Strengthen weak spots* (your shakiest cards) and *Look ahead* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Quiz screens have a **Charts** button (`js/charts.js`): the master verb chart and primary/secondary endings, as tables; after an answer the row that builds the part is highlighted.
+Vocabulary, parsing and principal parts each have *Strengthen weak spots* (your shakiest cards) and *Look ahead* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Every quiz screen has a **Charts** button (`js/charts.js`) with four tabs: the master verb chart, personal endings, noun endings (the first/second and third declension charts from the user's grammar) and contractions. After a verb or noun answer, the matching row is highlighted, and the parsing feedback has a button that opens it.
 
 ## Parsing practice
 `#/parse` quizzes the parts of a form in a fixed order (verbs: tense → voice → mood → person → number; infinitives stop after mood; participles continue with case → number → gender; other words: case → number → gender). Every parsing listed for the form under the same lexeme is accepted, each part is scored separately, and every form has its own FSRS card (`f:<form>:<strongs>`). *Guided* asks one part at a time with instant feedback and a hint; *Quick* shows all parts at once; *Auto* starts guided and switches (per verbs / other words) once you're ≥85 % reliable over 20 forms, and back below 60 %. Code: `js/parse-model.js` (slots, matching, grading), `js/parse.js` (UI). `node tools/test_stem.mjs [form…]` checks them against the whole text.
@@ -66,14 +68,14 @@ A brand-new user (no level chosen, nothing studied) sees two plain questions fir
 * **Learning curve** (`js/growth.js`, Home and Progress): cumulative words started, rebuilt from the per-day counts lexiko already keeps (so it has history from day one).
 * **Locked backups**: in Settings an optional passphrase encrypts the backup file (AES-GCM, key from PBKDF2-SHA256, 250,000 rounds; `js/store.js`). The passphrase is never stored; restoring asks for it. Needs a secure context (https or localhost).
 
-## Settings, help, noun endings and accessibility
+## Settings, help, progress and accessibility
 * **Settings** keeps the everyday choices up front (look, level, quiz style, new words per day, backup). Spot-check rate and memory target sit under *Advanced*; the passphrase, where backups go and storage status are folded under *Your data*.
 * **How lexiko works** (`#/help`, `js/help.js`) is a short, plain-language page linked from Home and Settings.
-* **Noun endings** (Charts › Noun endings) are the two charts from the user's grammar (Master Case Ending Chart): the bare endings, and the endings with the stem vowel, each for the first/second and the third declension (`js/charts.js`). They are fixed data, not computed. A parsing answer for a noun or adjective has a **Noun chart** button that opens this tab with the matching case and number row shaded. **Contractions** (fourth tab) is the contraction chart from the same grammar: single vowels, and vowels with diphthongs.
-* **Preposition cases:** a preposition that governs a name or number with no case ending (for example a proper name) looks at the word after it; about 25 occurrences (idioms and the like) remain "unsure" and the reader then shows every sense.
-* **Accessibility checks:** `node tools/test_a11y.js` checks, in light and dark at phone size, that every control has a name, tap targets are at least 40px and text contrast is at least 4.5:1 (3:1 for large text).
-* The Dodson-Ulrik file supplies every gloss; `sources/lexicon/user-lexicon.txt` still supplies the headwords.
 * **Progress** opens with one calm sentence: how much of the goal passage is known (or, with no goal, how many words you know and how much of the New Testament text they cover, and how far to the next round number).
 * **Undo**: a vocabulary session shows “Undo last answer” (or the U key) after each answer; it restores the card, the review log and today's counts (`undoRate` in `js/know.js`). One step only; parsing and principal-parts answers are graded automatically, so they have no undo.
 * **Updates**: the app re-checks for a new version whenever it returns to the front and once an hour, and offers “Update ready”.
-* **Prepositions with an unclear case** (the few where the words around them can't settle it) are decided by hand in `js/prep-cases.js`: a case, or `-` for a preposition that is really an adverbial prefix and governs nothing (it then shows its plain entry).
+* **Accessibility checks:** `node tools/test_a11y.js` checks, in light and dark at phone size, that every control has a name, tap targets are at least 40px and text contrast is at least 4.5:1 (3:1 for large text).
+
+## Words and prepositions
+* **Preposition cases:** a preposition that governs a name or number with no case ending (for example a proper name) looks at the word after it. The few uses the words around them can't settle are decided by hand in `js/prep-cases.js`: a case, or `-` for a preposition that is really an adverbial prefix and governs nothing (it then shows its plain entry).
+* The Dodson-Ulrik file supplies every gloss; `sources/lexicon/user-lexicon.txt` still supplies the headwords.

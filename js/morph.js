@@ -72,4 +72,3 @@ export function decode(code) {
   return { code, pos, posName, slots, bits, notes, summary, short: [pos, ...abbr].join(' ').trim() };
 }
 
-export const isInflected = (pos) => !['ADV', 'CONJ', 'COND', 'PRT', 'PREP', 'INJ', 'ARAM', 'HEB'].includes(pos);

@@ -52,7 +52,6 @@ function bumpDaily(field) {
 
 /** Record a review. kind: 'new' | 'review' | 'probe'. */
 let lastRate = null;
-export const canUndoRate = () => !!lastRate;
 /** Take back the most recent word rating: the card, today's counts and the review log go back to how they were. */
 export async function undoRate() {
   const u = lastRate; if (!u) return false; lastRate = null;
@@ -116,11 +115,6 @@ export function dueCards(now = Date.now()) {
   const out = [];
   for (const c of K.cards.values()) if (liveWord(c) && c.state !== 'new' && c.due <= now) out.push(c);
   return out.sort((a, b) => a.due - b.due);
-}
-export function dueSoonCount(hours = 24) {
-  const lim = Date.now() + hours * 3600000; let n = 0;
-  for (const c of K.cards.values()) if (liveWord(c) && c.due <= lim && c.state !== 'new') n++;
-  return n;
 }
 export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
 
