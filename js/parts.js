@@ -113,8 +113,8 @@ async function recordResult(st, grade) {
   st.recent.push(grade >= 3 ? 1 : 0); if (st.recent.length > 40) st.recent.shift(); st.total = (st.total || 0) + 1;
   if (setting('partsMode') === 'auto') {
     const sum = (a) => a.reduce((x, y) => x + y, 0), r = st.recent, cur = st.mode || 'choice';
-    if (cur === 'choice' && r.length >= 20 && sum(r.slice(-20)) / 20 >= 0.85) { st.mode = 'flash'; st.recent = []; toast('Nice — you know these well, so lexiko moved you to self-graded flashcards.', 5000); }
-    else if (cur === 'flash' && r.length >= 12 && sum(r.slice(-12)) / 12 < 0.6) { st.mode = 'choice'; st.recent = []; toast('Back to multiple choice for a while.', 4500); }
+    if (cur === 'choice' && r.length >= 20 && sum(r.slice(-20)) / 20 >= 0.85) { st.mode = 'flash'; st.recent = []; toast('Nice — you know these well, so lexiko moved you to self-graded flashcards.', 9000); }
+    else if (cur === 'flash' && r.length >= 12 && sum(r.slice(-12)) / 12 < 0.6) { st.mode = 'choice'; st.recent = []; toast('Back to multiple choice for a while.', 8000); }
   }
   await savePartsStats(st);
 }

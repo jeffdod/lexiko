@@ -101,8 +101,8 @@ async function recordResult(st, it, res) {
   st.total = (st.total || 0) + 1;
   if (setting('parseMode') === 'auto') {
     const cur = st.mode[g] || 'guided', sum = (a) => a.reduce((x, y) => x + y, 0), label = g === 'verb' ? 'verbs' : 'nouns, adjectives and pronouns';
-    if (cur === 'guided' && rec.length >= 20 && sum(rec.slice(-20)) / 20 >= 0.85) { st.mode[g] = 'quick'; st.recent[g] = []; toast('Nice — you parse ' + label + ' reliably, so lexiko moved you to Quick mode.', 5000); }
-    else if (cur === 'quick' && rec.length >= 12 && sum(rec.slice(-12)) / 12 < 0.6) { st.mode[g] = 'guided'; st.recent[g] = []; toast('Back to Guided mode for ' + label + ' for a bit.', 4500); }
+    if (cur === 'guided' && rec.length >= 20 && sum(rec.slice(-20)) / 20 >= 0.85) { st.mode[g] = 'quick'; st.recent[g] = []; toast('Nice — you parse ' + label + ' reliably, so lexiko moved you to Quick mode. You can change this under Style.', 10000); }
+    else if (cur === 'quick' && rec.length >= 12 && sum(rec.slice(-12)) / 12 < 0.6) { st.mode[g] = 'guided'; st.recent[g] = []; toast('Back to Guided mode for ' + label + ' for a bit. You can change this under Style.', 10000); }
   }
   await saveParseStats(st);
 }
