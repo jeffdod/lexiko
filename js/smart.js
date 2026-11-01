@@ -18,21 +18,24 @@ export function counts() {
   };
 }
 
+/** What the big button says for a topic's normal session: names the activity instead of just "Start". */
+const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Learn new words') : topic === 'parse' ? 'Practise parsing' : 'Practise principal parts';
+
 const work = (c) => [c.due ? c.due + ' to review' : '', c.fresh ? c.fresh + ' new' : ''].filter(Boolean).join(' + ');
 
 /** The best next step for one topic: { href, label, sub, kind: 'go' | 'reinforce' | 'preview' }. */
 export function smart(topic, c = counts()[topic]) {
   const T = TOPICS[topic];
-  if (c.due || c.fresh) return { href: T.go, label: 'Start', sub: work(c), kind: 'go', topic };
-  if (c.studied) return { href: T.reinforce, label: 'Reinforce', sub: 'You’re caught up — firm up your shakiest ' + T.noun, kind: 'reinforce', topic };
-  return { href: T.preview, label: 'Preview', sub: 'See a few new ' + T.noun, kind: 'preview', topic };
+  if (c.due || c.fresh) return { href: T.go, label: GO_LABEL(topic, c), sub: work(c), kind: 'go', topic };
+  if (c.studied) return { href: T.reinforce, label: 'Strengthen weak spots', sub: 'You’re caught up — firm up your shakiest ' + T.noun, kind: 'reinforce', topic };
+  return { href: T.preview, label: 'Look ahead', sub: 'See a few new ' + T.noun, kind: 'preview', topic };
 }
 
 /** The best next step overall: due reviews anywhere, then new material, then reinforcing, then a preview. */
 export function smartAll() {
   const c = counts();
   const t = ORDER.find((k) => c[k].due) || ORDER.find((k) => c[k].fresh);
-  if (t) { const s = smart(t, c[t]); return { ...s, sub: TOPICS[t].title + ' · ' + s.sub }; }
+  if (t) { const s = smart(t, c[t]); return { ...s, sub: s.sub }; }
   const r = ORDER.find((k) => c[k].studied);
   if (r) { const s = smart(r, c[r]); return { ...s, sub: 'You’re caught up — firm up your shakiest ' + TOPICS[r].noun }; }
   return smart('words', c.words);

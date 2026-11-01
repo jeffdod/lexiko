@@ -3,7 +3,7 @@ import { D, scopeLabel } from './data.js';
 import { K, setSetting, setting, dueCards, newToday, streak, scopeReadiness, readinessClass, readinessLabel, studiedCount } from './know.js';
 import { h, clear, pct, icon, startButton } from './util.js';
 import { smartAll, counts } from './smart.js';
-import { levelPicker } from './settings.js';
+import { renderWelcome } from './welcome.js';
 import { suggestions, suggestionItem } from './progress.js';
 import { readHref } from './reader.js';
 
@@ -11,6 +11,7 @@ const DAY = 86400000;
 
 export function renderHome(view) {
   const lvl = setting('level');
+  if (lvl == null && !K.settings.levelAsked && !studiedCount('w:')) return renderWelcome(view, (href) => { if (href) location.hash = href; else renderHome(view); });
   const cnt = counts(), due = cnt.words.due + cnt.parse.due + cnt.parts.due;
   const studied = studiedCount('w:');
   const newLeft = Math.max(0, setting('newPerDay') - newToday());
@@ -19,13 +20,10 @@ export function renderHome(view) {
   const needsBackup = studied >= 15 && (!lastBackup || Date.now() - lastBackup > 14 * DAY);
 
   const stack = h('div.stack');
-  stack.append(h('div', h('h1', { style: { fontSize: '2rem' } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'), h('div.muted', 'Build your Greek vocabulary. Read the Greek New Testament better.')));
+  stack.append(h('div.row.between', { style: { flexWrap: 'nowrap' } },
+    h('div', h('h1', { style: { fontSize: '2rem' } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'), h('div.muted', 'Build your Greek vocabulary. Read the Greek New Testament better.')),
+    h('a.btn.icon', { href: '#/search', 'aria-label': 'Search words', style: { flex: 'none' } }, icon('search', 20))));
 
-  if (lvl == null && !K.settings.levelAsked) {
-    stack.append(h('div.card.stack', h('h2', 'Where are you starting?'),
-      h('p.muted.small', 'Choose the most frequent words you already know — e.g. “100+” means every word that occurs 100 or more times. You can change it any time, and lexiko will occasionally spot-check you.'),
-      levelPicker(async () => { await setSetting('levelAsked', true); renderHome(view); })));
-  }
   if (needsBackup) stack.append(h('div.banner', icon('download', 22), h('div.grow', h('b', 'Back up your progress'), h('div.small', 'It lives only on this device. A backup takes two seconds.')), h('a.btn.sm', { href: '#/settings' }, 'Back up')));
 
   stack.append(h('div.card.stack',

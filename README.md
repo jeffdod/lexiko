@@ -42,8 +42,8 @@ Users get new versions automatically: the service worker notices a changed `sw-a
 ## Learn pages
 `#/learn` has one **Start** button and three topics (Vocabulary `#/learn/words`, Parsing `#/parse`, Principal parts `#/parts`). `js/smart.js` decides what Start does: reviews that are due, then new material, then **Reinforce** (your shakiest cards), then a preview — so it never says there is nothing to do. Each topic page has the same single button, a *Preview new* link, and collapsed *Study a passage* and *Options* sections.
 
-## Reinforce, preview and charts
-Vocabulary, parsing and principal parts each have *Reinforce* (your shakiest cards) and *Preview new* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Quiz screens have a **Charts** button (`js/charts.js`): the master verb chart and primary/secondary endings, as tables; after an answer the row that builds the part is highlighted.
+## Strengthen weak spots, look ahead and charts
+Vocabulary, parsing and principal parts each have *Strengthen weak spots* (your shakiest cards) and *Look ahead* (a few cards you haven't started). Neither ever writes a card, counter or statistic, so the spaced schedule is untouched. Quiz screens have a **Charts** button (`js/charts.js`): the master verb chart and primary/secondary endings, as tables; after an answer the row that builds the part is highlighted.
 
 ## Parsing practice
 `#/parse` quizzes the parts of a form in a fixed order (verbs: tense → voice → mood → person → number; infinitives stop after mood; participles continue with case → number → gender; other words: case → number → gender). Every parsing listed for the form under the same lexeme is accepted, each part is scored separately, and every form has its own FSRS card (`f:<form>:<strongs>`). *Guided* asks one part at a time with instant feedback and a hint; *Quick* shows all parts at once; *Auto* starts guided and switches (per verbs / other words) once you're ≥85 % reliable over 20 forms, and back below 60 %. Code: `js/parse-model.js` (slots, matching, grading), `js/parse.js` (UI). `node tools/test_stem.mjs [form…]` checks them against the whole text.
@@ -55,3 +55,6 @@ Vocabulary, parsing and principal parts each have *Reinforce* (your shakiest car
 * **Font:** Gentium Porsonic © SIL Global, **SIL Open Font License 1.1** (`fonts/OFL.txt`). The woff2 files are a modified subset, so the OFL's reserved names "Gentium"/"SIL" are not used: the web family is called **Lexiko Serif**; copyright and licence text remain inside the font files.
 * **Scheduling:** FSRS (open algorithm, default parameters).
 * App code: licence to be chosen by the owner.
+
+## First run and search
+A brand-new user (no level chosen, nothing studied) sees two plain questions first (`js/welcome.js`): how much Greek they know (which sets the level) and what they want to do first. **Search** (`#/search`, `js/search.js`, the magnifier on Home) finds a word by Greek form with or without accents, by English meaning, or by Strong's number, and shows its meaning, where it occurs and its forms; all Greek shown comes from the text and lexicon data.

@@ -77,8 +77,8 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     const previewed = items.filter((i) => i.type === 'preview').map((i) => i.n);
     const addBtn = previewed.length ? h('button.btn.primary', { onclick: async (e) => { e.currentTarget.disabled = true; for (const n of previewed) if (!getCard(n)) await markLearning(n); e.currentTarget.textContent = '✓ Added to your review pile'; } }, 'Add these ' + previewed.length + ' words to my review pile') : null;
     clear(view).append(
-      h('div.pagehead', h('h1', previewed.length ? 'Preview complete' : practice ? 'Practice complete' : 'Session complete')),
-      h('div.card.stack', practice ? h('p.muted.small', 'Reinforce is practice only — your review schedule is unchanged.') : null, h('div.kpis',
+      h('div.pagehead', h('h1', previewed.length ? 'Look-ahead complete' : practice ? 'Practice complete' : 'Session complete')),
+      h('div.card.stack', practice ? h('p.muted.small', 'Strengthening is practice only — your review schedule is unchanged.') : null, h('div.kpis',
         h('div.kpi', h('b', stats.done), h('span', 'cards done')),
         h('div.kpi', h('b', stats.done ? pct(stats.good / (stats.good + stats.again || 1)) : '—'), h('span', 'answered correctly')),
         practice ? null : h('div.kpi', h('b', stats.fresh), h('span', 'new words started')),
@@ -104,7 +104,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   }
 
   function frame(item, inner) {
-    const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Reinforce'] : item.type === 'preview' ? ['accent', 'Preview'] : ['', 'Review'];
+    const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })),
@@ -216,8 +216,8 @@ export function renderLearn(view, params) {
     const preview = rest[0] === 'preview';
     const goal = K.goal && K.goal.book ? K.goal : null;
     const items = preview ? previewWords(goal).map((n) => ({ n, type: 'preview' })) : troubleCards('w:', 15).map((c) => ({ n: +c.id.slice(2), type: 'practice' }));
-    if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Preview new words' : 'Reinforce')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'You haven’t studied any words yet, so there are no trouble spots to practise.'), h('a.btn', { href: '#/learn' }, 'Back'))); return; }
-    return void runSession(view, items, { title: 'Reinforce', practice: true });
+    if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Look ahead at new words' : 'Strengthen weak spots')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'You haven’t studied any words yet, so there are no trouble spots to practise.'), h('a.btn', { href: '#/learn' }, 'Back'))); return; }
+    return void runSession(view, items, { title: 'Strengthen weak spots', practice: true });
   }
   if (mode === 'level') {
     const items = nextByLevel(setting('newPerDay')).map((x) => ({ n: x.n, type: 'new' }));
@@ -243,7 +243,7 @@ function wordsPage(view) {
     h('div.pagehead', h('h1', 'Vocabulary')),
     h('div.stack',
       startButton(smart('words')),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Preview new words')),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words')),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal)),
