@@ -45,6 +45,25 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   { const all = await page.locator('details a:has-text("Practise these forms")').getAttribute('href'), vb = await page.locator('details a.btn:has-text("Verbs only")').first().getAttribute('href');
     ok(/\/all$/.test(all) && /\/verb$/.test(vb) && all.replace(/all$/, '') === vb.replace(/verb$/, ''), 'passage parsing offers all forms and verbs only for the same text: ' + all + ' | ' + vb);
     await page.goto(URL + vb); await page.waitForSelector('.qcard'); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
+  // parsing: when the answer is wrong, the right button is lit even for a voice that has no button of its own (middle or passive deponent)
+  { const tgt = await page.evaluate(async () => { const { D } = await import('./js/data.js'); const { decode } = await import('./js/morph.js'); const k = await import('./js/know.js'); await k.setSetting('parseMode', 'guided');
+      for (const bk of D.books) for (const [ch, vs] of D.text[bk.code]) for (const [v, toks] of vs) for (const t of toks) { const f = D.forms[t >> 4]; if (f.an.length !== 1) continue; const d = decode(f.an[0].m);
+        if (d.pos === 'V' && d.slots.voice === 'N' && d.slots.tense && d.slots.mood) return { book: bk.code, ch, v, w: f.plain.replace(/\u00ad/g, ''), tense: d.slots.tense }; } return null; });
+    ok(!!tgt, 'found a verb whose voice is middle or passive deponent: ' + (tgt && tgt.w));
+    if (tgt) {
+      await page.goto(URL + '#/home'); await page.waitForSelector('.hero');
+      await page.goto(URL + ['#/parse/run/passage', tgt.book, tgt.ch, tgt.v, tgt.ch, tgt.v, 'verb'].join('/')); await page.waitForSelector('.qcard');
+      let lit = null; const seen = [];
+      for (let i = 0; i < 15 && lit === null; i++) {
+        if (!(await page.locator('.qcard').count())) break;
+        const word = (await page.textContent('.qgreek')).replace(/\u00ad/g, ''); seen.push(word);
+        if (word !== tgt.w) { await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(250); continue; }
+        await page.click('.popt[data-code="' + tgt.tense + '"]'); await page.waitForSelector('.popt[data-code="E"]:not([disabled])'); await page.waitForTimeout(100);
+        await page.click('.popt[data-code="A"]'); await page.waitForSelector('.popt.right');
+        lit = (await page.locator('.popt.right').first().innerText()).replace(/\d/g, '').trim();
+      }
+      ok(lit === 'Middle or passive', 'a wrong voice answer lights "Middle or passive" as the right one (lit: ' + lit + '; saw ' + seen.join(',') + ')');
+    } }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');
