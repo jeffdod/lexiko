@@ -1,9 +1,8 @@
 // First run: two plain questions (how much Greek do you know? what first?), then straight into the app.
 import { setSetting, setLevel } from './know.js';
 import { levelStats } from './settings.js';
-import { h, clear } from './util.js';
+import { h, clear, fmt } from './util.js';
 
-const fmt = (n) => n.toLocaleString('en-US');
 // [level, title, description, how often to spot-check words you say you know]
 const LEVEL_CHOICES = [
   [null, 'I’m just starting', 'New to Greek, or still learning the alphabet'],

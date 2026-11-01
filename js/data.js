@@ -107,7 +107,6 @@ export function chapterVerses(code, ch) {
   const c = D.text[code].find((x) => x[0] === ch);
   return c ? c[1] : [];
 }
-export function bookChapters(code) { return D.bookByCode.get(code).chapters; }   // [[ch, nVerses],...]
 
 /** scope = {book, c1, v1, c2, v2}; v2 may be 999 for "to end of chapter". */
 export function scopeVerses(scope) {

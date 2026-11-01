@@ -1,11 +1,10 @@
 // The reader: Greek text with tap/click word popups, optional glosses for unknown words, readiness per chapter.
-import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, scopeLabel, periScope, periRange } from './data.js';
+import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange } from './data.js';
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, readinessLabel, readinessClass, markRead, setReadKey } from './know.js';
-import { h, clear, toAcute, pct, toast, icon } from './util.js';
+import { h, clear, toAcute, pct, toast, icon, fmt } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const fmt = (n) => n.toLocaleString('en-US');
 
 export const readHref = (code, ch, vs) => '#/read/' + code + '/' + ch + (vs ? '/' + vs : '');
 

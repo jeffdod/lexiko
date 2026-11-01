@@ -4,9 +4,8 @@ import { D, lexeme, chapterVerses, senseNs, tokenForm, refLabel, unpack } from '
 import { decode } from './morph.js';
 import { status, markKnown, markLearning, K } from './know.js';
 import { readHref, statusChip } from './reader.js';
-import { h, clear, toAcute, toast, icon } from './util.js';
+import { h, clear, toAcute, toast, icon, fmt } from './util.js';
 
-const fmt = (n) => n.toLocaleString('en-US');
 const GREEK = /[Ͱ-Ͽἀ-῿]/;
 /** Compare Greek without accents, breathings or case; final sigma = sigma. */
 const fold = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');

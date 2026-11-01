@@ -11,7 +11,7 @@ import { renderParts } from './parts.js';
 import { renderSearch } from './search.js';
 import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
-import { h, clear, icon, toast } from './util.js';
+import { h, clear, icon } from './util.js';
 
 const view = document.getElementById('view');
 const navEl = document.getElementById('nav');

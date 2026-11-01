@@ -2,7 +2,6 @@
 // R(t,S) = (1 + 19/81 * t/S)^-0.5.  Grades: 1 Again, 2 Hard, 3 Good, 4 Easy.
 const W = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
 const DECAY = -0.5, FACTOR = 19 / 81, DAY = 86400000, MIN = 60000;
-export const DAY_MS = DAY;
 
 const clampD = (d) => Math.min(10, Math.max(1, d));
 const initS = (g) => Math.max(0.1, W[g - 1]);
