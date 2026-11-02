@@ -141,7 +141,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.round ? (stats.rk - 1) / stats.R : (stats.shown - 1) / total)) + '%' } })), h('span.qcount', { 'aria-label': stats.round ? 'Retry ' + stats.rk + ' of ' + stats.R : 'Item ' + stats.shown + ' of ' + total }, stats.round ? '↻ ' + stats.rk + ' / ' + stats.R : stats.shown + ' / ' + total), chartsButton(),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.round ? stats.rk / stats.R : stats.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': stats.round ? 'Retry ' + stats.rk + ' of ' + stats.R : 'Item ' + stats.shown + ' of ' + total }, stats.round ? '↻ ' + stats.rk + ' / ' + stats.R : stats.shown + ' / ' + total), chartsButton(),
         h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
       practice ? practiceBanner(item.type === 'preview') : null, inner,
       undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));

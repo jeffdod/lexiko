@@ -11,14 +11,14 @@ export const TOPICS = {
 const ORDER = ['words', 'parse', 'parts'];
 
 /** New parts a normal session would add: every part of the next verbs, after the reviews that are due. */
-const partsFresh = () => { const p = planPartsSession(); let room = Math.max(0, p.size - Math.min(p.due.length, p.size)), items = 0, verbs = 0; for (const g of p.fresh) { if (room <= 0) break; const k = Math.min(room, g.items.length); room -= k; items += k; verbs++; } return { items, verbs }; };
+const partsFresh = () => { const p = planPartsSession(); let room = Math.max(0, p.size - Math.min(p.due.length, p.size)), items = 0, newVerbs = 0; const verbs = new Set(p.due.slice(0, p.size).map((x) => x.n)); for (const g of p.fresh) { if (room <= 0) break; const k = Math.min(room, g.items.length); room -= k; items += k; newVerbs++; verbs.add(g.n); } return { items, newVerbs, verbs: verbs.size }; };
 
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
   return {
     words: { due: dueCards().length, fresh: Math.max(0, setting('newPerDay') - newToday()), studied: studiedCount('w:') },
     parse: { due: parseCardsDue().length, fresh: Math.max(0, setting('parseNewPerDay') - parseNewToday()), studied: studiedCount('f:') },
-    parts: { due: partsCardsDue().length, fresh: partsFresh().items, freshVerbs: partsFresh().verbs, studied: studiedCount('p:') },
+    parts: { due: partsCardsDue().length, fresh: partsFresh().items, freshVerbs: partsFresh().newVerbs, sessionVerbs: partsFresh().verbs, studied: studiedCount('p:') },
   };
 }
 
@@ -27,7 +27,11 @@ const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Le
 
 /** Everything a normal session will contain, so the button never promises less than it delivers. Vocabulary sessions also slip in a few check-ins on words you said you already know. */
 const work = (c, topic = 'words') => {
-  const parts = [c.due ? c.due + ' to review' : '', topic === 'parts' ? (c.freshVerbs ? c.freshVerbs + ' new verb' + (c.freshVerbs > 1 ? 's' : '') + ' (' + c.fresh + (c.fresh === 1 ? ' part)' : ' parts)') : '') : c.fresh ? c.fresh + ' new' : ''];
+  if (topic === 'parts') {                              // the same verb count the quiz counter shows
+    const n = c.sessionVerbs || 0, nw = c.freshVerbs || 0;
+    return n ? n + (n === 1 ? ' verb' : ' verbs') + (nw ? ' (' + nw + ' new)' : ' to review') : '';
+  }
+  const parts = [c.due ? c.due + ' to review' : '', c.fresh ? c.fresh + ' new' : ''];
   if (topic === 'words' && (c.due || c.fresh) && setting('level') != null) {
     const items = Math.min(c.due, Math.max(setting('sessionSize'), 30)) + c.fresh, rate = setting('probeRate');
     const n = Math.round(items * rate / (1 - rate)) || (items ? 1 : 0);
