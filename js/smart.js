@@ -1,6 +1,6 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
-import { unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
+import { troubleCards, unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
 import { planPartsSession } from './parts.js';
 
 export const TOPICS = {
@@ -45,7 +45,8 @@ const work = (c, topic = 'words') => {
 export function smart(topic, c = counts()[topic]) {
   const T = TOPICS[topic];
   if (c.due || c.fresh) return { href: T.go, label: GO_LABEL(topic, c), sub: work(c, topic), kind: 'go', topic };
-  if (c.studied) return { href: T.reinforce, label: 'Strengthen weak spots', sub: 'You’re caught up — firm up your shakiest ' + T.noun, kind: 'reinforce', topic };
+  const prefix = { words: 'w:', parse: 'f:', parts: 'p:' }[topic];
+  if (c.studied && troubleCards(prefix, 1).length) return { href: T.reinforce, label: 'Strengthen weak spots', sub: 'You’re caught up — firm up your shakiest ' + T.noun, kind: 'reinforce', topic };
   return { href: T.preview, label: 'Look ahead', sub: 'See a few new ' + T.noun, kind: 'preview', topic };
 }
 
@@ -54,7 +55,7 @@ export function smartAll() {
   const c = counts();
   const t = ORDER.find((k) => c[k].due) || ORDER.find((k) => c[k].fresh);
   if (t) { const s = smart(t, c[t]); return { ...s, sub: s.sub }; }
-  const r = ORDER.find((k) => c[k].studied);
+  const PFX = { words: 'w:', parse: 'f:', parts: 'p:' }, r = ORDER.find((k) => c[k].studied && troubleCards(PFX[k], 1).length);
   if (r) { const s = smart(r, c[r]); return { ...s, sub: 'You’re caught up — firm up your shakiest ' + TOPICS[r].noun }; }
   return smart('words', c.words);
 }

@@ -281,7 +281,7 @@ export function renderParts(view, params) {
     if (!queue.length) {
       if (!scope && !practice) { const alt = smart('parts'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }
       clear(view).append(h('div.pagehead', h('h1', 'Principal parts')), h('div.card.stack',
-        h('p', practice ? (rest[1] === 'preview' ? 'You’ve already started every part available right now.' : 'Study a few principal parts first; Strengthen weak spots will then pick out your shakiest.')
+        h('p', practice ? (rest[1] === 'preview' ? 'You’ve already started every part available right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the parts you’ve studied.')
           : scope ? 'There are no principal parts to learn in ' + scopeLabel(scope) + '.' : 'You’re all caught up. 🎉'), h('a.btn', { href: '#/parts' }, 'Back')));
       return;
     }
