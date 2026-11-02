@@ -1,6 +1,6 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
-import { troubleCards, unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
+import { troubleCards, wordsPace, parsePace, unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
 import { planPartsSession } from './parts.js';
 
 export const TOPICS = {
@@ -16,8 +16,8 @@ const partsFresh = () => { const p = planPartsSession(); let room = Math.max(0, 
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
   return {
-    words: { due: dueCards().length, fresh: Math.max(0, setting('newPerDay') - newToday()), studied: studiedCount('w:') },
-    parse: { due: parseCardsDue().length, fresh: Math.max(0, setting('parseNewPerDay') - parseNewToday()), studied: studiedCount('f:') },
+    words: { due: dueCards().length, fresh: wordsPace().left, studied: studiedCount('w:') },
+    parse: { due: parseCardsDue().length, fresh: parsePace().left, studied: studiedCount('f:') },
     parts: { due: partsCardsDue().length, fresh: partsFresh().items, freshVerbs: partsFresh().newVerbs, sessionVerbs: partsFresh().verbs, studied: studiedCount('p:') },
   };
 }

@@ -1,8 +1,9 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards } from './know.js';
+import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, wordsPace } from './know.js';
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
+import { paceNote, paceOptions } from './pace.js';
 import { unfinishedVerbs, waitingVerbs, verbProgress, VERB_CAP } from './know.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
@@ -323,6 +324,7 @@ function wordsPage(view) {
     h('div.pagehead', h('h1', 'Vocabulary')),
     h('div.stack',
       startButton(smart('words')),
+      paceNote(wordsPace(), 'words'),
       verbHold(),
       h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words')),
       fold('Study a passage',
@@ -330,6 +332,7 @@ function wordsPage(view) {
         passagePicker(view, goal)),
       fold('Study by how common the words are', h('p.muted.small', 'Pick a group of words by how often they occur in the New Testament. lexiko teaches the ones in it you don’t know yet.'), bandsCard()),
       fold('Options',
+        ...paceOptions('words', 'words', () => wordsPage(view)),
         h('div.row.between', h('div', h('b', 'Quiz style'), h('div.muted.small', 'How you answer each word.')),
           h('div.seg', [['flash', 'Flashcards'], ['choice', 'Multiple choice']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('mode') === v), onclick: async (e) => { await setSetting('mode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); } }, t)))),
         h('div.row.wrap', h('a.btn.sm', { href: '#/learn/review' }, 'Review only'), h('a.btn.sm', { href: '#/learn/level' }, 'Learn the next common words'), h('a.btn.sm', { href: '#/settings' }, 'Change my level')))));
