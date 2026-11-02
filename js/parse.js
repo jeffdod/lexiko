@@ -3,8 +3,8 @@
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt } from './util.js';
-import { chartsButton, openCharts, chartRowForSlots } from './charts.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
+import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
@@ -127,7 +127,7 @@ const stop = () => { if (keyHandler) { document.removeEventListener('keydown', k
 
 function runSession(view, queue, { title, scope, restart, practice = false }) {
   const total = queue.length;
-  const S = { shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {} };
+  const S = { missed: [], shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {} };
   let st = null, cur = null;
 
   const finish = () => {
@@ -139,7 +139,9 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'forms parsed')), h('div.kpi', h('b', S.done ? pct(S.full / S.done) : '—'), h('span', 'fully correct')), practice ? null : h('div.kpi', h('b', S.fresh), h('span', 'new forms'))),
         Object.keys(S.slots).length ? h('div', h('b', 'Accuracy by part'), slotBars(S.slots)) : null,
         weakest && weakest[1] < 0.8 ? h('p.muted', 'Most slips this time: ' + SLOT_TITLE[weakest[0]].toLowerCase() + '. It will keep coming back until it sticks.') : null,
-        h('div.row.wrap', h('button.btn.primary', { onclick: restart }, 'Practise more'),
+        missedBlock(S.missed.map((m) => { const it = itemOf(m.id), L = it && D.lexByN.get(it.strongs); return { greek: true, word: D.forms[m.id].plain, sub: L ? L.head + ' · ' + L.brief : '', why: m.wrong.length ? 'Missed: ' + m.wrong.map((k) => (SLOT_TITLE[k] || k).toLowerCase()).join(', ') : '' }; }),
+          () => runSession(view, S.missed.map((m) => ({ id: m.id, type: 'practice' })), { title, scope, restart, practice: true })),
+        h('div.row.wrap', h('button.btn' + (S.missed.length ? '' : '.primary'), { onclick: restart }, 'Practise more'),
           h('a.btn', { href: '#/parse' }, 'Back to Parsing'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
@@ -165,7 +167,9 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     return h('div.qcard.pcard', h('div.qask', 'Parse this word'), h('div.qgreek', { lang: 'grc' }, f.plain), h('div.qmeta', L.head + ' · ' + L.brief),
       ctx ? h('details.ctxfold', h('summary', 'See it in a verse'), ctx) : null);
   }
-  const chartLink = (it, d) => (it.group === 'V' ? h('button.btn.sm', { onclick: () => openCharts({ highlight: chartRowForSlots(d.slots) }) }, icon('table', 18), 'Verb chart')
+  const chartLink = (it, d) => (it.group === 'V' && d.slots.mood === 'P' ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'part', highlight: participleHighlight(d.slots) }) }, icon('table', 18), 'Participle chart')
+    : it.group === 'V' && d.slots.mood === 'N' ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'inf', highlight: infinitiveHighlight(d.slots) }) }, icon('table', 18), 'Infinitive chart')
+    : it.group === 'V' ? h('button.btn.sm', { onclick: () => openCharts({ highlight: chartRowForSlots(d.slots) }) }, icon('table', 18), 'Verb chart')
     : it.group === 'N' && (d.pos === 'N' || d.pos === 'A') && d.slots.case && d.slots.number ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'nouns', highlight: { case: d.slots.case, number: d.slots.number } }) }, icon('table', 18), 'Noun chart') : null);
 
   /* feedback shared by both modes */
@@ -176,6 +180,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     let next = null;
     if (first) {
       if (!practice) next = await rateParse(cardIdFor(c.id), grade, ms, { m: mode, w: res.wrong.join('') });
+      if (!res.full) S.missed.push({ id: c.id, wrong: res.wrong });
       S.done++; if (res.full) S.full++; if (c.type === 'new') S.fresh++;
       for (const [k, v] of Object.entries(res.perSlot)) { const s = (S.slots[k] ||= [0, 0]); s[1]++; if (v.ok) s[0]++; }
       if (!practice) await recordResult(st, it, res);

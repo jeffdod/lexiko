@@ -6,7 +6,7 @@
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
 import { K, status, setting, setSetting, partsId, partsCardsDue, partsNewToday, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
@@ -119,7 +119,7 @@ async function recordResult(st, grade) {
 }
 
 function runSession(view, queue, { scope, restart, practice }) {
-  const total = queue.length, S = { shown: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, fresh: 0 };
+  const total = queue.length, S = { missed: new Map(), shown: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, fresh: 0 };
   const added = [];
   let st = null, t0 = 0;
 
@@ -129,7 +129,9 @@ function runSession(view, queue, { scope, restart, practice }) {
       h('div.card.stack',
         practice ? h('p.muted.small', 'Strengthening is practice only — your review schedule is unchanged.') : null,
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'parts done')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'answered correctly')), practice ? null : h('div.kpi', h('b', S.fresh), h('span', 'new parts started'))),
-        h('div.row.wrap', h('button.btn.primary', { onclick: restart }, practice ? 'Another round' : 'Practise more'),
+        missedBlock([...S.missed.values()].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: SLOT_NAMES[m.slot] }; }),
+          () => runSession(view, [...S.missed.values()].map((m) => ({ ...m, type: 'practice', retry: false })), { scope, restart, practice: true })),
+        h('div.row.wrap', h('button.btn' + (S.missed.size ? '' : '.primary'), { onclick: restart }, practice ? 'Another round' : 'Practise more'),
           h('a.btn', { href: '#/parts' }, 'Back to Principal parts'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
@@ -148,6 +150,7 @@ function runSession(view, queue, { scope, restart, practice }) {
       if (!practice) { await rateParts(partsId(c.n, c.slot), g, Date.now() - t0, { m: c.fmt }); await recordResult(st, g); if (c.type === 'new') S.fresh++; }
       S.done++; if (g >= 3) S.good++;
     }
+    if (g < 3) S.missed.set(c.n + ':' + c.slot, c);
     if (g < 3) retryQ.push({ ...c, retry: true });
     advance();
   }
