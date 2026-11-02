@@ -87,8 +87,13 @@ export function planParseSession({ scope = null, kind = 'all', size = setting('s
 export function buildParseSession(opts) {
   const { due, fresh, limit, size } = planParseSession(opts);
   const dueIds = due.slice(0, size).map((x) => ({ id: x.id, type: 'due' }));
-  const newIds = fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s)
-    .slice(0, Math.min(limit, Math.max(0, size - dueIds.length))).map((o) => ({ id: o.x.id, type: 'new' }));
+  const want = Math.min(limit, Math.max(0, size - dueIds.length));
+  const ranked = fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s);
+  // variety: no single word (εἰμί, λέγω, the article…) fills the session; take at most a few forms of each, then relax if there aren't enough words
+  const cap = size > 20 ? 3 : 2, per = new Map(), lex = (id) => D.forms[id].an[0].s, picked = [], rest = [];
+  for (const o of ranked) { const k = lex(o.x.id), n = per.get(k) || 0; if (picked.length < want && n < cap) { picked.push(o); per.set(k, n + 1); } else rest.push(o); }
+  for (const o of rest) { if (picked.length >= want) break; picked.push(o); }
+  const newIds = picked.map((o) => ({ id: o.x.id, type: 'new' }));
   return shuffle([...dueIds, ...newIds]);
 }
 
@@ -144,7 +149,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), h('span.qcount', { 'aria-label': 'Item ' + Math.min(S.done + 1, total) + ' of ' + total }, Math.min(S.done + 1, total) + ' / ' + total), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), h('span.qcount', { 'aria-label': c.retry ? 'Trying again, ' + (queue.filter((x) => x.retry).length + 1) + ' left' : 'Item ' + Math.min(S.done + 1, total) + ' of ' + total }, c.retry ? '↻ ' + (queue.filter((x) => x.retry).length + 1) + ' left' : Math.min(S.done + 1, total) + ' / ' + total), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
       practice ? practiceBanner(c.type === 'preview') : null, inner));
   }
 

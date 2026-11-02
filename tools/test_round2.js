@@ -93,6 +93,13 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.click('dialog button:has-text("Infinitives")');
   ok(/κεναι/.test(await page.textContent('dialog .cbody')), 'infinitive chart shows');
   await page.keyboard.press('Escape');
+  { const r = await page.evaluate(async () => { const { D } = await import('./js/data.js'); const pa = await import('./js/parse.js'); let worst = 0;
+      for (let t = 0; t < 20; t++) { const c = {}; pa.buildParseSession({ scope: { book: 'JHN', c1: 1, v1: 1, c2: 1, v2: 999 }, kind: 'verb', size: 25, newLimit: 25 }).forEach((x) => { const s = D.forms[x.id].an[0].s; c[s] = (c[s] || 0) + 1; }); worst = Math.max(worst, ...Object.values(c)); }
+      return worst; });
+    ok(r <= 3, 'no word fills a parsing session (most forms of one word: ' + r + ')'); }
+  await page.goto(URL + '#/parse/run/passage/JHN/1/1/1/18/verb'); await page.waitForSelector('.qcard');
+  { let seen = false; for (let i = 0; i < 9 && !seen; i++) { await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(250); seen = /↻/.test(await page.textContent('.qcount').catch(() => '')); }
+    ok(seen, 'a retry card shows how many retries are left'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');
