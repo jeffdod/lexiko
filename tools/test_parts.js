@@ -57,6 +57,18 @@ process.on('unhandledRejection', () => {});
     const next = k.nextByLevel(60).map((x) => x.n); o.verbsInNext = next.filter((n) => D.lexByN.get(n).pos === 'V').length; o.nounsInNext = next.length - o.verbsInNext;
     k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); return o; });
   ok(vg.open0 === 3 && vg.unfinished === 3 && vg.slots === 0 && vg.verbsInNext === 0 && vg.nounsInNext > 30, 'new verbs are held back while 3 started verbs are unfinished, other words continue', JSON.stringify(vg));
+  // ---- verbs you said you know: meaning only; they wait, then go first for parts and parsing
+  const vq = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const { D } = await import('./js/data.js'); const m = await import('./js/parts.js'); const o = {};
+    const saved = new Map(k.K.cards), sp = { ...k.K.partsVerbs }, sv = { ...k.K.verbParse };
+    const verbs = D.lex.filter((L) => L.pos === 'V' && m.eligible().has(L.n)).slice(0, 6).map((L) => L.n);
+    const mk = (n, src) => { const c = f.review(f.newCard('w:' + n), 3, Date.now() - 864e6, 0.9); c.src = src; c.state = 'review'; k.K.cards.set('w:' + n, c); };
+    for (const n of verbs.slice(0, 3)) mk(n, 'new'); for (const n of verbs.slice(3, 5)) mk(n, 'manual');
+    o.full = k.unfinishedVerbs().length; o.waiting = k.waitingVerbs().length; o.promotedFull = k.promotedVerbs().size;
+    const n0 = verbs[0]; k.K.partsVerbs[n0] = { stage: 'cold', days: {}, miss: 0 }; k.K.verbParse[n0] = Array(20).fill(1);
+    o.afterOne = k.unfinishedVerbs().length; o.promoted = k.promotedVerbs().size; o.waitingAfter = k.waitingVerbs().length;
+    const first = m.planPartsSession({}).fresh.map((g) => g.n); const prom = k.promotedVerbs(); o.promotedFirst = prom.size > 0 && prom.has(first[0]);
+    k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); k.K.partsVerbs = sp; k.K.verbParse = sv; return o; });
+  ok(vq.full === 3 && vq.waiting === 2 && vq.promotedFull === 0 && vq.afterOne === 3 && vq.promoted === 1 && vq.waitingAfter === 1 && vq.promotedFirst, 'verbs marked known wait for a free slot, then come first for principal parts', JSON.stringify(vq));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });

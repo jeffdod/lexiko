@@ -2,7 +2,7 @@
 import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange } from './data.js';
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection } from './know.js';
-import { h, clear, toAcute, pct, toast, icon, fmt } from './util.js';
+import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -63,7 +63,7 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
     {
       const act = h('div.row.wrap', { style: { marginTop: '.6rem' } });
       if (status(L.n) !== 'known' || !K.cards.has('w:' + L.n)) {
-        act.append(h('button.btn.sm', { onclick: async () => { await markKnown(L.n); toast('Marked as known'); onStatus && onStatus(); } }, '✓ I know this'));
+        act.append(...knowButtons(L, markKnown, onStatus));
       }
       if (status(L.n) === 'known') act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to words to review'); onStatus && onStatus(); } }, '↺ Review this'));
       else act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to your learning list'); onStatus && onStatus(); } }, '+ Learn this'));

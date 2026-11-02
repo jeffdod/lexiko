@@ -4,7 +4,7 @@ import { D, lexeme, chapterVerses, senseNs, tokenForm, refLabel, unpack } from '
 import { decode } from './morph.js';
 import { status, markKnown, markLearning, K } from './know.js';
 import { readHref, statusChip } from './reader.js';
-import { h, clear, toAcute, toast, icon, fmt } from './util.js';
+import { h, clear, toAcute, toast, icon, fmt, knowButtons } from './util.js';
 
 const GREEK = /[Ͱ-Ͽἀ-῿]/;
 /** Compare Greek without accents, breathings or case; final sigma = sigma. */
@@ -109,7 +109,7 @@ function detail(view, n, back) {
         h('div.row.wrap',
           status(L.n) === 'known' ? h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to words to review'); draw(); } }, '↺ Review this')
             : h('button.btn.primary.sm', { onclick: async () => { await markLearning(L.n); toast('Added to your learning list'); draw(); } }, '+ Learn this'),
-          status(L.n) !== 'known' || !K.cards.has('w:' + L.n) ? h('button.btn.sm', { onclick: async () => { await markKnown(L.n); toast('Marked as known'); draw(); } }, '✓ I know this') : null)));
+          status(L.n) !== 'known' || !K.cards.has('w:' + L.n) ? h('span.row.wrap', knowButtons(L, markKnown, draw)) : null)));
     const vs = versesOf(L);
     if (vs.length) wrap.append(h('div.card.stack', h('h2', 'Where it appears'), h('div.list', vs.map((v) => {
       const line = h('div', { lang: 'grc', style: { fontSize: '1.15rem', lineHeight: 1.5 } });

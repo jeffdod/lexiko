@@ -128,3 +128,11 @@ export function backLinks(defaultHref, defaultLabel, primary = false) {
   const main = h('a.btn' + (primary && !hit ? '.primary' : ''), { href: defaultHref }, defaultLabel);
   return hit ? [h('a.btn' + (primary ? '.primary' : ''), { href: o }, hit[1]), main] : [main];
 }
+
+/** "I know this" buttons: one for most words; for verbs, the meaning alone, or the meaning and the parsing too. */
+export function knowButtons(L, markKnown, after) {
+  const go = (full, msg) => async () => { await markKnown(L.n, full); toast(msg); after && after(); };
+  if (L.pos !== 'V') return [h('button.btn.sm', { onclick: go(false, 'Marked as known') }, '✓ I know this')];
+  return [h('button.btn.sm', { onclick: go(false, 'Marked: you know the meaning. Its principal parts and parsing are still to learn.') }, '✓ I know the meaning'),
+    h('button.btn.sm', { onclick: go(true, 'Marked as known, meaning and parsing') }, '✓ I know the meaning and parsing')];
+}
