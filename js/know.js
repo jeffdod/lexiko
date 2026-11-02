@@ -6,9 +6,9 @@ import { todayKey, shuffle } from './util.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsNewPerDay: 3, partsPace: 'auto', partsPause: false,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsVerbsPerDay: 2, partsPace: 'auto', partsPause: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, partsAcc: [], ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, partsAcc: [], partsVerbs: {}, ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -18,6 +18,7 @@ export async function initKnow() {
   K.read = (await store.get('read')) || {};
   K.goal = (await store.get('goal')) || null;
   K.partsAcc = (await store.get('partsAcc')) || [];
+  K.partsVerbs = (await store.get('partsVerbs')) || {};
   K.ready = true;
 }
 
@@ -208,33 +209,49 @@ export const saveParseStats = (st) => store.set('parseStats', st);
 /* ---------- principal parts: one card per printed part ('p:<strongs>:<slot>') ---------- */
 export const partsId = (n, slot) => 'p:' + n + ':' + slot;
 export const partsCardsDue = (now = Date.now()) => [...K.cards.values()].filter((c) => c.id.startsWith('p:') && c.state !== 'new' && c.due <= now);
-export const partsNewToday = () => (K.daily[todayKey()] || {}).ppn || 0;
-/** How many new principal parts to start today, and why. Automatic: slows when reviews pile up or answers slip, speeds up when you are secure. */
+export const partsNewToday = () => (K.daily[todayKey()] || {}).ppv || 0;      // new verbs started today
+export const partsVerbStarted = (n) => { const pre = 'p:' + n + ':'; for (const [id, c] of K.cards) if (id.startsWith(pre) && c.state !== 'new') return true; return false; };
+
+/* Each verb is either being learned (multiple choice) or known well enough for cold, self-graded questions. */
+export const verbStage = (n) => (K.partsVerbs[n] && K.partsVerbs[n].stage) || 'learn';
+/** After an answer: a part answered correctly in multiple choice on two different days counts as learned; when every part is, the verb goes cold. Two cold misses in a row send it back. */
+export async function noteVerbAnswer(n, slot, ok, cold, slots) {
+  const v = (K.partsVerbs[n] ||= { stage: 'learn', days: {}, miss: 0 }), day = todayKey();
+  if (cold) {
+    v.miss = ok ? 0 : (v.miss || 0) + 1;
+    if (v.miss >= 2) { v.stage = 'learn'; v.days = {}; v.miss = 0; }
+  } else if (ok) {
+    const d = (v.days[slot] ||= []); if (!d.includes(day)) d.push(day);
+    if (slots.every((sl) => (v.days[sl] || []).length >= 2)) { v.stage = 'cold'; v.miss = 0; }
+  }
+  await store.set('partsVerbs', K.partsVerbs);
+}
+
+/** How many new verbs to start today, and why. Automatic: slows when reviews pile up or answers slip, speeds up when you are secure. */
 export function partsPace(now = Date.now()) {
-  const max = Math.max(1, setting('partsNewPerDay')), today = partsNewToday(), due = partsCardsDue(now).length;
+  const max = Math.max(1, setting('partsVerbsPerDay')), today = partsNewToday(), due = partsCardsDue(now).length;
   const out = (n, why, extra = {}) => ({ n, left: Math.max(0, n - today), due, why, auto: setting('partsPace') !== 'fixed', ...extra });
-  if (setting('partsPause')) return out(0, 'New parts are paused.', { paused: true });
+  if (setting('partsPause')) return out(0, 'New verbs are paused.', { paused: true });
   if (setting('partsPace') === 'fixed') return out(max, '');
   const cap = Math.max(10, setting('sessionSize') || 25), a = K.partsAcc, acc = a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null;
-  let n = Math.min(2, max), why = '';
-  if (due > cap) { n = 0; why = 'You have ' + due + ' to review, so new parts wait until you catch up.'; }
-  else if (due > cap / 2) { n = 1; why = 'You have ' + due + ' to review, so new parts are slowed until you catch up.'; }
-  else if (acc != null && acc < 0.75) { n = 1; why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new parts are slowed while these settle.'; }
-    else if (acc != null && acc > 0.9 && due <= cap / 4) { n = Math.min(3, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly with little waiting, so one more comes in.'; }
-  if (n === 0 && today === 0) {                                  // never stay at zero for long
-    const days = Object.keys(K.daily).filter((k) => (K.daily[k].ppn || 0) > 0).sort().pop();
-    const gap = days ? (new Date(todayKey()) - new Date(days)) / 864e5 : 99;
-    if (gap >= 3) { n = 1; why = 'It’s been a few days, so one new part keeps things moving. ' + why; }
-  }
-  n = Math.min(n, max);
-  return out(n, why, { acc });
+  const last = Object.keys(K.daily).filter((k) => (K.daily[k].ppv || 0) > 0).sort().pop();
+  const gap = last ? (new Date(todayKey()) - new Date(last)) / 864e5 : 99;
+  let n = Math.min(1, max), why = '', slow = false;
+  if (due > cap) { n = 0; slow = true; why = 'You have ' + due + ' to review, so new verbs wait until you catch up.'; }
+  else if (due > cap / 2) { n = gap >= 2 ? 1 : 0; slow = true; why = 'You have ' + due + ' to review, so new verbs are slowed until you catch up.'; }
+  else if (acc != null && acc < 0.75) { n = gap >= 2 ? 1 : 0; slow = true; why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new verbs are slowed while these settle.'; }
+  else if (acc != null && acc > 0.9 && due <= cap / 4) { n = Math.min(2, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly with little waiting, so an extra verb comes in.'; }
+  if (n === 0 && today === 0 && gap >= 3) { n = 1; why = 'It’s been a few days, so one new verb keeps things moving. ' + why; }
+  return out(Math.min(n, max), why, { acc, slow });
 }
 export async function rateParts(id, grade, ms = 0, meta = {}) {
   const now = Date.now();
   const prev = K.cards.get(id) || F.newCard(id);
   const next = F.review(prev, grade, now, K.settings.retention);
+  const newVerb = prev.state === 'new' && !partsVerbStarted(id.split(':')[1]);
   await saveCard(next);
   const d = (K.daily[todayKey()] ||= {}); d.ppr = (d.ppr || 0) + 1; if (prev.state === 'new') d.ppn = (d.ppn || 0) + 1;
+  if (newVerb) d.ppv = (d.ppv || 0) + 1;
   await store.set('daily', K.daily);
   await store.addLog([{ t: now, id, g: grade, k: 'parts', ms, ...meta }]);
   return next;

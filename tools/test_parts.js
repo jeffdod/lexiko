@@ -26,15 +26,27 @@ process.on('unhandledRejection', () => {});
   ok(r.short < r.n * 0.02, 'nearly always four form choices', r.short + ' of ' + r.n + ' short');
   ok(r.rows['ἐλύθην'] === 'aor1-pas' && r.rows['ἐγράφην'] === 'aor2-pas' && r.rows['ἔλυσα'] === 'aor1-act' && r.rows['ἔμεινα'] === 'aor-liq-act' && r.rows['ἔβαλον'] === 'aor2-act' && r.rows['ἐγενόμην'] === 'aor2-mid' && r.rows['λέλυκα'] === 'perf1-act' && r.rows['γέγονα'] === 'perf2-act' && r.rows['μενῶ'] === 'fut-liq-act' && r.rows['λύσω'] === 'fut-act', 'chart rows picked correctly');
 
-  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('partsPace', 'fixed'); await k.setSetting('partsNewPerDay', 10); });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('partsPace', 'fixed'); await k.setSetting('partsVerbsPerDay', 10); });
   // ---- automatic pace for new parts
   const pc = await p.evaluate(async () => { const k = await import('./js/know.js'); const o = {}; const S = k.K.settings; const keep = { ...S };
-    S.partsPace = 'auto'; S.partsNewPerDay = 3; S.partsPause = false; k.K.partsAcc = []; o.base = k.partsPace().n;
+    S.partsPace = 'auto'; S.partsVerbsPerDay = 3; S.partsPause = false; k.K.partsAcc = []; o.base = k.partsPace().n;
     k.K.partsAcc = Array(20).fill(1); o.good = k.partsPace().n; k.K.partsAcc = Array(20).fill(0).map((_, i) => i % 2); o.weak = k.partsPace().n;
-    S.partsNewPerDay = 1; k.K.partsAcc = Array(20).fill(1); o.capped = k.partsPace().n; S.partsNewPerDay = 3;
-    S.partsPause = true; o.paused = k.partsPace().n; S.partsPause = false; S.partsPace = 'fixed'; S.partsNewPerDay = 5; o.fixed = k.partsPace().n;
+    S.partsVerbsPerDay = 1; k.K.partsAcc = Array(20).fill(1); o.capped = k.partsPace().n; S.partsVerbsPerDay = 3;
+    S.partsPause = true; o.paused = k.partsPace().n; S.partsPause = false; S.partsPace = 'fixed'; S.partsVerbsPerDay = 5; o.fixed = k.partsPace().n;
     Object.assign(S, keep); k.K.partsAcc = []; return o; });
-  ok(pc.base === 2 && pc.good === 3 && pc.weak === 1 && pc.capped === 1 && pc.paused === 0 && pc.fixed === 5, 'pace: 2 normally, 3 when doing well, 1 when slipping, capped by the setting, paused, fixed', JSON.stringify(pc));
+  ok(pc.base === 1 && pc.good === 2 && pc.weak === 1 && pc.capped === 1 && pc.paused === 0 && pc.fixed === 5, 'pace: 1 new verb normally, 2 when doing well, 1 when slipping, capped by the setting, paused, fixed', JSON.stringify(pc));
+  // ---- per-verb stages: multiple choice until every part is right on two days, then cold; two cold misses send it back
+  const vs = await p.evaluate(async () => { const k = await import('./js/know.js'); const o = {}; const n = 2064, slots = [2, 1, 3]; k.K.partsVerbs = {};
+    o.start = k.verbStage(n);
+    const today = k.todayKey ? k.todayKey() : null;
+    for (const sl of slots) await k.noteVerbAnswer(n, sl, true, false, slots);
+    o.afterOneDay = k.verbStage(n);
+    for (const sl of slots) k.K.partsVerbs[n].days[sl].push('1999-01-01');
+    await k.noteVerbAnswer(n, 2, true, false, slots); o.afterTwoDays = k.verbStage(n);
+    await k.noteVerbAnswer(n, 2, false, true, slots); o.oneMiss = k.verbStage(n);
+    await k.noteVerbAnswer(n, 2, false, true, slots); o.twoMisses = k.verbStage(n);
+    k.K.partsVerbs = {}; return o; });
+  ok(vs.start === 'learn' && vs.afterOneDay === 'learn' && vs.afterTwoDays === 'cold' && vs.oneMiss === 'cold' && vs.twoMisses === 'learn', 'verb goes cold only after every part is right on two days, and back after two cold misses', JSON.stringify(vs));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });
@@ -42,9 +54,10 @@ process.on('unhandledRejection', () => {});
   const snap = () => p.evaluate(async () => { const k = await import('./js/know.js'); return JSON.stringify([...k.K.cards.entries()].sort()); });
   const before = await snap();
   await p.goto(URL + '#/parts/run/mix'); await p.waitForSelector('.qcard');
-  let answered = 0, seenRec = false, seenRecall = false;
-  for (let i = 0; i < 40 && !(i >= 14 && seenRec && seenRecall); i++) {
+  let answered = 0, seenRec = false, seenRecall = false, meets = 0;
+  for (let i = 0; i < 40 && !(i >= 14 && seenRecall); i++) {
     await p.waitForSelector('.qcard', { timeout: 5000 }).catch(() => {});
+    if (await p.$('button:has-text("Start learning this verb")')) { meets++; await p.click('button:has-text("Start learning this verb")'); continue; }
     if (await p.$('h1:has-text("Session complete")')) break;
     const isRec = await p.$('.qcard .qmeta:has-text("Which verb")');
     if (isRec) { seenRec = true; await p.click('.opts:not(.two) .opt >> nth=0'); await p.waitForTimeout(250); await p.click('.opts.two .opt >> nth=1'); }
@@ -56,7 +69,7 @@ process.on('unhandledRejection', () => {});
     answered++; await p.waitForTimeout(300);
   }
   const mid = await snap();
-  ok(answered >= 10, 'answered parts questions', String(answered)); ok(seenRec && seenRecall, 'both question formats appeared', seenRec + '/' + seenRecall);
+  ok(answered >= 10, 'answered parts questions', String(answered)); ok(seenRecall && meets >= 1, 'a new verb is introduced whole, then asked as multiple choice', meets + ' verbs met, recall ' + seenRecall);
   ok(mid !== before && mid.includes('"p:'), 'principal-part cards were created');
   // charts
   await p.goto(URL + '#/parts'); await p.click('button:has-text("Charts")'); await p.waitForSelector('dialog.charts[open] table');

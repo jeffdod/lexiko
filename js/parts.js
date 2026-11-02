@@ -4,7 +4,7 @@
 //   recall    — you're shown a verb and a part name: pick the form (multiple choice) or remember it (self-graded)
 // "Auto" starts with multiple choice and moves to self-graded flashcards once you're reliable.
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
-import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
 import { smart, TOPICS } from './smart.js';
@@ -37,33 +37,41 @@ function poolVerbs(scope) {
   return out;
 }
 
-/** What a session would contain right now: parts due, then new parts (spread across verbs) up to the daily allowance. */
+/** What a session would contain right now: parts due, then whole new verbs (every part of each) up to the daily allowance of verbs. */
 export function planPartsSession({ scope = null, size = setting('sessionSize'), newLimit = null } = {}) {
-  const verbs = poolVerbs(scope), inPool = new Map(verbs.map((v) => [v.n, v.w]));
+  const verbs = poolVerbs(scope).sort((a, b) => b.w - a.w), inPool = new Set(verbs.map((v) => v.n));
   const due = partsCardsDue().map((c) => ({ c, ...parseCardId(c.id) })).filter((x) => eligible().has(x.n) && eligible().get(x.n).parts[x.slot] && (!scope || inPool.has(x.n)))
     .sort((a, b) => a.c.due - b.c.due);
-  const byRank = [];
-  for (const { n, w } of verbs) {
-    let rank = 0;
-    for (const slot of cardParts(eligible().get(n))) {
-      const c = K.cards.get(partsId(n, slot)); if (c && c.state !== 'new') continue;
-      (byRank[rank] ||= []).push({ n, slot, s: Math.sqrt(w) * (0.6 + Math.random() * 0.8) }); rank++;
-    }
-  }
-  const fresh = byRank.flatMap((r) => (r || []).sort((a, b) => b.s - a.s));
+  const unstarted = (n) => cardParts(eligible().get(n)).filter((slot) => { const c = K.cards.get(partsId(n, slot)); return !c || c.state === 'new'; });
   const limit = newLimit != null ? newLimit : scope ? size : partsPace().left;
+  const fresh = [], seen = new Set();                    // fresh: one group per verb, [{ n, slot }] in teaching order
+  for (const { n } of verbs) {                          // verbs already begun: finish their remaining parts first
+    if (!partsVerbStarted(n)) continue;
+    const slots = unstarted(n); if (slots.length) { fresh.push({ n, started: true, items: slots.map((slot) => ({ n, slot })) }); seen.add(n); }
+  }
+  let added = 0;
+  for (const { n } of verbs) {
+    if (added >= limit) break; if (seen.has(n) || partsVerbStarted(n)) continue;
+    const slots = unstarted(n); if (!slots.length) continue;
+    fresh.push({ n, started: false, items: slots.map((slot) => ({ n, slot })) }); added++;
+  }
   return { due, fresh, limit, size };
 }
 export function buildPartsSession(opts) {
-  const { due, fresh, limit, size } = planPartsSession(opts);
-  const dueItems = due.slice(0, size).map((x) => ({ n: x.n, slot: x.slot, type: 'review' }));
-  const newItems = fresh.slice(0, Math.min(limit, Math.max(0, size - dueItems.length))).map((x) => ({ n: x.n, slot: x.slot, type: 'new' }));
-  return shuffle([...dueItems, ...newItems]);
+  const { due, fresh, size } = planPartsSession(opts);
+  const dueItems = shuffle(due.slice(0, size).map((x) => ({ n: x.n, slot: x.slot, type: 'review' })));
+  let room = Math.max(0, size - dueItems.length); const out = [...dueItems];
+  for (const g of fresh) {
+    if (room <= 0) break; const items = g.items.slice(0, room); room -= items.length;
+    const block = items.map((x, i) => ({ ...x, type: 'new', meet: i === 0 && !g.started }));
+    out.splice(Math.floor(Math.random() * (out.length + 1)), 0, ...block);
+  }
+  return out;
 }
 /** Extra practice: nothing here is ever scheduled. 'trouble' = your shakiest parts; 'preview' = a few parts you haven't started. */
 export function buildPartsExtra(kind, scope = null) {
   if (kind === 'trouble') return shuffle(troubleCards('p:', 15).map((c) => ({ ...parseCardId(c.id), type: 'practice' })).filter((x) => eligible().get(x.n) && eligible().get(x.n).parts[x.slot]));
-  return shuffle(planPartsSession({ scope, newLimit: 6 }).fresh.slice(0, 6).map((x) => ({ n: x.n, slot: x.slot, type: 'preview' })));
+  return shuffle(planPartsSession({ scope, newLimit: 3 }).fresh.flatMap((g) => g.items).slice(0, 6).map((x) => ({ n: x.n, slot: x.slot, type: 'preview' })));
 }
 
 /* ---------- answer choices ---------- */
@@ -106,15 +114,10 @@ export function verbOptions(entry) {
 /* ---------- session ---------- */
 let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
-const modeOf = (st) => { const p = setting('partsMode'); return p === 'choice' || p === 'flash' ? p : (st.mode || 'choice'); };
+const modeOf = (n) => (verbStage(n) === 'cold' ? 'flash' : 'choice');       // each verb decides for itself: multiple choice while learning, cold self-graded cards once known
 
 async function recordResult(st, grade) {
   st.recent.push(grade >= 3 ? 1 : 0); if (st.recent.length > 40) st.recent.shift(); st.total = (st.total || 0) + 1;
-  if (setting('partsMode') === 'auto') {
-    const sum = (a) => a.reduce((x, y) => x + y, 0), r = st.recent, cur = st.mode || 'choice';
-    if (cur === 'choice' && r.length >= 20 && sum(r.slice(-20)) / 20 >= 0.85) { st.mode = 'flash'; st.recent = []; toast('Nice — you know these well, so lexiko moved you to self-graded flashcards.', 9000); }
-    else if (cur === 'flash' && r.length >= 12 && sum(r.slice(-12)) / 12 < 0.6) { st.mode = 'choice'; st.recent = []; toast('Back to multiple choice for a while.', 8000); }
-  }
   await savePartsStats(st);
 }
 
@@ -147,7 +150,8 @@ function runSession(view, queue, { scope, restart, practice }) {
   async function grade(c, g) {
     const first = !c.retry;
     if (first) {
-      if (!practice) { await rateParts(partsId(c.n, c.slot), g, Date.now() - t0, { m: c.fmt }); await recordResult(st, g); if (c.type === 'new') S.fresh++; }
+      if (!practice) { await rateParts(partsId(c.n, c.slot), g, Date.now() - t0, { m: c.fmt }); await recordResult(st, g);
+        await noteVerbAnswer(c.n, c.slot, g >= 3, c.fmt === 'flash', cardParts(eligible().get(c.n))); if (c.type === 'new') S.fresh++; }
       S.done++; if (g >= 3) S.good++;
     }
     if (g < 3) S.missed.set(c.n + ':' + c.slot, c);
@@ -160,7 +164,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? (S.rk - 1) / S.R : (S.shown - 1) / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? (S.rk - 1) / S.R : (S.shown - 1) / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1] + (practice || c.retry ? '' : ' · ' + (verbStage(c.n) === 'cold' ? 'cold' : 'multiple choice')))),
       practice ? practiceBanner(c.type === 'preview') : null, inner, ctl || null));
   }
 
@@ -170,6 +174,17 @@ function runSession(view, queue, { scope, restart, practice }) {
     return h('div.fb.ok',
       h('div.row.between', h('b', { lang: 'grc' }, entry.lemma), h('span.small.muted', L.short || L.brief)),
       h('div.partsgrid', SLOT_NAMES.map((name, i) => h('div.pp' + (i === slot ? '.hi' : '') + (entry.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, entry.parts[i] || '—')))));
+  }
+
+  /* the first time you meet a verb: all its parts together, before any question */
+  function meetVerb(c, entry) {
+    const L = lexeme(c.n), slots = cardParts(entry), btn = h('button.btn.primary.block', { onclick: () => { stop(); show(c); } }, 'Start learning this verb');
+    clear(view).append(h('div.qwrap',
+      h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)), h('span.chip.accent', 'New verb')),
+      h('div.qcard', h('div.qgreek', { lang: 'grc' }, entry.lemma), h('div.qmeta', (L.short || L.brief) + ' · G' + c.n),
+        h('div.partsgrid', { style: { textAlign: 'left', marginTop: '.7rem' } }, [0, ...slots.slice().sort((a, b) => a - b)].filter((i) => entry.parts[i]).map((i) => h('div.pp', h('small', SLOT_NAMES[i]), h('span', { lang: 'grc' }, entry.parts[i])))),
+        h('p.muted.small', { style: { margin: '.7rem 0 0' } }, 'This verb has ' + slots.length + ' principal part' + (slots.length === 1 ? '' : 's') + ' to learn. You’ll be asked each one, with choices to help.')), btn));
+    setKeys(() => { btn.click(); return true; });
   }
 
   const setKeys = (enter) => {
@@ -188,12 +203,13 @@ function runSession(view, queue, { scope, restart, practice }) {
   function show(c) {
     t0 = Date.now();
     const entry = eligible().get(c.n); if (!entry || !entry.parts[c.slot]) return advance();
-    const L = lexeme(c.n), form = entry.parts[c.slot], mode = modeOf(st);
+    const L = lexeme(c.n), form = entry.parts[c.slot], mode = modeOf(c.n);
+    if (c.meet) { c.meet = false; return meetVerb(c, entry); }
     const gloss = h('div.qmeta', (L.short || L.brief) + ' · G' + c.n);
     const continueBtn = (g, label) => { const b = h('button.btn.primary.block', { onclick: () => grade(c, g) }, label || 'Continue'); setKeys(() => { b.click(); return true; }); return b; };
 
     /* recognise: form → verb → part */
-    if (mode === 'choice' && (c.fmt || (c.fmt = Math.random() < 0.4 ? 'rec' : 'rcl')) === 'rec') {
+    if (mode === 'choice' && (c.fmt || (c.fmt = c.type !== 'new' && !c.retry && Math.random() < 0.35 ? 'rec' : 'rcl')) === 'rec') {
       let verbOK = null, partOK = null;
       const card = h('div.qcard', h('div.qgreek', { lang: 'grc' }, form), h('div.qmeta', 'Which verb is this a principal part of?'));
       const step1 = h('div.opts', { style: { marginTop: '.8rem' } }), step2 = h('div.opts.two', { hidden: true }), tail2 = h('div');
@@ -271,15 +287,12 @@ export function renderParts(view, params) {
 
 function landing(view) {
   const goal = K.goal && K.goal.book ? K.goal : null;
-  const modeSeg = h('div.seg', [['auto', 'Auto'], ['choice', 'Multiple choice'], ['flash', 'Flashcards']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('partsMode') === v), onclick: async (e) => {
-    await setSetting('partsMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget)));
-  } }, t)));
-  const newSel = h('select', { 'aria-label': 'New parts per day', onchange: async (e) => { await setSetting('partsNewPerDay', +e.target.value); landing(view); } },
-    [...new Set([1, 2, 3, 5, setting('partsNewPerDay')])].sort((a, b) => a - b).map((n) => h('option', { value: n, selected: n === setting('partsNewPerDay') }, n)));
+  const newSel = h('select', { 'aria-label': 'Most new verbs per day', onchange: async (e) => { await setSetting('partsVerbsPerDay', +e.target.value); landing(view); } },
+    [1, 2, 3].map((n) => h('option', { value: n, selected: n === setting('partsVerbsPerDay') }, n)));
   const auto = setting('partsPace') !== 'fixed', pace = partsPace();
   const seg2 = (key, items, after) => h('div.seg', items.map(([v, t]) => h('button', { 'aria-pressed': String(String(setting(key)) === String(v)), onclick: async () => { await setSetting(key, v); landing(view); } }, t)));
-  const paceNote = pace.paused ? h('div.card.small', h('b', 'New parts are paused.'), ' Turn this off in Options when you want more.')
-    : auto && pace.why ? h('div.card.small', h('b', 'Pace: ' + pace.n + ' new a day. '), pace.why) : null;
+  const paceNote = pace.paused ? h('div.card.small', h('b', 'New verbs are paused.'), ' Turn this off in Options when you want more.')
+    : auto && pace.why ? h('div.card.small', h('b', pace.slow ? 'New verbs are slowed. ' : 'Pace: ' + pace.n + ' new verb' + (pace.n === 1 ? '' : 's') + ' a day. '), pace.why) : null;
   clear(view).append(h('div.pagehead', h('h1', 'Principal parts')),
     h('div.stack',
       startButton(smart('parts')), paceNote,
@@ -292,9 +305,21 @@ function landing(view) {
           info: (sc) => { let verbs = 0; for (const [v] of scopeCounts(sc)) if (eligible().has(v)) verbs++; return fmt(verbs) + ' verb' + (verbs === 1 ? '' : 's') + ' with principal parts in this passage'; },
         })),
       fold('Options',
-        h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Multiple choice checks you; flashcards ask you to remember, then rate yourself. Auto moves up when you’re reliable.')), modeSeg),
-        h('div.stack', h('b', 'New parts'), seg2('partsPace', [['auto', 'Automatic'], ['fixed', 'Fixed number']]),
-          h('div.muted.small', auto ? 'Automatic pace looks at how many reviews are waiting and how you answered your last 40 parts. It slows down when reviews pile up or you’re below about 75% correct, and speeds up a little when you’re above 90% with little waiting. It never stays at zero for more than a few days.' : 'Exactly this many new parts every day.')),
-        h('div.row.between', h('span', auto ? 'Most new per day' : 'New per day'), newSel),
-        h('div.row.between', h('div', h('b', 'Pause new parts'), h('div.muted.small', 'Review only, until you turn it off.')), seg2('partsPause', [[false, 'Off'], [true, 'On']])))));
+        h('div.stack', h('b', 'New verbs'), seg2('partsPace', [['auto', 'Automatic'], ['fixed', 'Fixed number']]),
+          h('div.muted.small', auto ? 'Automatic pace looks at how many reviews are waiting and how you answered your last 40 parts. It slows down when reviews pile up or you’re below about 75% correct, and adds a verb when you’re above 90% with little waiting. It never stays at zero for more than a few days.' : 'Exactly this many new verbs every day.')),
+        h('div.row.between', h('span', auto ? 'Most new verbs per day' : 'New verbs per day'), newSel),
+        h('div.row.between', h('div', h('b', 'Pause new verbs'), h('div.muted.small', 'Review only, until you turn it off.')), seg2('partsPause', [[false, 'Off'], [true, 'On']]))),
+      verbsFold()));
+}
+
+/** Where each verb you've started stands: still learning (with how many parts are secure) or known well enough for cold questions. */
+function verbsFold() {
+  const rows = [...eligible().values()].filter((e) => partsVerbStarted(e.n)).map((e) => {
+    const slots = cardParts(e), v = K.partsVerbs[e.n] || {}, cold = verbStage(e.n) === 'cold';
+    const secure = slots.filter((sl) => ((v.days || {})[sl] || []).length >= 2).length;
+    return { e, cold, secure, total: slots.length, w: lexeme(e.n).freq };
+  }).sort((a, b) => b.w - a.w);
+  return fold('Your verbs (' + rows.length + ')', rows.length ? h('div.stack', rows.slice(0, 60).map((r) => h('div.row.between', h('span', h('b', { lang: 'grc' }, r.e.lemma), ' ', h('span.muted.small', lexeme(r.e.n).short || lexeme(r.e.n).brief)),
+    h('span.chip' + (r.cold ? '' : '.accent'), r.cold ? 'Cold' : 'Learning · ' + r.secure + ' of ' + r.total + ' parts'))), rows.length > 60 ? h('div.muted.small', '…and ' + (rows.length - 60) + ' more.') : null,
+    h('div.muted.small', 'A verb goes cold after every part is right in multiple choice on two different days. Two cold misses in a row send it back to multiple choice.')) : h('p.muted.small', 'Verbs you start will appear here.'));
 }
