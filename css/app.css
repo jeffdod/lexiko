@@ -339,3 +339,7 @@ dialog.charts { padding-top: 0; }
 .ftable td.no { font-family: inherit; font-size: .8rem; color: var(--muted); }
 .ftable td i { display: block; font-style: normal; font-family: inherit; font-size: .68rem; color: var(--muted); }
 .fchip { display: inline-block; background: var(--surface-2); border-radius: 99px; padding: .05rem .6rem; font-family: var(--greek); margin: .15rem .3rem .15rem 0; }
+
+.next { display: flex; align-items: flex-start; gap: .5rem; color: var(--muted, #596172); font-size: .9rem; } .next b { color: var(--ink, inherit); } .next svg { margin-top: .2rem; flex: none; }
+.tilenext { display: flex; align-items: center; gap: .25rem; opacity: .8; margin: .3rem 0 0; }
+.sched { display: grid; gap: .1rem; } .sched > div { display: flex; justify-content: space-between; padding: .25rem 0; border-bottom: 1px dashed var(--line, #ddd5c4); } .sched > div:last-child { border: 0; }

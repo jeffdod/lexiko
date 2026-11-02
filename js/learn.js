@@ -6,7 +6,7 @@ import { partsGrid } from './partforms.js';
 import { paceNote, paceOptions } from './pace.js';
 import { unfinishedVerbs, waitingVerbs, verbProgress, VERB_CAP } from './know.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
-import { smart, smartAll, TOPICS, topicNote } from './smart.js';
+import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
 
@@ -285,12 +285,14 @@ export function renderLearn(view, params) {
     if (!D.bookByCode.has(book)) return void (location.hash = '#/learn');
     return void startFrom(view, 'passage', scope, scopeLabel(scope));
   }
-  const next = smartAll();
+  const next = smartAll(), up = upcoming(), dueAll = up.all.due;
   clear(view).append(
     h('div.pagehead', h('h1', 'Learn')),
     h('div.stack',
       startButton(next),
-      h('div.topics', ['words', 'parse', 'parts'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)))))));
+      nextLine(up, dueAll),
+      h('div.topics', ['words', 'parse', 'parts'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)), tileNext(up, k) ? h('p.small.tilenext', icon('clock', 13), ' ' + tileNext(up, k)) : null))),
+      comingUp(up)));
 }
 
 /* ---------- Vocabulary page ---------- */
