@@ -2,7 +2,7 @@
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
 import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt } from './util.js';
+import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
@@ -69,6 +69,7 @@ function distractors(L, k = 3) {
 function runSession(view, items, { title, scope, back, practice = false }) {
   const queue = items.map((i) => ({ ...i }));
   const total = queue.length;
+  const missed = new Set();
   const stats = { shown: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
   let current = null, t0 = 0;
   /* keyboard: Space/Enter shows the answer or continues, 1–4 choose or rate. Skipped when a button has focus or a dialog is open. */
@@ -96,6 +97,8 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         practice ? null : h('div.kpi', h('b', stats.fresh), h('span', 'new words started')),
         stats.probes ? h('div.kpi', h('b', stats.probes - stats.probeMiss + '/' + stats.probes), h('span', 'check-ins held')) : null),
         stats.probeMiss ? h('p.muted', stats.probeMiss + ' word' + (stats.probeMiss > 1 ? 's' : '') + ' you’d assumed you knew slipped; they’re back in your review pile.') : null,
+        missedBlock([...missed].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: L.brief }; }),
+          () => runSession(view, [...missed].map((m) => ({ ...m, type: 'practice', seen: false, retry: false })), { title, scope, back, practice: true })),
         h('div.row.wrap', addBtn, scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null,
           h('a.btn' + (scope ? '' : '.primary'), { href: '#/learn' }, 'Back to Learn'), h('a.btn', { href: '#/progress' }, 'Progress'))));
   };
@@ -129,7 +132,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
       if (item.type === 'probe') { stats.probes++; if (g < 3) stats.probeMiss++; }
     }
     if (g >= 3) { stats.good++; stats.done++; }
-    else { stats.again++; requeue(item); }
+    else { stats.again++; missed.add(item); requeue(item); }
     advance();
   }
 

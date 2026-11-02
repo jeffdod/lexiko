@@ -102,6 +102,10 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
       await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(200); }
     const first = seq.filter((x) => !x.startsWith('↻')), tot = new Set(first.map((x) => x.split(' / ')[1]));
     ok(tot.size === 1 && first.every((x, i) => x.startsWith((i + 1) + ' / ')) && seq.some((x) => x.startsWith('↻ 1 / ')) && seq.findIndex((x) => x.startsWith('↻')) === first.length, 'quiz total never changes; missed items come back in a retry round at the end ' + seq.join(' | ')); }
+  await page.goto(URL + '#/parse/run/passage/MRK/1/1/1/8/verb'); await page.waitForSelector('.qcard');
+  { for (let i = 0; i < 80 && !(await page.locator('.missed').count()); i++) { await page.click('button:has-text("I don’t know")').catch(() => {}); await page.waitForSelector('.fb,.missed').catch(() => {}); if (await page.locator('.fb').count()) await page.click('button.primary.block'); await page.waitForTimeout(120); }
+    ok(await page.locator('.missed .miss').count() >= 1, 'session-complete lists the words you missed');
+    await page.click('button:has-text("Practise these")'); await page.waitForSelector('.qcard'); ok(await page.locator('.qcount').count() === 1, 'Practise these starts a session of the missed words'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');
