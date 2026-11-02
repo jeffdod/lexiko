@@ -24,8 +24,16 @@ function formsOf(n) {
   return index.get(n) || [];
 }
 
+const relCache = new Map();
+function relatedEntries(n) {
+  if (relCache.has(n)) return relCache.get(n);
+  const e = D.parts.get(n), keys = new Set((e ? e.parts : []).filter(Boolean).map(skel)), out = new Set();
+  if (keys.size) for (const f of D.forms) { if (!keys.has(skel(f.w))) continue; for (const a of f.an) { if (a.s === n) continue; const m = TAG.exec(a.m); if (m && m[4] === 'I' && m[5]) out.add(a.s); } }
+  relCache.set(n, out); return out;
+}
+
 /** Which tenses a part governs: the imperfect belongs to the present stem, the pluperfect to the perfect stem. */
-const GROUPS = [[['P', 'Present'], ['I', 'Imperfect']], [['F', 'Future']], [['A', 'Aorist']], [['R', 'Perfect'], ['L', 'Pluperfect']], [['R', 'Perfect'], ['L', 'Pluperfect']], [['A', 'Aorist']]];
+const GROUPS = [[['P', 'Present'], ['I', 'Imperfect']], [['F', 'Future']], [['A', 'Aorist']], [['R', 'Perfect'], ['L', 'Pluperfect']], [['R', 'Perfect'], ['L', 'Pluperfect']], [['A', 'Aorist'], ['F', 'Future passive']]];
 
 /** If the printed form itself doesn't occur, fall back to the voices that belong to that part. */
 const DEFAULT_VOICES = [['A', 'D', 'N', 'O', 'X', 'Q'], ['A', 'M', 'D', 'N', 'O', 'X', 'Q'], ['A', 'D', 'N', 'X', 'Q'], ['A', 'X', 'Q'], ['M', 'P', 'E', 'D', 'N', 'O'], ['P', 'O', 'E']];
@@ -40,12 +48,14 @@ function merge(list) {
 /** The forms of one principal part: the same voice as the printed form, in the tenses that part governs. */
 export function partForms(n, slot, printed) {
   const k = skel(printed || ''), main = GROUPS[slot][0][0];
-  // some parts are listed in the text under another dictionary entry (a supplementing verb): follow the printed form there
-  const via = new Set(); for (const f of D.forms) if (f.plain === k) for (const a of f.an) if (a.s !== n && /^V-/.test(a.m)) { const m = TAG.exec(a.m); if (m && m[2] === main) via.add(a.s); }
+  // some parts are listed in the text under another dictionary entry (a supplementing verb, e.g. the future of λέγω is under ἐρέω):
+  // any printed indicative form of this verb that the text tags under another entry links that entry to this one
+  const via = relatedEntries(n);
   const all = [...formsOf(n), ...[...via].flatMap((m) => formsOf(m))];
   const voices = new Set(all.filter((f) => f.tense === main && (skel(f.w) === k || f.plain === k)).map((f) => f.voice + f.sec));   // the voice the printed form has in the text
-  const groups = GROUPS[slot].map(([tense, label]) => {
-    const use = all.filter((f) => f.tense === tense && (voices.size ? voices.has(f.voice + f.sec) : DEFAULT_VOICES[slot].includes(f.voice)));
+  const letters = new Set([...voices].map((v) => v[0]));
+  const groups = GROUPS[slot].map(([tense, label], gi) => {
+    const use = all.filter((f) => f.tense === tense && (voices.size ? (gi === 0 ? voices.has(f.voice + f.sec) : letters.has(f.voice)) : DEFAULT_VOICES[slot].includes(f.voice)));
     const cell = {}, other = {};
     for (const f of use) (f.mood === 'I' ? (cell[f.person + f.number] ||= []) : (other[f.mood] ||= [])).push(f);
     const fix = (o) => Object.fromEntries(Object.entries(o).map(([key, v]) => [key, merge(v)]));
