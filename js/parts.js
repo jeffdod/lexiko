@@ -302,10 +302,11 @@ function landing(view) {
   const seg2 = (key, items, after) => h('div.seg', items.map(([v, t]) => h('button', { 'aria-pressed': String(String(setting(key)) === String(v)), onclick: async () => { await setSetting(key, v); landing(view); } }, t)));
   const paceNote = pace.paused ? h('div.card.small', h('b', 'New verbs are paused.'), ' Turn this off in Options when you want more.')
     : auto && pace.why ? h('div.card.small', h('b', pace.slow ? 'New verbs are slowed. ' : 'Pace: ' + pace.n + ' new verb' + (pace.n === 1 ? '' : 's') + ' a day. '), pace.why) : null;
+  const sm = smart('parts');
   clear(view).append(backHead('Principal parts', '#/learn', 'Learn'),
     h('div.stack',
-      startButton(smart('parts')), paceNote,
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Look ahead at new parts'), h('a.btn.sm', { href: TOPICS.parts.review }, 'Review parts I’ve learned'), chartsButton()),
+      startButton(sm), paceNote,
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Look ahead at new parts'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parts.review }, 'Review parts I’ve learned'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/parts/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal, {
