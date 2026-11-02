@@ -82,6 +82,13 @@ process.on('unhandledRejection', () => {});
     const fut = m.partForms(3004, 1, e.parts[1]), perf = m.partForms(3004, 4, e.parts[4]);
     return { fut: fut.groups.length && Object.keys(fut.groups[0].cell).length, via: fut.via.length, perfPass: perf.groups.length && !!(perf.groups[0].cell['3S']) }; });
   ok(rel.fut >= 5 && rel.via === 1 && rel.perfPass, 'the future and perfect passive of λέγω are found under the entry the text uses', JSON.stringify(rel));
+  // ---- shaky words are only ones you have actually struggled with
+  const sh = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const { D } = await import('./js/data.js'); const saved = new Map(k.K.cards);
+    const ns = D.lex.slice(0, 4).map((L) => L.n); const mk = (n, grades) => { let c = f.newCard('w:' + n); let t = Date.now() - 864e6; for (const g of grades) { c = f.review(c, g, t, 0.9); t += 864e5; } k.K.cards.set('w:' + n, c); };
+    mk(ns[0], [3]); mk(ns[1], [4, 3]); mk(ns[2], [1, 3]); mk(ns[3], [3, 1]);
+    const ids = k.troubleCards('w:', 50).map((c) => +c.id.slice(2)); k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c);
+    return { good: ids.includes(ns[0]) || ids.includes(ns[1]), again: ids.includes(ns[2]), lapsed: ids.includes(ns[3]) }; });
+  ok(!sh.good && sh.again && sh.lapsed, 'weak spots list only words you have missed or struggled with, not ones you always got right', JSON.stringify(sh));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });

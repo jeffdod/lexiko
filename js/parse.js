@@ -308,7 +308,7 @@ export function renderParse(view, params) {
     let scope = null, kind = 'all';
     if (rest[0] === 'extra') {
       const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : 'trouble');
-      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : 'You haven’t studied any forms yet, so there are no trouble spots to practise.'), ...backLinks('#/parse', 'Back'))); return; }
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'passage') {
