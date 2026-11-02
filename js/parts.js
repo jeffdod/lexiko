@@ -119,7 +119,7 @@ async function recordResult(st, grade) {
 }
 
 function runSession(view, queue, { scope, restart, practice }) {
-  const total = queue.length, S = { done: 0, good: 0, fresh: 0 };
+  const total = queue.length, S = { shown: 0, done: 0, good: 0, fresh: 0 };
   const added = [];
   let st = null, t0 = 0;
 
@@ -133,7 +133,7 @@ function runSession(view, queue, { scope, restart, practice }) {
           h('a.btn', { href: '#/parts' }, 'Back to Principal parts'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
-  const advance = async () => { stop(); const c = queue.shift(); if (!c) return finish(); st = await getPartsStats(); show(c); };
+  const advance = async () => { stop(); const c = queue.shift(); if (!c) return finish(); S.shown++; st = await getPartsStats(); show(c); };
 
   async function grade(c, g) {
     const first = !c.retry;
@@ -150,7 +150,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * S.done / total) + '%' } })), h('span.qcount', { 'aria-label': c.retry ? 'Trying again, ' + (queue.filter((x) => x.retry).length + 1) + ' left' : 'Item ' + Math.min(S.done + 1, total) + ' of ' + total }, c.retry ? '↻ ' + (queue.filter((x) => x.retry).length + 1) + ' left' : Math.min(S.done + 1, total) + ' / ' + total), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.shown - 1) / (S.shown + queue.length)) + '%' } })), h('span.qcount', { 'aria-label': 'Item ' + S.shown + ' of ' + (S.shown + queue.length) }, S.shown + ' / ' + (S.shown + queue.length)), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
       practice ? practiceBanner(c.type === 'preview') : null, inner, ctl || null));
   }
 

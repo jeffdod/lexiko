@@ -69,7 +69,7 @@ function distractors(L, k = 3) {
 function runSession(view, items, { title, scope, back, practice = false }) {
   const queue = items.map((i) => ({ ...i }));
   const total = queue.length;
-  const stats = { done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
+  const stats = { shown: 0, done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
   let current = null, t0 = 0;
   /* keyboard: Space/Enter shows the answer or continues, 1–4 choose or rate. Skipped when a button has focus or a dialog is open. */
   const sid = Math.random().toString(36).slice(2); view.dataset.sess = sid;
@@ -100,7 +100,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
           h('a.btn' + (scope ? '' : '.primary'), { href: '#/learn' }, 'Back to Learn'), h('a.btn', { href: '#/progress' }, 'Progress'))));
   };
 
-  const advance = () => { current = queue.shift(); if (!current) return finish(); show(current); };
+  const advance = () => { current = queue.shift(); if (!current) return finish(); stats.shown++; show(current); };
   const requeue = (item, gap) => queue.splice(Math.min(queue.length, gap), 0, item);
 
   let undoState = null;                                   // the one answer that can be taken back
@@ -129,7 +129,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * stats.done / total) + '%' } })), h('span.qcount', { 'aria-label': item.seen ? 'Trying again, ' + (queue.filter((i) => i.seen).length + 1) + ' left' : 'Item ' + Math.min(stats.done + 1, total) + ' of ' + total }, item.seen ? '↻ ' + (queue.filter((i) => i.seen).length + 1) + ' left' : Math.min(stats.done + 1, total) + ' / ' + total), chartsButton(),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.shown - 1) / (stats.shown + queue.length)) + '%' } })), h('span.qcount', { 'aria-label': 'Item ' + stats.shown + ' of ' + (stats.shown + queue.length) }, stats.shown + ' / ' + (stats.shown + queue.length)), chartsButton(),
         h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
       practice ? practiceBanner(item.type === 'preview') : null, inner,
       undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));
