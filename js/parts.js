@@ -4,7 +4,7 @@
 //   recall    — you're shown a verb and a part name: pick the form (multiple choice) or remember it (self-graded)
 // "Auto" starts with multiple choice and moves to self-graded flashcards once you're reliable.
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
-import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, promotedVerbs, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
 import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks } from './util.js';
 import { smart, TOPICS } from './smart.js';
@@ -39,7 +39,7 @@ function poolVerbs(scope) {
 
 /** What a session would contain right now: parts due, then whole new verbs (every part of each) up to the daily allowance of verbs. */
 export function planPartsSession({ scope = null, size = setting('sessionSize'), newLimit = null } = {}) {
-  const verbs = poolVerbs(scope).sort((a, b) => b.w - a.w), inPool = new Set(verbs.map((v) => v.n));
+  const prom = promotedVerbs(), verbs = poolVerbs(scope).sort((a, b) => (prom.has(b.n) - prom.has(a.n)) || b.w - a.w), inPool = new Set(verbs.map((v) => v.n));
   const due = partsCardsDue().map((c) => ({ c, ...parseCardId(c.id) })).filter((x) => eligible().has(x.n) && eligible().get(x.n).parts[x.slot] && (!scope || inPool.has(x.n)))
     .sort((a, b) => a.c.due - b.c.due);
   const unstarted = (n) => cardParts(eligible().get(n)).filter((slot) => { const c = K.cards.get(partsId(n, slot)); return !c || c.state === 'new'; });

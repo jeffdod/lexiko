@@ -2,7 +2,7 @@
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
 import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { unfinishedVerbs, verbProgress, VERB_CAP } from './know.js';
+import { unfinishedVerbs, waitingVerbs, verbProgress, VERB_CAP } from './know.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
@@ -305,13 +305,14 @@ function verbHold() {
 
 /** Which verbs are still being learned, and what each one needs. */
 function verbsPage(view) {
-  const open = unfinishedVerbs().map((n) => ({ n, L: lexeme(n), p: verbProgress(n) }));
+  const open = unfinishedVerbs().map((n) => ({ n, L: lexeme(n), p: verbProgress(n) })), waiting = waitingVerbs();
   clear(view).append(h('div.pagehead', h('h1', 'Verbs to finish')),
     h('div.stack',
       open.length ? h('div.card', open.map(({ L, p }) => h('div.row.between', { style: { padding: '.5rem 0' } },
         h('div', h('b', { lang: 'grc' }, L.head), ' ', h('span.muted.small', L.brief),
           h('div.muted.small', (p.meaning ? '✓ Meaning' : 'Meaning still settling'), ' · ', p.total ? (p.parts ? '✓ Principal parts' : p.secure + ' of ' + p.total + ' parts cold') : 'no principal parts', ' · ', p.parsing ? '✓ Parsing' : p.answers < 8 ? 'needs more parsing' : Math.round(p.acc * 100) + '% parsing')))))
         : h('div.card', h('p', 'Every verb you’ve started is fully learned. 🎉')),
+      waiting.length ? h('div.card.stack', h('b', 'Up next'), h('p.muted.small', 'You said you know the meaning of these verbs. They’ll get their principal parts and parsing next, once there is room.'), h('div', waiting.slice(0, 12).map((n) => h('span.chip', { style: { margin: '.15rem .3rem .15rem 0' } }, h('span', { lang: 'grc' }, lexeme(n).head))))) : null,
       h('p.muted.small', 'A verb is finished when its meaning is learned, every principal part is known cold, and you parse it correctly 95% of the time or better over your last 20 answers (at least 8). A verb with no principal parts needs only the meaning and the parsing. New verbs wait while ' + VERB_CAP + ' or more are unfinished.'),
       h('div.row.wrap', h('a.btn.primary', { href: '#/parts' }, 'Principal parts'), h('a.btn', { href: '#/parse' }, 'Parsing'), h('a.btn', { href: '#/learn/words' }, 'Back to Vocabulary'))));
 }

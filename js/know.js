@@ -90,8 +90,8 @@ export async function rate(n, grade, kind = 'review', ms = 0) {
 }
 
 /** "I already know this" — create a stable card without a quiz. */
-export async function markKnown(n) {
-  const c = F.review(F.newCard('w:' + n), 4, Date.now(), K.settings.retention); c.src = 'manual';
+export async function markKnown(n, full = false) {      // full: a verb whose parsing you know too (otherwise its parts and parsing are still to learn)
+  const c = F.review(F.newCard('w:' + n), 4, Date.now(), K.settings.retention); c.src = full ? 'full' : 'manual';
   await saveCard(c); return c;
 }
 /** "I don't know this" — put it in the learning pile, due now. */
@@ -203,15 +203,23 @@ export function verbProgress(n) {
   const meaning = !!c && c.state === 'review', parts = !slots.length || cold, parsing = a.length >= 8 && acc >= 0.95;
   return { meaning, parts, parsing, done: meaning && parts && parsing, secure, total: slots.length, acc, answers: a.length };
 }
-/** Verbs you began learning here that aren't finished yet. (Words you marked as known or that were only spot-checked don't count.) */
-export function unfinishedVerbs() {
-  const out = [];
+/** Verbs being worked on: ones you began learning here, plus verbs you said you know whose turn has come. (Spot-checked words don't count.) */
+function verbLists() {
+  const mine = [], queue = [];
   for (const [id, c] of K.cards) {
-    if (!id.startsWith('w:') || c.state === 'new' || c.src !== 'new') continue;
-    const n = +id.slice(2); if (isVerb(n) && !verbProgress(n).done) out.push(n);
+    if (!id.startsWith('w:') || c.state === 'new') continue;
+    const n = +id.slice(2); if (!isVerb(n)) continue;
+    if (c.src === 'new' || (c.src === 'manual' && c.state !== 'review')) { if (!verbProgress(n).done) mine.push(n); }
+    else if (c.src === 'manual') { if (!verbProgress(n).done) queue.push(n); }        // "I know this": meaning only, parts and parsing still to learn
   }
-  return out;
+  queue.sort((a, b) => D.lexByN.get(b).freq - D.lexByN.get(a).freq);
+  const promoted = queue.slice(0, Math.max(0, VERB_CAP - mine.length));
+  return { mine, promoted, waiting: queue.slice(promoted.length) };
 }
+export function unfinishedVerbs() { const v = verbLists(); return [...v.mine, ...v.promoted]; }
+/** Verbs you marked as known: the next ones to get their principal parts and parsing, as soon as there is room. */
+export const promotedVerbs = () => new Set(verbLists().promoted);
+export const waitingVerbs = () => verbLists().waiting;
 export const verbSlots = () => Math.max(0, VERB_CAP - unfinishedVerbs().length);
 /** Keeps nouns and everything else but lets in only as many new verbs as the gate allows. */
 export function admitVerbs(ns) {
