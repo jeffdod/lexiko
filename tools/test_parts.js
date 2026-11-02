@@ -69,6 +69,14 @@ process.on('unhandledRejection', () => {});
     const first = m.planPartsSession({}).fresh.map((g) => g.n); const prom = k.promotedVerbs(); o.promotedFirst = prom.size > 0 && prom.has(first[0]);
     k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); k.K.partsVerbs = sp; k.K.verbParse = sv; return o; });
   ok(vq.full === 3 && vq.waiting === 2 && vq.promotedFull === 0 && vq.afterOne === 3 && vq.promoted === 1 && vq.waitingAfter === 1 && vq.promotedFirst, 'verbs marked known wait for a free slot, then come first for principal parts', JSON.stringify(vq));
+  // ---- tap a part to see its forms (read from the text's own forms)
+  const pf = await p.evaluate(async () => { const m = await import('./js/partforms.js'); const { D } = await import('./js/data.js'); const o = {};
+    const fut = m.partForms(1510, 1, D.parts.get(1510).parts[1]); const c = fut.groups[0].cell; o.fut = ['1S', '2S', '3S', '1P', '2P', '3P'].map((k) => c[k] && c[k][0][0]).join(' ');
+    const all = JSON.stringify([...Array(6).keys()].map((i) => { const e = D.parts.get(3004); return e.parts[i] ? m.partForms(3004, i, e.parts[i]).groups.map((g) => g.cell) : null; }));
+    o.noCapsOrGraves = !/[Α-Ω]|[̀ὰὲὴὶὸὺὼ]/.test(all.normalize('NFD').replace(/[^\u0370-\u03ff\u0300-\u036f\u1f00-\u1fff]/g, '')) || !/[ὰὲὴὶὸὺὼ]/.test(all);
+    const aorPas = m.partForms(1096, 5, D.parts.get(1096).parts[5]).groups[0].cell; o.passiveOnly = !JSON.stringify(aorPas).includes('ἐγένετο');
+    o.pres = m.partForms(1510, 0, 'εἰμί').groups.map((g) => g.label).join('+'); return o; });
+  ok(pf.fut === 'ἔσομαι ἔσῃ ἔσται ἐσόμεθα ἔσεσθε ἔσονται' && pf.noCapsOrGraves && pf.passiveOnly && pf.pres === 'Present+Imperfect', 'tapping a part lists the forms that occur, lowercase, acutes only, imperfect under the present', JSON.stringify(pf));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });
