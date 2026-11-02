@@ -69,7 +69,7 @@ function distractors(L, k = 3) {
 function runSession(view, items, { title, scope, back, practice = false }) {
   const queue = items.map((i) => ({ ...i }));
   const total = queue.length;
-  const stats = { shown: 0, done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
+  const stats = { shown: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
   let current = null, t0 = 0;
   /* keyboard: Space/Enter shows the answer or continues, 1–4 choose or rate. Skipped when a button has focus or a dialog is open. */
   const sid = Math.random().toString(36).slice(2); view.dataset.sess = sid;
@@ -100,15 +100,23 @@ function runSession(view, items, { title, scope, back, practice = false }) {
           h('a.btn' + (scope ? '' : '.primary'), { href: '#/learn' }, 'Back to Learn'), h('a.btn', { href: '#/progress' }, 'Progress'))));
   };
 
-  const advance = () => { current = queue.shift(); if (!current) return finish(); stats.shown++; show(current); };
-  const requeue = (item, gap) => queue.splice(Math.min(queue.length, gap), 0, item);
+  const retryQ = [];                                      // missed cards wait here and come back after the last card, in a retry round
+  const advance = () => {
+    current = queue.shift();
+    if (!current && retryQ.length) { queue.push(...retryQ.splice(0)); stats.round = 1; stats.R = queue.length; stats.rk = 0; current = queue.shift(); }
+    if (!current) return finish();
+    if (stats.round) stats.rk++; else stats.shown++;
+    show(current);
+  };
+  const requeue = (item) => retryQ.push(item);
 
   let undoState = null;                                   // the one answer that can be taken back
   async function undo() {
     const u = undoState; if (!u) return; undoState = null;
     if (u.rated) await undoRate();
     Object.assign(stats, u.stats); u.item.seen = u.wasSeen;
-    const at = queue.indexOf(u.item); if (at >= 0) queue.splice(at, 1);          // a missed card that was queued to come back
+    const at = retryQ.indexOf(u.item); if (at >= 0) retryQ.splice(at, 1);
+    const aq = queue.indexOf(u.item); if (aq >= 0) queue.splice(aq, 1);          // a missed card that was queued to come back
     if (current) queue.unshift(current);
     current = u.item; show(current); toast('Last answer undone');
   }
@@ -121,7 +129,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
       if (item.type === 'probe') { stats.probes++; if (g < 3) stats.probeMiss++; }
     }
     if (g >= 3) { stats.good++; stats.done++; }
-    else { stats.again++; requeue(item, g === 1 ? 3 : 7); }
+    else { stats.again++; requeue(item); }
     advance();
   }
 
@@ -129,7 +137,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.shown - 1) / (stats.shown + queue.length)) + '%' } })), h('span.qcount', { 'aria-label': 'Item ' + stats.shown + ' of ' + (stats.shown + queue.length) }, stats.shown + ' / ' + (stats.shown + queue.length)), chartsButton(),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.round ? (stats.rk - 1) / stats.R : (stats.shown - 1) / total)) + '%' } })), h('span.qcount', { 'aria-label': stats.round ? 'Retry ' + stats.rk + ' of ' + stats.R : 'Item ' + stats.shown + ' of ' + total }, stats.round ? '↻ ' + stats.rk + ' / ' + stats.R : stats.shown + ' / ' + total), chartsButton(),
         h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
       practice ? practiceBanner(item.type === 'preview') : null, inner,
       undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));

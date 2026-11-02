@@ -127,7 +127,7 @@ const stop = () => { if (keyHandler) { document.removeEventListener('keydown', k
 
 function runSession(view, queue, { title, scope, restart, practice = false }) {
   const total = queue.length;
-  const S = { shown: 0, done: 0, full: 0, fresh: 0, slots: {} };
+  const S = { shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {} };
   let st = null, cur = null;
 
   const finish = () => {
@@ -143,13 +143,20 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
           h('a.btn', { href: '#/parse' }, 'Back to Parsing'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
-  const advance = async () => { stop(); cur = queue.shift(); if (!cur) return finish(); S.shown++; st = await getParseStats(); show(cur); };
+  const retryQ = [];                                      // missed forms wait here and come back after the last one, in a retry round
+  const advance = async () => {
+    stop(); cur = queue.shift();
+    if (!cur && retryQ.length) { queue.push(...retryQ.splice(0)); S.round = 1; S.R = queue.length; S.rk = 0; cur = queue.shift(); }
+    if (!cur) return finish();
+    if (S.round) S.rk++; else S.shown++;
+    st = await getParseStats(); show(cur);
+  };
 
   function frame(c, inner) {
     const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.shown - 1) / (S.shown + queue.length)) + '%' } })), h('span.qcount', { 'aria-label': 'Item ' + S.shown + ' of ' + (S.shown + queue.length) }, S.shown + ' / ' + (S.shown + queue.length)), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? (S.rk - 1) / S.R : (S.shown - 1) / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
       practice ? practiceBanner(c.type === 'preview') : null, inner));
   }
 
@@ -173,7 +180,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       for (const [k, v] of Object.entries(res.perSlot)) { const s = (S.slots[k] ||= [0, 0]); s[1]++; if (v.ok) s[0]++; }
       if (!practice) await recordResult(st, it, res);
     }
-    if (!res.full && first) queue.splice(Math.min(queue.length, 4), 0, { ...c, retry: true });
+    if (!res.full && first) retryQ.push({ ...c, retry: true });
     const L = D.lexByN.get(it.strongs), best = res.best;
         const others = it.valid.filter((v) => v !== best);
     const soft = Object.entries(res.perSlot).filter(([, v]) => v.soft);
@@ -186,7 +193,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       h('div.pslots', chips),
       soft.length ? h('div.small.muted', 'Accepted: the Robinson–Pierpont code marks this as ' + labelOf('voice', best.slots.voice).toLowerCase() + ' — a middle/passive form that may be read either way.') : null,
       chartLink(it, best.d));
-    const go = h('button.btn.primary.block', { onclick: advance }, queue.length ? 'Continue' : 'Finish');
+    const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
     (view.querySelector('.qwrap') || view).append(fb, go);
     go.focus({ preventScroll: true });
     keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
