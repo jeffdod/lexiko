@@ -2,6 +2,7 @@
 import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange } from './data.js';
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection } from './know.js';
+import { partsGrid } from './partforms.js';
 import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -57,8 +58,7 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
     if (L.full) block.append(h('details', h('summary', 'Fuller definition'), h('div', L.full)));
     const pe = L.pos === 'V' ? D.parts.get(L.n) : null;
     if (pe && pe.parts.slice(1).some(Boolean)) {
-      block.append(h('details.pparts', h('summary', 'Principal parts'),
-        h('div.partsgrid', PART_NAMES.map((name, i) => h('div.pp' + (pe.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, pe.parts[i] || '—'))))));
+      block.append(h('details.pparts', h('summary', 'Principal parts'), partsGrid(L.n, pe, PART_NAMES)));
     } else if (L.pos === 'V') block.append(h('div.muted.small', 'This verb doesn’t have principal parts.'));
     {
       const act = h('div.row.wrap', { style: { marginTop: '.6rem' } });

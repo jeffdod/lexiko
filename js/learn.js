@@ -2,6 +2,7 @@
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
 import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards } from './know.js';
 import * as F from './fsrs.js';
+import { partsGrid } from './partforms.js';
 import { unfinishedVerbs, waitingVerbs, verbProgress, VERB_CAP } from './know.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
@@ -24,8 +25,7 @@ function partsBlock(L) {
   if (L.pos !== 'V') return null;
   const e = D.parts.get(L.n);
   if (!e || !e.parts.slice(1).some(Boolean)) return h('div.cardparts', h('div.small.muted', 'This verb doesn’t have principal parts.'));
-  return h('div.cardparts', h('div.small.muted', 'Principal parts'),
-    h('div.partsgrid', PART_NAMES.map((name, i) => h('div.pp' + (e.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, e.parts[i] || '—')))));
+  return h('div.cardparts', h('div.small.muted', 'Principal parts — tap one to see its forms'), partsGrid(L.n, e, PART_NAMES));
 }
 
 const POSNAME = { N: 'noun', V: 'verb', A: 'adjective', T: 'article', P: 'pronoun', R: 'pronoun', D: 'pronoun', X: 'pronoun', I: 'pronoun', F: 'pronoun', S: 'pronoun', C: 'pronoun', K: 'pronoun', Q: 'pronoun', ADV: 'adverb', CONJ: 'conjunction', PREP: 'preposition', PRT: 'particle', COND: 'conditional', INJ: 'interjection', HEB: 'Hebrew', ARAM: 'Aramaic' };

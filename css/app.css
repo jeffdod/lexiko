@@ -328,3 +328,14 @@ summary { padding-block: .6rem; }
 dialog.charts { padding-top: 0; }
 .chead { position: sticky; top: 0; z-index: 3; background: var(--surface); padding: .9rem .1rem .6rem; margin: 0 0 .2rem; } .chead h2 { margin: 0; outline: none; }
 .chead .btn.icon { flex: none; margin-right: .1rem; }
+
+.pp.tap { border: 2px solid transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.pp.tap[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft, var(--surface-2)); }
+.fpanel { margin-top: .6rem; padding: .7rem .8rem; border: 1px solid var(--line, var(--border, #ddd)); border-radius: 14px; }
+.ftable { border-collapse: collapse; width: 100%; margin-top: .4rem; }
+.ftable th { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); text-align: left; padding: .2rem .3rem; }
+.ftable td { padding: .35rem .3rem; border-top: 1px solid var(--line, var(--border, #ddd)); font-family: var(--greek); font-size: 1.05rem; vertical-align: top; }
+.ftable td.l { font-family: inherit; font-size: .78rem; color: var(--muted); width: 2.2rem; }
+.ftable td.no { font-family: inherit; font-size: .8rem; color: var(--muted); }
+.ftable td i { display: block; font-style: normal; font-family: inherit; font-size: .68rem; color: var(--muted); }
+.fchip { display: inline-block; background: var(--surface-2); border-radius: 99px; padding: .05rem .6rem; font-family: var(--greek); margin: .15rem .3rem .15rem 0; }

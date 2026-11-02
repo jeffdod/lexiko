@@ -9,6 +9,7 @@ import * as F from './fsrs.js';
 import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks } from './util.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
+import { partsGrid } from './partforms.js';
 import { readHref } from './reader.js';
 import { chartsButton, chartRowFor } from './charts.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
@@ -177,7 +178,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     const L = lexeme(entry.n);
     return h('div.fb.ok',
       h('div.row.between', h('b', { lang: 'grc' }, entry.lemma), h('span.small.muted', L.short || L.brief)),
-      h('div.partsgrid', SLOT_NAMES.map((name, i) => h('div.pp' + (i === slot ? '.hi' : '') + (entry.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, entry.parts[i] || '—')))));
+      partsGrid(entry.n, entry, SLOT_NAMES, { hi: slot }));
   }
 
   /* the first time you meet a verb: all its parts together, before any question */
@@ -186,7 +187,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)), h('span.chip.accent', 'New verb')),
       h('div.qcard', h('div.qgreek', { lang: 'grc' }, entry.lemma), h('div.qmeta', (L.short || L.brief) + ' · G' + c.n),
-        h('div.partsgrid', { style: { textAlign: 'left', marginTop: '.7rem' } }, [0, ...slots.slice().sort((a, b) => a - b)].filter((i) => entry.parts[i]).map((i) => h('div.pp', h('small', SLOT_NAMES[i]), h('span', { lang: 'grc' }, entry.parts[i])))),
+        partsGrid(c.n, entry, SLOT_NAMES, { hideBlank: true, style: { textAlign: 'left', marginTop: '.7rem' } }),
         h('p.muted.small', { style: { margin: '.7rem 0 0' } }, 'This verb has ' + slots.length + ' principal part' + (slots.length === 1 ? '' : 's') + ' to learn. You’ll be asked each one, with choices to help.')), btn));
     setKeys(() => { btn.click(); return true; });
   }
