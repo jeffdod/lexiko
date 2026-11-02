@@ -4,7 +4,7 @@
 //   recall    — you're shown a verb and a part name: pick the form (multiple choice) or remember it (self-graded)
 // "Auto" starts with multiple choice and moves to self-graded flashcards once you're reliable.
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
-import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, promotedVerbs, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, unfinishedVerbs, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
 import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, TOPICS } from './smart.js';
@@ -34,13 +34,13 @@ function poolVerbs(scope) {
   const elig = eligible();
   if (scope) return [...scopeCounts(scope)].filter(([n]) => elig.has(n)).map(([n, c]) => ({ n, w: c * 3 + Math.sqrt(lexeme(n).freq) }));
   let out = [...elig.keys()].filter((n) => status(n) !== 'unknown').map((n) => ({ n, w: lexeme(n).freq }));
-  if (out.length < 15) out = [...elig.keys()].filter((n) => lexeme(n).rank <= 500).map((n) => ({ n, w: lexeme(n).freq }));      // nothing known yet: the most common verbs
+  if (out.length < 15) { const have = new Set(out.map((v) => v.n)); out = [...out, ...[...elig.keys()].filter((n) => !have.has(n) && lexeme(n).rank <= 500).map((n) => ({ n, w: lexeme(n).freq }))]; }      // few known yet: add the most common verbs to the ones you have
   return out;
 }
 
 /** What a session would contain right now: parts due, then whole new verbs (every part of each) up to the daily allowance of verbs. */
 export function planPartsSession({ scope = null, size = setting('sessionSize'), newLimit = null } = {}) {
-  const prom = promotedVerbs(), verbs = poolVerbs(scope).sort((a, b) => (prom.has(b.n) - prom.has(a.n)) || b.w - a.w), inPool = new Set(verbs.map((v) => v.n));
+  const prom = new Set(unfinishedVerbs()), verbs = poolVerbs(scope).sort((a, b) => (prom.has(b.n) - prom.has(a.n)) || b.w - a.w), inPool = new Set(verbs.map((v) => v.n));
   const due = partsCardsDue().map((c) => ({ c, ...parseCardId(c.id) })).filter((x) => eligible().has(x.n) && eligible().get(x.n).parts[x.slot] && (!scope || inPool.has(x.n)))
     .sort((a, b) => a.c.due - b.c.due);
   const unstarted = (n) => cardParts(eligible().get(n)).filter((slot) => { const c = K.cards.get(partsId(n, slot)); return !c || c.state === 'new'; });
@@ -54,8 +54,11 @@ export function planPartsSession({ scope = null, size = setting('sessionSize'), 
     if (!today) { if (added >= limit) continue; added++; }
     fresh.push({ n, started: true, items: slots.map((slot) => ({ n, slot })) }); seen.add(n);
   }
+  const pace = newLimit == null && !scope ? partsPace() : null, open = !pace || (!pace.paused && !pace.overload);   // verbs you are learning (at most 3, by the verb gate) don't wait for the daily pace
   for (const { n } of verbs) {
-    if (added >= limit) break; if (seen.has(n) || partsVerbStarted(n)) continue;
+    if (seen.has(n) || partsVerbStarted(n)) continue;
+    const mine = prom.has(n) && open && !scope && newLimit == null;
+    if (added >= limit && !mine) { if (prom.has(n)) continue; break; }
     const slots = unstarted(n); if (!slots.length) continue;
     fresh.push({ n, started: false, items: slots.map((slot) => ({ n, slot })) }); added++;
   }
