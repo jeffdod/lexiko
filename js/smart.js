@@ -1,7 +1,8 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
-import { troubleCards, reviewCards, wordsPace, parsePace, unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
 import { planPartsSession } from './parts.js';
+import { h, icon } from './util.js';
 
 export const TOPICS = {
   words: { title: 'Vocabulary', page: '#/learn/words', go: '#/learn/daily', reinforce: '#/learn/practice/trouble', review: '#/learn/practice/review', preview: '#/learn/practice/preview', noun: 'words', blurb: 'Learn and review Greek words' },
@@ -20,6 +21,52 @@ export function counts() {
     parse: { due: parseCardsDue().length, fresh: parsePace().left, studied: studiedCount('f:') },
     parts: { due: partsCardsDue().length, fresh: partsFresh().items, freshVerbs: partsFresh().newVerbs, sessionVerbs: partsFresh().verbs, studied: studiedCount('p:') },
   };
+}
+
+/** When studied cards come due next (read-only). Per topic and overall: the soonest time, plus counts for later today, tomorrow and the next 7 days. */
+export function upcoming(now = Date.now()) {
+  const eod = new Date(now); eod.setHours(24, 0, 0, 0); const today = +eod, tomorrow = today + 864e5, week = today + 6 * 864e5;
+  const mk = () => ({ next: Infinity, nextCount: 0, today: 0, tomorrow: 0, week: 0, due: 0 });
+  const out = { words: mk(), parse: mk(), parts: mk(), all: mk() };
+  for (const c of K.cards.values()) {
+    const t = c.id[0] === 'w' ? 'words' : c.id[0] === 'f' ? 'parse' : c.id[0] === 'p' ? 'parts' : null;
+    if (!t || c.state === 'new' || c.src === 'probe' || (t === 'words' && !liveWord(c))) continue;
+    for (const o of [out[t], out.all]) {
+      if (c.due <= now) { o.due++; continue; }
+      if (c.due < o.next) { o.next = c.due; o.nextCount = 1; } else if (c.due - o.next < 36e5) o.nextCount++;      // cards due within the hour after the first
+      if (c.due < today) o.today++; else if (c.due < tomorrow) o.tomorrow++;
+      if (c.due < week) o.week++;
+    }
+  }
+  return out;
+}
+/** "in 20 min", "in 3 h", "tomorrow", "in 3 days" */
+export function whenText(t, now = Date.now()) {
+  if (!isFinite(t)) return '';
+  const m = Math.round((t - now) / 6e4);
+  if (m < 60) return 'in ' + Math.max(1, m) + ' min';
+  const sod = (d) => new Date(d).setHours(0, 0, 0, 0), days = Math.round((sod(t) - sod(now)) / 864e5);
+  if (days <= 0) return 'in ' + Math.round(m / 60) + ' h';
+  return days === 1 ? 'tomorrow' : 'in ' + days + ' days';
+}
+
+/** "Next review in 3 h · 4 cards" for when nothing is due right now (null otherwise). */
+export function nextLine(u, due) {
+  if (due || !isFinite(u.all.next)) return null;
+  const when = whenText(u.all.next), n = u.all.nextCount;
+  return h('div.next', icon('clock', 16), h('span', h('b', 'Next review ' + when), ' · ' + n + (n === 1 ? ' card' : ' cards'),
+    u.all.tomorrow && when !== 'tomorrow' ? h('div.small', 'Then ' + u.all.tomorrow + ' more tomorrow') : null));
+}
+/** A small box counting what is coming due. */
+export function comingUp(u) {
+  const rows = [['Later today', u.all.today], ['Tomorrow', u.all.tomorrow], ['Next 7 days', u.all.week]];
+  if (!rows.some((r) => r[1])) return null;
+  return h('div.card.stack', h('b', 'Coming up'), h('div.sched', rows.map(([k, v]) => h('div', h('span', k), h('b', String(v))))));
+}
+/** One line per topic tile: "3 due now", "next in 3 h", or nothing yet. */
+export function tileNext(u, k) {
+  const o = u[k];
+  return o.due ? o.due + ' due now' : isFinite(o.next) ? 'Next ' + whenText(o.next) : '';
 }
 
 /** What the big button says for a topic's normal session: names the activity instead of just "Start". */

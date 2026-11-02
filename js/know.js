@@ -128,7 +128,7 @@ export const readinessLabel = (p) => (p >= 0.98 ? 'Ready' : p >= 0.95 ? 'Comfort
 export const readinessClass = (p) => (p >= 0.98 ? 'r4' : p >= 0.95 ? 'r3' : p >= 0.9 ? 'r2' : p >= 0.8 ? 'r1' : 'r0');
 
 /** A word card that is still in use (a preposition that is now reviewed per case no longer uses its old single card). */
-const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const L = D.lexByN.get(+c.id.slice(2)); return !L || !L.senses; };
+export const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const L = D.lexByN.get(+c.id.slice(2)); return !L || !L.senses; };
 export function dueCards(now = Date.now()) {
   const out = [];
   for (const c of K.cards.values()) if (liveWord(c) && c.state !== 'new' && c.due <= now) out.push(c);

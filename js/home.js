@@ -3,7 +3,7 @@ import { D, scopeLabel } from './data.js';
 import { K, setting, newToday, streak, scopeReadiness, readinessClass, readinessLabel, studiedCount } from './know.js';
 import { h, clear, pct, icon, startButton, fold } from './util.js';
 import { growthCard } from './growth.js';
-import { smartAll, counts } from './smart.js';
+import { smartAll, counts, upcoming, nextLine } from './smart.js';
 import { renderWelcome } from './welcome.js';
 import { suggestions, suggestionItem } from './progress.js';
 import { readHref } from './reader.js';
@@ -32,6 +32,7 @@ export function renderHome(view) {
   stack.append(h('div.card.stack.hero',
     startButton(smartAll()),
     h('div.row.wrap', h('a.btn.sm', { href: '#/learn/practice/review' }, 'Review what I’ve learned'), h('a.btn.sm', { href: '#/learn/practice/preview' }, 'Look ahead at new words')),
+    nextLine(upcoming(), due),
     (parts.length || streak()) ? h('div.row.between.muted.small', h('span', parts.join(' · ')), streak() ? h('span.chip.gold', icon('flame', 14), streak() + '-day streak') : null) : null));
 
   // 2. reading: your goal, or where you left off
