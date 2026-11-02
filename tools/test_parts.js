@@ -77,6 +77,11 @@ process.on('unhandledRejection', () => {});
     const aorPas = m.partForms(1096, 5, D.parts.get(1096).parts[5]).groups[0].cell; o.passiveOnly = !JSON.stringify(aorPas).includes('ἐγένετο');
     o.pres = m.partForms(1510, 0, 'εἰμί').groups.map((g) => g.label).join('+'); return o; });
   ok(pf.fut === 'ἔσομαι ἔσῃ ἔσται ἐσόμεθα ἔσεσθε ἔσονται' && pf.noCapsOrGraves && pf.passiveOnly && pf.pres === 'Present+Imperfect', 'tapping a part lists the forms that occur, lowercase, acutes only, imperfect under the present', JSON.stringify(pf));
+  // ---- parts whose forms the text lists under another dictionary entry (the future of λέγω is under ἐρέω)
+  const rel = await p.evaluate(async () => { const m = await import('./js/partforms.js'); const { D } = await import('./js/data.js'); const e = D.parts.get(3004);
+    const fut = m.partForms(3004, 1, e.parts[1]), perf = m.partForms(3004, 4, e.parts[4]);
+    return { fut: fut.groups.length && Object.keys(fut.groups[0].cell).length, via: fut.via.length, perfPass: perf.groups.length && !!(perf.groups[0].cell['3S']) }; });
+  ok(rel.fut >= 5 && rel.via === 1 && rel.perfPass, 'the future and perfect passive of λέγω are found under the entry the text uses', JSON.stringify(rel));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });
