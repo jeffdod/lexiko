@@ -98,8 +98,8 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
       return worst; });
     ok(r <= 3, 'no word fills a parsing session (most forms of one word: ' + r + ')'); }
   await page.goto(URL + '#/parse/run/passage/JHN/1/1/1/18/verb'); await page.waitForSelector('.qcard');
-  { let seen = false; for (let i = 0; i < 9 && !seen; i++) { await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(250); seen = /↻/.test(await page.textContent('.qcount').catch(() => '')); }
-    ok(seen, 'a retry card shows how many retries are left'); }
+  { const seq = []; for (let i = 0; i < 9; i++) { seq.push(+(await page.textContent('.qcount')).split(' / ')[0]); await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(250); }
+    ok(seq.every((x, i) => x === i + 1), 'quiz counter advances on every card, retries included ' + seq.join(',')); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');
