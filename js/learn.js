@@ -2,6 +2,7 @@
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
 import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards } from './know.js';
 import * as F from './fsrs.js';
+import { unfinishedVerbs, verbProgress, VERB_CAP } from './know.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
@@ -253,6 +254,7 @@ function previewWords(goal) {
 export function renderLearn(view, params) {
   const [mode, ...rest] = params;
   if (mode === 'words') return void wordsPage(view);
+  if (mode === 'verbs') return void verbsPage(view);
   if (mode === 'daily') return void startFrom(view, 'daily', null, 'Today’s session');
   if (mode === 'review') return void startFrom(view, 'review', null, 'Review');
   if (mode === 'set') { const [lo, hi] = rest.map(Number); return void startFrom(view, 'daily', null, bandLabel([lo, hi]), new Set(D.lex.filter((L) => L.freq >= lo && L.freq <= hi).map((L) => L.n))); }
@@ -294,12 +296,33 @@ function bandsCard() {
   return h('div.list', rows);
 }
 
+/** The note shown while new verbs wait for the ones you've started to be fully learned. */
+function verbHold() {
+  const open = unfinishedVerbs();
+  if (open.length < VERB_CAP) return null;
+  return h('div.card.small', h('b', 'New verbs are on hold.'), ' You have ' + open.length + ' verbs you haven’t fully learned yet. Nouns, adjectives and other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See these ' + open.length + ' verbs →')));
+}
+
+/** Which verbs are still being learned, and what each one needs. */
+function verbsPage(view) {
+  const open = unfinishedVerbs().map((n) => ({ n, L: lexeme(n), p: verbProgress(n) }));
+  clear(view).append(h('div.pagehead', h('h1', 'Verbs to finish')),
+    h('div.stack',
+      open.length ? h('div.card', open.map(({ L, p }) => h('div.row.between', { style: { padding: '.5rem 0' } },
+        h('div', h('b', { lang: 'grc' }, L.head), ' ', h('span.muted.small', L.brief),
+          h('div.muted.small', (p.meaning ? '✓ Meaning' : 'Meaning still settling'), ' · ', p.total ? (p.parts ? '✓ Principal parts' : p.secure + ' of ' + p.total + ' parts cold') : 'no principal parts', ' · ', p.parsing ? '✓ Parsing' : p.answers < 8 ? 'needs more parsing' : Math.round(p.acc * 100) + '% parsing')))))
+        : h('div.card', h('p', 'Every verb you’ve started is fully learned. 🎉')),
+      h('p.muted.small', 'A verb is finished when its meaning is learned, every principal part is known cold, and you parse it correctly 95% of the time or better over your last 20 answers (at least 8). A verb with no principal parts needs only the meaning and the parsing. New verbs wait while ' + VERB_CAP + ' or more are unfinished.'),
+      h('div.row.wrap', h('a.btn.primary', { href: '#/parts' }, 'Principal parts'), h('a.btn', { href: '#/parse' }, 'Parsing'), h('a.btn', { href: '#/learn/words' }, 'Back to Vocabulary'))));
+}
+
 function wordsPage(view) {
   const goal = K.goal && K.goal.book ? K.goal : null;
   clear(view).append(
     h('div.pagehead', h('h1', 'Vocabulary')),
     h('div.stack',
       startButton(smart('words')),
+      verbHold(),
       h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words')),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,

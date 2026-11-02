@@ -47,6 +47,16 @@ process.on('unhandledRejection', () => {});
     await k.noteVerbAnswer(n, 2, false, true, slots); o.twoMisses = k.verbStage(n);
     k.K.partsVerbs = {}; return o; });
   ok(vs.start === 'learn' && vs.afterOneDay === 'learn' && vs.afterTwoDays === 'cold' && vs.oneMiss === 'cold' && vs.twoMisses === 'learn', 'verb goes cold only after every part is right on two days, and back after two cold misses', JSON.stringify(vs));
+  // ---- verb gate: new verbs wait while 3 started verbs are unfinished
+  const vg = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const { D } = await import('./js/data.js'); const o = {};
+    const saved = new Map(k.K.cards); k.K.settings.level = null;
+    const verbs = D.lex.filter((L) => L.pos === 'V').slice(0, 4).map((L) => L.n);
+    o.open0 = k.verbSlots();
+    for (const n of verbs.slice(0, 3)) { const c = f.review(f.newCard('w:' + n), 3, Date.now() - 864e6, 0.9); c.src = 'new'; c.state = 'review'; k.K.cards.set('w:' + n, c); }
+    o.unfinished = k.unfinishedVerbs().length; o.slots = k.verbSlots();
+    const next = k.nextByLevel(60).map((x) => x.n); o.verbsInNext = next.filter((n) => D.lexByN.get(n).pos === 'V').length; o.nounsInNext = next.length - o.verbsInNext;
+    k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); return o; });
+  ok(vg.open0 === 3 && vg.unfinished === 3 && vg.slots === 0 && vg.verbsInNext === 0 && vg.nounsInNext > 30, 'new verbs are held back while 3 started verbs are unfinished, other words continue', JSON.stringify(vg));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });

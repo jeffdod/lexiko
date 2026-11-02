@@ -8,7 +8,7 @@ export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
   readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsVerbsPerDay: 2, partsPace: 'auto', partsPause: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, partsAcc: [], partsVerbs: {}, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, partsAcc: [], partsVerbs: {}, verbParse: {}, ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -19,6 +19,7 @@ export async function initKnow() {
   K.goal = (await store.get('goal')) || null;
   K.partsAcc = (await store.get('partsAcc')) || [];
   K.partsVerbs = (await store.get('partsVerbs')) || {};
+  K.verbParse = (await store.get('verbParse')) || {};
   K.ready = true;
 }
 
@@ -148,8 +149,8 @@ export function passageWords(scope) {
 }
 /** Next most-frequent words the learner doesn't know yet (level builder). */
 export function nextByLevel(limit) {
-  const out = [];
-  for (const L of D.lex) { if (status(L.n) === 'unknown') { out.push({ n: L.n, c: L.freq }); if (out.length >= limit) break; } }
+  const out = []; let room = verbSlots();
+  for (const L of D.lex) { if (status(L.n) === 'unknown') { if (L.pos === 'V') { if (room <= 0) continue; room--; } out.push({ n: L.n, c: L.freq }); if (out.length >= limit) break; } }
   return out;
 }
 /** Assumed-known words (no card yet) to spot-check, weighted toward the edge of the declared level. */
@@ -179,6 +180,7 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
   else if (only) fresh = D.lex.filter((L) => only.has(L.n) && (!K.cards.has('w:' + L.n) || getCard(L.n).state === 'new') && status(L.n) === 'unknown').map((L) => L.n);
   else if (scope) fresh = passageWords(scope).filter((x) => !K.cards.has('w:' + x.n) || getCard(x.n).state === 'new').map((x) => x.n);
   else fresh = nextByLevel(200).map((x) => x.n);
+  if (kind !== 'review' && (only || scope)) fresh = admitVerbs(fresh);
   const cap = newLimit != null ? newLimit : Math.max(0, K.settings.newPerDay - (scope || only ? 0 : newToday()));
   dueList.slice(0, Math.max(size, 30)).forEach((n) => push(n, 'review'));
   fresh.slice(0, cap).forEach((n) => push(n, 'new'));
@@ -187,6 +189,34 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
     probeCandidates(nProbe, seen).forEach((x) => push(x.n, 'probe'));
   }
   return shuffle(items).slice(0, scope || only ? 400 : Math.max(size, 40));
+}
+
+/* ---------- verb gate: new verbs wait until the ones you've started are fully learned ---------- */
+export const VERB_CAP = 3;
+const isVerb = (n) => { const L = D.lexByN.get(n); return !!L && L.pos === 'V'; };
+/** What a verb still needs: meaning learned, every principal part known cold, parsing at 95%+ over its last 20 answers (at least 8). */
+export function verbProgress(n) {
+  const c = K.cards.get('w:' + n), e = D.parts.get(n), slots = e ? [1, 2, 3, 4, 5].filter((i) => e.parts[i]) : [];
+  const v = K.partsVerbs[n] || {}, cold = verbStage(n) === 'cold';
+  const secure = cold ? slots.length : slots.filter((sl) => ((v.days || {})[sl] || []).length >= 2).length;
+  const a = K.verbParse[n] || [], acc = a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  const meaning = !!c && c.state === 'review', parts = !slots.length || cold, parsing = a.length >= 8 && acc >= 0.95;
+  return { meaning, parts, parsing, done: meaning && parts && parsing, secure, total: slots.length, acc, answers: a.length };
+}
+/** Verbs you began learning here that aren't finished yet. (Words you marked as known or that were only spot-checked don't count.) */
+export function unfinishedVerbs() {
+  const out = [];
+  for (const [id, c] of K.cards) {
+    if (!id.startsWith('w:') || c.state === 'new' || c.src !== 'new') continue;
+    const n = +id.slice(2); if (isVerb(n) && !verbProgress(n).done) out.push(n);
+  }
+  return out;
+}
+export const verbSlots = () => Math.max(0, VERB_CAP - unfinishedVerbs().length);
+/** Keeps nouns and everything else but lets in only as many new verbs as the gate allows. */
+export function admitVerbs(ns) {
+  let room = verbSlots();
+  return ns.filter((n) => { if (!isVerb(n)) return true; if (room > 0) { room--; return true; } return false; });
 }
 /* ---------- parsing practice: form-level cards ('f:<form>:<strongs>') ---------- */
 export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;
@@ -199,6 +229,7 @@ export async function rateParse(id, grade, ms = 0, meta = {}) {
   await saveCard(next);
   const d = (K.daily[todayKey()] ||= {}); d.pr = (d.pr || 0) + 1; if (prev.state === 'new') d.pn = (d.pn || 0) + 1;
   await store.set('daily', K.daily);
+  const sn = id.split(':')[2]; if (sn) { const a = (K.verbParse[sn] ||= []); a.push(grade >= 3 ? 1 : 0); if (a.length > 20) a.shift(); await store.set('verbParse', K.verbParse); }
   await store.addLog([{ t: now, id, g: grade, k: 'parse', ms, ...meta }]);
   return next;
 }

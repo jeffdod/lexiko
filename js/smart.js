@@ -1,6 +1,6 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
-import { setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
+import { unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
 import { planPartsSession } from './parts.js';
 
 export const TOPICS = {
@@ -37,6 +37,7 @@ const work = (c, topic = 'words') => {
     const n = Math.round(items * rate / (1 - rate)) || (items ? 1 : 0);
     if (n) parts.push(n + (n > 1 ? ' check-ins' : ' check-in'));
   }
+  if (topic === 'words' && c.fresh && unfinishedVerbs().length >= VERB_CAP) parts[1] += ' (no new verbs)';
   return parts.filter(Boolean).join(' + ');
 };
 
