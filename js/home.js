@@ -28,10 +28,11 @@ export function renderHome(view) {
   if (needsBackup) stack.append(h('div.banner', icon('download', 22), h('div.grow', h('b', 'Back up your progress'), h('div.small', 'It lives only on this device. A backup takes two seconds.')), h('a.btn.sm', { href: '#/settings' }, 'Back up')));
 
   // 1. the one thing to do now
+  const next = smartAll();
   const parts = [due ? due + ' due' : '', newLeft ? newLeft + ' new today' : ''].filter(Boolean);
   stack.append(h('div.card.stack.hero',
-    startButton(smartAll()),
-    h('div.row.wrap', h('a.btn.sm', { href: '#/learn/practice/review' }, 'Review what I’ve learned'), h('a.btn.sm', { href: '#/learn/practice/preview' }, 'Look ahead at new words')),
+    startButton(next),
+    h('div.row.wrap', next.kind === 'review' ? null : h('a.btn.sm', { href: '#/learn/practice/review' }, 'Review what I’ve learned'), h('a.btn.sm', { href: '#/learn/practice/preview' }, 'Look ahead at new words')),
     nextLine(upcoming(), due),
     (parts.length || streak()) ? h('div.row.between.muted.small', h('span', parts.join(' · ')), streak() ? h('span.chip.gold', icon('flame', 14), streak() + '-day streak') : null) : null));
 
