@@ -31,6 +31,7 @@ export function renderHome(view) {
   const parts = [due ? due + ' due' : '', newLeft ? newLeft + ' new today' : ''].filter(Boolean);
   stack.append(h('div.card.stack.hero',
     startButton(smartAll()),
+    h('div.row.wrap', h('a.btn.sm', { href: '#/learn/practice/review' }, 'Review what I’ve learned'), h('a.btn.sm', { href: '#/learn/practice/preview' }, 'Look ahead at new words')),
     (parts.length || streak()) ? h('div.row.between.muted.small', h('span', parts.join(' · ')), streak() ? h('span.chip.gold', icon('flame', 14), streak() + '-day streak') : null) : null));
 
   // 2. reading: your goal, or where you left off

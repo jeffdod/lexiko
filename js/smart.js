@@ -1,12 +1,12 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
-import { troubleCards, wordsPace, parsePace, unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
+import { troubleCards, reviewCards, wordsPace, parsePace, unfinishedVerbs, VERB_CAP, setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
 import { planPartsSession } from './parts.js';
 
 export const TOPICS = {
-  words: { title: 'Vocabulary', page: '#/learn/words', go: '#/learn/daily', reinforce: '#/learn/practice/trouble', preview: '#/learn/practice/preview', noun: 'words', blurb: 'Learn and review Greek words' },
-  parse: { title: 'Parsing', page: '#/parse', go: '#/parse/run/mix/all', reinforce: '#/parse/run/extra/trouble', preview: '#/parse/run/extra/preview', noun: 'forms', blurb: 'Tense, voice, mood, case, number, gender' },
-  parts: { title: 'Principal parts', page: '#/parts', go: '#/parts/run/mix', reinforce: '#/parts/run/extra/trouble', preview: '#/parts/run/extra/preview', noun: 'parts', blurb: 'The six parts of each verb' },
+  words: { title: 'Vocabulary', page: '#/learn/words', go: '#/learn/daily', reinforce: '#/learn/practice/trouble', review: '#/learn/practice/review', preview: '#/learn/practice/preview', noun: 'words', blurb: 'Learn and review Greek words' },
+  parse: { title: 'Parsing', page: '#/parse', go: '#/parse/run/mix/all', reinforce: '#/parse/run/extra/trouble', review: '#/parse/run/extra/review', preview: '#/parse/run/extra/preview', noun: 'forms', blurb: 'Tense, voice, mood, case, number, gender' },
+  parts: { title: 'Principal parts', page: '#/parts', go: '#/parts/run/mix', reinforce: '#/parts/run/extra/trouble', review: '#/parts/run/extra/review', preview: '#/parts/run/extra/preview', noun: 'parts', blurb: 'The six parts of each verb' },
 };
 const ORDER = ['words', 'parse', 'parts'];
 
@@ -47,6 +47,7 @@ export function smart(topic, c = counts()[topic]) {
   if (c.due || c.fresh) return { href: T.go, label: GO_LABEL(topic, c), sub: work(c, topic), kind: 'go', topic };
   const prefix = { words: 'w:', parse: 'f:', parts: 'p:' }[topic];
   if (c.studied && troubleCards(prefix, 1).length) return { href: T.reinforce, label: 'Strengthen weak spots', sub: 'You’re caught up — firm up your shakiest ' + T.noun, kind: 'reinforce', topic };
+  if (c.studied) return { href: T.review, label: 'Review what you’ve learned', sub: 'You’re caught up — go over the ' + T.noun + ' you’ve learned', kind: 'review', topic };
   return { href: T.preview, label: 'Look ahead', sub: 'See a few new ' + T.noun, kind: 'preview', topic };
 }
 
@@ -57,6 +58,8 @@ export function smartAll() {
   if (t) { const s = smart(t, c[t]); return { ...s, sub: s.sub }; }
   const PFX = { words: 'w:', parse: 'f:', parts: 'p:' }, r = ORDER.find((k) => c[k].studied && troubleCards(PFX[k], 1).length);
   if (r) { const s = smart(r, c[r]); return { ...s, sub: 'You’re caught up — firm up your shakiest ' + TOPICS[r].noun }; }
+  const q = ORDER.find((k) => c[k].studied);
+  if (q) { const s = smart(q, c[q]); return { ...s, sub: 'You’re caught up — go over what you’ve learned' }; }
   return smart('words', c.words);
 }
 

@@ -1,7 +1,7 @@
 // Parsing practice: pick the parts of a form in a fixed order (guided one-at-a-time, or quick all-at-once),
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, recentWords, parsePace, waitingVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, reviewCards, recentWords, parsePace, waitingVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
@@ -103,6 +103,7 @@ export function buildParseSession(opts) {
 export function buildParseExtra(kind) {
   ensureIndex();
   if (kind === 'trouble') return shuffle(troubleCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'practice' })).filter((x) => x.id != null && itemOf(x.id)).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i));
+  if (kind === 'review') return shuffle(reviewCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'recent' })).filter((x) => x.id != null && itemOf(x.id)).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i));
   if (kind === 'recent') {                                      // forms of the words you started in the last few days, a few of each
     const ws = new Set(recentWords()), per = new Map(), out = [];
     const cand = [...members.keys()].filter((id) => itemOf(id) && ws.has(D.forms[id].an[0].s)).map((id) => ({ id, s: Math.sqrt(D.forms[id].count) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s);
@@ -315,8 +316,8 @@ export function renderParse(view, params) {
     ensureIndex();
     let scope = null, kind = 'all';
     if (rest[0] === 'extra') {
-      const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'recent' ? 'recent' : 'trouble');
-      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practise yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
+      const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'recent' ? 'recent' : rest[1] === 'review' ? 'review' : 'trouble');
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practise yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'passage') {
@@ -351,7 +352,7 @@ async function landing(view) {
     h('div.stack',
       startButton(smart('parse')),
       paceNote(parsePace(), 'forms'),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Forms of words I just learned'), chartsButton()),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Forms of words I just learned'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('div.row', h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practise'), h('a.btn.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/verb' }, 'Verbs only'))) : null,
         passagePicker(view, goal, {

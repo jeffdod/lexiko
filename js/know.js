@@ -344,6 +344,12 @@ export const savePartsStats = (st) => store.set('partsStats', st);
 /* ---------- extra practice: which studied cards give you the most trouble (never writes anything) ---------- */
 export function troubleScore(c, now = Date.now()) { return (c.lapses || 0) * 2 + ((c.difficulty || 5) - 5) / 2 + (1 - F.retrievability(c, now)) * 3; }
 /** A card is shaky only if you have actually struggled with it: it lapsed, or it was rated Again/Hard so its difficulty rose. Never-missed cards are not. */
+/** Studied cards you are least likely to remember right now, for a plain review when nothing is due. Never writes anything. */
+export function reviewCards(prefix, limit = 15) {
+  const now = Date.now();
+  return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new' && c.src !== 'probe' && (prefix !== 'w:' || liveWord(c)))
+    .sort((a, b) => F.retrievability(a, now) - F.retrievability(b, now)).slice(0, limit);
+}
 export const isShaky = (c) => (c.lapses || 0) > 0 || (c.difficulty || 5) >= 6;
 export function troubleCards(prefix, limit = 15) {
   const now = Date.now();

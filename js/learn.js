@@ -1,6 +1,6 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, wordsPace, recentWords } from './know.js';
+import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
 import { paceNote, paceOptions } from './pace.js';
@@ -262,6 +262,11 @@ export function renderLearn(view, params) {
   if (mode === 'practice') {                                   // extra practice: never touches the schedule
     const preview = rest[0] === 'preview';
     const goal = K.goal && K.goal.book ? K.goal : null;
+    if (rest[0] === 'review') {
+      const cs = reviewCards('w:', 15);
+      if (!cs.length) { clear(view).append(backHead('Review', '#/learn/words', 'Vocabulary'), h('div.card.stack', h('p', 'You haven’t studied any words yet.'), ...backLinks('#/learn/words', 'Back to Vocabulary'))); return; }
+      return void runSession(view, shuffle(cs.map((c) => ({ n: +c.id.slice(2), type: 'recent' }))), { title: 'Review what you’ve learned', practice: true });
+    }
     if (rest[0] === 'recent') {
       const ns = recentWords().slice(0, 30);
       if (!ns.length) { clear(view).append(backHead('Review what I just learned', '#/learn/words', 'Vocabulary'), h('div.card.stack', h('p', 'You haven’t started any words in the last few days.'), ...backLinks('#/learn/words', 'Back to Vocabulary'))); return; }
@@ -331,7 +336,7 @@ function wordsPage(view) {
       startButton(smart('words')),
       paceNote(wordsPace(), 'words'),
       verbHold(),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), h('a.btn.sm', { href: '#/learn/practice/recent' }, 'Review what I just learned'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Parse them')),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), h('a.btn.sm', { href: TOPICS.words.review }, 'Review what I’ve learned'), h('a.btn.sm', { href: '#/learn/practice/recent' }, 'Review what I just learned'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Parse them')),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal)),
