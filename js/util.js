@@ -110,3 +110,21 @@ export function missedBlock(rows, onPractise) {
     rows.map((r) => h('div.miss', h('span' + (r.greek ? '.g' : '.w'), r.greek ? { lang: 'grc' } : {}, r.word), r.sub ? h('small', r.sub) : null, r.why ? h('small.wrong', r.why) : null)),
     h('div.row.wrap', h('button.btn.primary', { onclick: onPractise }, 'Practise these ' + rows.length)));
 }
+
+/* ---------- "Back to …" after a quiz: offer the place the quiz was started from ---------- */
+export const origin = { href: null, prev: null };
+const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage)|parse\/run|parts\/run)/;
+/** Called on every route change: remembers where a quiz was launched from (not from another quiz). */
+export function noteRoute(hash) {
+  const cur = hash || '#/';
+  if (QUIZ.test(cur) && !QUIZ.test(origin.prev || '')) origin.href = origin.prev == null ? null : origin.prev || '#/';
+  origin.prev = cur;
+}
+const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/progress/, 'Back to Progress'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Learn'],
+  [/^#\/parse$/, 'Back to Parsing'], [/^#\/parts$/, 'Back to Principal parts'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to search']];
+/** The usual "Back to <topic page>" button, preceded by one to wherever the quiz was started from when that is somewhere else. */
+export function backLinks(defaultHref, defaultLabel, primary = false) {
+  const o = origin.href, hit = o && o !== defaultHref && ORIGIN_LABEL.find(([re]) => re.test(o));
+  const main = h('a.btn' + (primary && !hit ? '.primary' : ''), { href: defaultHref }, defaultLabel);
+  return hit ? [h('a.btn' + (primary ? '.primary' : ''), { href: o }, hit[1]), main] : [main];
+}

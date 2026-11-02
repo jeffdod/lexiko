@@ -3,7 +3,7 @@
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
@@ -142,7 +142,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
         missedBlock(S.missed.map((m) => { const it = itemOf(m.id), L = it && D.lexByN.get(it.strongs); return { greek: true, word: D.forms[m.id].plain, sub: L ? L.head + ' · ' + L.brief : '', why: m.wrong.length ? 'Missed: ' + m.wrong.map((k) => (SLOT_TITLE[k] || k).toLowerCase()).join(', ') : '' }; }),
           () => runSession(view, S.missed.map((m) => ({ id: m.id, type: 'practice' })), { title, scope, restart, practice: true })),
         h('div.row.wrap', h('button.btn' + (S.missed.length ? '' : '.primary'), { onclick: restart }, 'Practise more'),
-          h('a.btn', { href: '#/parse' }, 'Back to Parsing'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
+          ...backLinks('#/parse', 'Back to Parsing'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
   const retryQ = [];                                      // missed forms wait here and come back after the last one, in a retry round
@@ -308,7 +308,7 @@ export function renderParse(view, params) {
     let scope = null, kind = 'all';
     if (rest[0] === 'extra') {
       const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : 'trouble');
-      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : 'You haven’t studied any forms yet, so there are no trouble spots to practise.'), h('a.btn', { href: '#/parse' }, 'Back'))); return; }
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : 'You haven’t studied any forms yet, so there are no trouble spots to practise.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'passage') {
@@ -319,7 +319,7 @@ export function renderParse(view, params) {
     if (!q.length) {
       if (!scope) { const alt = smart('parse'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }
       clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack',
-        h('p', scope ? 'There is nothing to parse in ' + scopeLabel(scope) + ' for this selection.' : 'You’re all caught up. 🎉'), h('a.btn', { href: '#/parse' }, 'Back')));
+        h('p', scope ? 'There is nothing to parse in ' + scopeLabel(scope) + ' for this selection.' : 'You’re all caught up. 🎉'), ...backLinks('#/parse', 'Back')));
       return;
     }
     return runSession(view, q, { title: scope ? scopeLabel(scope) : KIND_TITLE[kind], scope, restart: () => renderParse(view, params) });
