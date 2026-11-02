@@ -124,6 +124,7 @@ export function renderSettings(view) {
         : 'On a computer the backup is saved to your Downloads folder. Copy it somewhere safe (a cloud drive or a USB stick). To restore later, click Restore… and choose that file. Backup names start with “lex” and end with the date.'),
         persistLine, h('div.row.wrap', h('button.btn.sm', { onclick: () => refreshPersist(true) }, 'Protect my data')),
         h('div.muted.small', store.usingMemory ? '⚠ This browser is blocking storage, so progress will be lost when you close the page.' : 'Stored in this browser (IndexedDB). No account, no server.'))),
+    updatesCard(),
     h('div.card.stack', h('h2', 'Install'), installBtn,
       h('p.muted.small', standalone ? '✓ You’re running the installed app.' : ios ? 'On iPhone/iPad: tap the Share button, then “Add to Home Screen”. It then opens full-screen and works offline.' : 'Use your browser’s “Install app” / “Add to Home Screen” option to run lexiko full-screen, offline, with no browser bars.')),
     h('div.card.stack', h('h2', 'About'),
@@ -158,4 +159,28 @@ async function showLicense() {
   document.body.append(dlg); dlg.showModal();
   try { const r = await fetch('fonts/OFL.txt'); if (!r.ok) throw new Error(r.status); pre.textContent = await r.text(); }
   catch { pre.textContent = 'The license text could not be loaded. It is the SIL Open Font License 1.1: https://openfontlicense.org'; }
+}
+
+/* ---------- app updates: show the installed version and check for a newer one on demand ---------- */
+function updatesCard() {
+  const ver = h('span', '…'), msg = h('p.muted.small', ''), act = h('div.row.wrap');
+  const swa = 'serviceWorker' in navigator;
+  const ask = (w) => new Promise((res) => { const ch = new MessageChannel(); ch.port1.onmessage = (e) => res(e.data); w.postMessage('VERSION', [ch.port2]); setTimeout(() => res(null), 1500); });
+  (async () => { const c = swa && navigator.serviceWorker.controller; ver.textContent = c ? (await ask(c)) || 'unknown' : 'not installed for offline use'; })();
+  const check = h('button.btn.sm', { onclick: async () => {
+    if (!swa) { msg.textContent = 'This browser can’t install updates in the background.'; return; }
+    check.disabled = true; msg.textContent = 'Checking…'; clear(act).append(check);
+    try {
+      const reg = await navigator.serviceWorker.getRegistration(); if (!reg) { msg.textContent = 'Offline use isn’t set up on this device yet.'; check.disabled = false; return; }
+      await reg.update();
+      let w = reg.waiting || reg.installing;
+      if (w && w.state !== 'installed') await new Promise((res) => { const f = () => { if (w.state === 'installed' || w.state === 'redundant') { w.removeEventListener('statechange', f); res(); } }; w.addEventListener('statechange', f); setTimeout(res, 20000); });
+      w = reg.waiting;
+      if (w) { msg.textContent = 'A newer version is downloaded and ready.'; act.append(h('button.btn.sm.primary', { onclick: () => { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); w.postMessage('SKIP_WAITING'); } }, 'Reload to update')); }
+      else msg.textContent = 'You have the latest version.';
+    } catch { msg.textContent = 'Couldn’t check just now. Are you online?'; }
+    check.disabled = false;
+  } }, 'Check for updates');
+  act.append(check);
+  return h('div.card.stack', h('h2', 'App version'), h('p.small', 'Installed version: ', h('b', ver)), msg, act);
 }

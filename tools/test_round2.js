@@ -102,6 +102,8 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
       await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(200); }
     const first = seq.filter((x) => !x.startsWith('↻')), tot = new Set(first.map((x) => x.split(' / ')[1]));
     ok(tot.size === 1 && first.every((x, i) => x.startsWith((i + 1) + ' / ')) && seq.some((x) => x.startsWith('↻ 1 / ')) && seq.findIndex((x) => x.startsWith('↻')) === first.length, 'quiz total never changes; missed items come back in a retry round at the end ' + seq.join(' | ')); }
+  await page.goto(URL + '#/settings'); await page.waitForSelector('h2:has-text("App version")');
+  ok(await page.locator('button:has-text("Check for updates")').count() === 1, 'Settings has a Check for updates button');
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');

@@ -6,7 +6,10 @@ const CACHE = 'lexiko-' + self.LEXIKO_VERSION;
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(self.LEXIKO_ASSETS.map((a) => new Request(a, { cache: 'reload' })))));
 });
-self.addEventListener('message', (event) => { if (event.data === 'SKIP_WAITING') self.skipWaiting(); });
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data === 'VERSION' && event.ports[0]) event.ports[0].postMessage(self.LEXIKO_VERSION);
+});
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     for (const k of await caches.keys()) if (k.startsWith('lexiko-') && k !== CACHE) await caches.delete(k);
