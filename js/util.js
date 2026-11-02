@@ -96,7 +96,7 @@ export function icon(name, size = 22) {
 }
 
 /** Shown on Extra practice screens: nothing answered here touches the review schedule. */
-export const practiceBanner = (preview) => h('div.practice-note', h('b', preview ? 'Look ahead' : 'Strengthen'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : 'practice only; it won’t change your review schedule.'));
+export const practiceBanner = (preview, recent = false) => h('div.practice-note', h('b', preview ? 'Look ahead' : recent ? 'Refresher' : 'Strengthen'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : recent ? 'words you started recently; practice only, so it won’t change your review schedule.' : 'practice only; it won’t change your review schedule.'));
 
 /** A collapsed section: keeps secondary options out of the way until you want them. */
 export const fold = (title, ...kids) => h('details.fold', h('summary', title), h('div.stack', kids));
@@ -135,4 +135,9 @@ export function knowButtons(L, markKnown, after) {
   if (L.pos !== 'V') return [h('button.btn.sm', { onclick: go(false, 'Marked as known') }, '✓ I know this')];
   return [h('button.btn.sm', { onclick: go(false, 'Marked: you know the meaning. Its principal parts and parsing are still to learn.') }, '✓ I know the meaning'),
     h('button.btn.sm', { onclick: go(true, 'Marked as known, meaning and parsing') }, '✓ I know the meaning and parsing')];
+}
+
+/** A page heading with a visible way back, for when there is no browser back button (installed app). */
+export function backHead(title, href, label) {
+  return h('div.pagehead', h('a.btn.ghost.icon.sm', { href, 'aria-label': 'Back to ' + label, title: 'Back to ' + label }, icon('chevL', 22)), h('h1', title));
 }
