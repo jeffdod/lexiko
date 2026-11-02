@@ -6,7 +6,7 @@ import { todayKey, shuffle } from './util.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsNewPerDay: 5, partsPace: 'auto', partsPause: false,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsNewPerDay: 3, partsPace: 'auto', partsPause: false,
 };
 export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, partsAcc: [], ready: false };
 
@@ -216,12 +216,11 @@ export function partsPace(now = Date.now()) {
   if (setting('partsPause')) return out(0, 'New parts are paused.', { paused: true });
   if (setting('partsPace') === 'fixed') return out(max, '');
   const cap = Math.max(10, setting('sessionSize') || 25), a = K.partsAcc, acc = a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null;
-  let n = Math.min(3, max), why = '';
+  let n = Math.min(2, max), why = '';
   if (due > cap) { n = 0; why = 'You have ' + due + ' to review, so new parts wait until you catch up.'; }
   else if (due > cap / 2) { n = 1; why = 'You have ' + due + ' to review, so new parts are slowed until you catch up.'; }
   else if (acc != null && acc < 0.75) { n = 1; why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new parts are slowed while these settle.'; }
-  else if (acc != null && acc < 0.85) { n = Math.min(2, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new parts come in gently.'; }
-  else if (acc != null && acc > 0.9 && due <= cap / 4) { n = Math.min(5, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly with little waiting, so a few more come in.'; }
+    else if (acc != null && acc > 0.9 && due <= cap / 4) { n = Math.min(3, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly with little waiting, so one more comes in.'; }
   if (n === 0 && today === 0) {                                  // never stay at zero for long
     const days = Object.keys(K.daily).filter((k) => (K.daily[k].ppn || 0) > 0).sort().pop();
     const gap = days ? (new Date(todayKey()) - new Date(days)) / 864e5 : 99;

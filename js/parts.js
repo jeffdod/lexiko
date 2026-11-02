@@ -275,7 +275,7 @@ function landing(view) {
     await setSetting('partsMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget)));
   } }, t)));
   const newSel = h('select', { 'aria-label': 'New parts per day', onchange: async (e) => { await setSetting('partsNewPerDay', +e.target.value); landing(view); } },
-    [...new Set([2, 3, 5, 8, 10, setting('partsNewPerDay')])].sort((a, b) => a - b).map((n) => h('option', { value: n, selected: n === setting('partsNewPerDay') }, n)));
+    [...new Set([1, 2, 3, 5, setting('partsNewPerDay')])].sort((a, b) => a - b).map((n) => h('option', { value: n, selected: n === setting('partsNewPerDay') }, n)));
   const auto = setting('partsPace') !== 'fixed', pace = partsPace();
   const seg2 = (key, items, after) => h('div.seg', items.map(([v, t]) => h('button', { 'aria-pressed': String(String(setting(key)) === String(v)), onclick: async () => { await setSetting(key, v); landing(view); } }, t)));
   const paceNote = pace.paused ? h('div.card.small', h('b', 'New parts are paused.'), ' Turn this off in Options when you want more.')
