@@ -107,7 +107,43 @@ function contractionTables() {
   ];
 }
 
-const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings'], ['contr', 'Contractions']];
+/* ---------- participles: λύω as the model (rows N G D A; columns masculine, feminine, neuter) ---------- */
+const PART_CHARTS = [
+  { title: 'Present active', note: 'Third declension (masculine, neuter) with first declension feminine. Future active uses the same endings on the future stem.',
+    s: [['λύων', 'λύουσα', 'λῦον'], ['λύοντος', 'λυούσης', 'λύοντος'], ['λύοντι', 'λυούσῃ', 'λύοντι'], ['λύοντα', 'λύουσαν', 'λῦον']],
+    p: [['λύοντες', 'λύουσαι', 'λύοντα'], ['λυόντων', 'λυουσῶν', 'λυόντων'], ['λύουσι(ν)', 'λυούσαις', 'λύουσι(ν)'], ['λύοντας', 'λυούσας', 'λύοντα']] },
+  { title: 'Present middle / passive', note: 'Second and first declension endings, like an adjective. Future middle uses the same endings on the future stem.',
+    s: [['λυόμενος', 'λυομένη', 'λυόμενον'], ['λυομένου', 'λυομένης', 'λυομένου'], ['λυομένῳ', 'λυομένῃ', 'λυομένῳ'], ['λυόμενον', 'λυομένην', 'λυόμενον']],
+    p: [['λυόμενοι', 'λυόμεναι', 'λυόμενα'], ['λυομένων', 'λυομένων', 'λυομένων'], ['λυομένοις', 'λυομέναις', 'λυομένοις'], ['λυομένους', 'λυομένας', 'λυόμενα']] },
+  { title: 'Aorist active', note: 'First aorist, with the tense marker σα.',
+    s: [['λύσας', 'λύσασα', 'λῦσαν'], ['λύσαντος', 'λυσάσης', 'λύσαντος'], ['λύσαντι', 'λυσάσῃ', 'λύσαντι'], ['λύσαντα', 'λύσασαν', 'λῦσαν']],
+    p: [['λύσαντες', 'λύσασαι', 'λύσαντα'], ['λυσάντων', 'λυσασῶν', 'λυσάντων'], ['λύσασι(ν)', 'λυσάσαις', 'λύσασι(ν)'], ['λύσαντας', 'λυσάσας', 'λύσαντα']] },
+  { title: 'Aorist middle', note: 'Second and first declension endings, like the present middle / passive.',
+    s: [['λυσάμενος', 'λυσαμένη', 'λυσάμενον'], ['λυσαμένου', 'λυσαμένης', 'λυσαμένου'], ['λυσαμένῳ', 'λυσαμένῃ', 'λυσαμένῳ'], ['λυσάμενον', 'λυσαμένην', 'λυσάμενον']],
+    p: [['λυσάμενοι', 'λυσάμεναι', 'λυσάμενα'], ['λυσαμένων', 'λυσαμένων', 'λυσαμένων'], ['λυσαμένοις', 'λυσαμέναις', 'λυσαμένοις'], ['λυσαμένους', 'λυσαμένας', 'λυσάμενα']] },
+  { title: 'Aorist passive', note: 'Built on the passive stem with θ; the endings follow the third declension.',
+    s: [['λυθείς', 'λυθεῖσα', 'λυθέν'], ['λυθέντος', 'λυθείσης', 'λυθέντος'], ['λυθέντι', 'λυθείσῃ', 'λυθέντι'], ['λυθέντα', 'λυθεῖσαν', 'λυθέν']],
+    p: [['λυθέντες', 'λυθεῖσαι', 'λυθέντα'], ['λυθέντων', 'λυθεισῶν', 'λυθέντων'], ['λυθεῖσι(ν)', 'λυθείσαις', 'λυθεῖσι(ν)'], ['λυθέντας', 'λυθείσας', 'λυθέντα']] },
+  { title: 'Perfect active', note: 'Reduplicated stem with κ; the endings follow the third declension.',
+    s: [['λελυκώς', 'λελυκυῖα', 'λελυκός'], ['λελυκότος', 'λελυκυίας', 'λελυκότος'], ['λελυκότι', 'λελυκυίᾳ', 'λελυκότι'], ['λελυκότα', 'λελυκυῖαν', 'λελυκός']],
+    p: [['λελυκότες', 'λελυκυῖαι', 'λελυκότα'], ['λελυκότων', 'λελυκυιῶν', 'λελυκότων'], ['λελυκόσι(ν)', 'λελυκυίαις', 'λελυκόσι(ν)'], ['λελυκότας', 'λελυκυίας', 'λελυκότα']] },
+  { title: 'Perfect middle / passive', note: 'Reduplicated stem; second and first declension endings. The accent stays on the μέν syllable.',
+    s: [['λελυμένος', 'λελυμένη', 'λελυμένον'], ['λελυμένου', 'λελυμένης', 'λελυμένου'], ['λελυμένῳ', 'λελυμένῃ', 'λελυμένῳ'], ['λελυμένον', 'λελυμένην', 'λελυμένον']],
+    p: [['λελυμένοι', 'λελυμέναι', 'λελυμένα'], ['λελυμένων', 'λελυμένων', 'λελυμένων'], ['λελυμένοις', 'λελυμέναις', 'λελυμένοις'], ['λελυμένους', 'λελυμένας', 'λελυμένα']] },
+];
+function participleTables() {
+  const CASES = ['Nominative', 'Genitive', 'Dative', 'Accusative'];
+  const rows = (R) => R.map((v, i) => h('tr', h('th', { scope: 'row' }, CASES[i]), v.map((x) => h('td', { lang: 'grc' }, x))));
+  const out = [h('p.small.muted', 'Model verb λύω. Participles agree with the word they describe in gender, number and case. Read across for the gender and down for the case.')];
+  for (const c of PART_CHARTS) {
+    out.push(h('div.cblock', h('h3', c.title), h('p.small.muted', c.note), h('div.cscroll', h('table.ctable.cpart',
+      h('thead', h('tr', h('th', ''), ['Masculine', 'Feminine', 'Neuter'].map((g) => h('th', g)))),
+      h('tbody', h('tr', h('th.c', { colspan: 4 }, 'Singular')), rows(c.s), h('tr', h('th.c', { colspan: 4 }, 'Plural')), rows(c.p))))));
+  }
+  return out;
+}
+
+const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings'], ['contr', 'Contractions'], ['part', 'Participles']];
 
 /** Open the charts sheet. `highlight` is a master-chart row key (see chartRowFor). */
 export function openCharts({ tab = 'master', highlight = null } = {}) {
@@ -118,6 +154,7 @@ export function openCharts({ tab = 'master', highlight = null } = {}) {
     if (t === 'master') body.append(h('p.small.muted', 'Indicative, with λύω as the model. Any verb’s principal part follows one of these rows.'), masterTable(highlight));
     else if (t === 'nouns') body.append(...nounEndingsTables(highlight));
     else if (t === 'contr') body.append(...contractionTables());
+    else if (t === 'part') body.append(...participleTables());
     else body.append(endingsTable('Primary endings', PRIMARY_ACT, PRIMARY_MP, true), endingsTable('Secondary endings', SECOND_ACT, SECOND_MP, true));
     const row = body.querySelector('tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
   };

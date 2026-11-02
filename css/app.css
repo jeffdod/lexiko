@@ -299,3 +299,5 @@ summary { padding-block: .6rem; }
 .undorow { display: flex; justify-content: center; margin-top: .6rem; }
 .qcount { font-size: .8rem; color: var(--muted, #667); font-variant-numeric: tabular-nums; white-space: nowrap; }
 #pop .partsgrid { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); margin-top: .4rem; }
+.cpart td { font-family: var(--greek); font-size: 1.02rem; white-space: nowrap; } .cpart thead th { text-transform: none; letter-spacing: 0; }
+@media (max-width: 420px) { .cpart td, .cpart th { padding: .35rem .3rem; } .cpart td { font-size: .92rem; } .cpart tbody th { font-size: .66rem; letter-spacing: 0; } }
