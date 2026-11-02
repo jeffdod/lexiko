@@ -298,3 +298,4 @@ summary { padding-block: .6rem; }
 .ccontr td.hi { background: var(--good-soft); font-weight: 700; }
 .undorow { display: flex; justify-content: center; margin-top: .6rem; }
 .qcount { font-size: .8rem; color: var(--muted, #667); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#pop .partsgrid { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); margin-top: .4rem; }
