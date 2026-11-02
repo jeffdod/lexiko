@@ -59,7 +59,7 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
     if (pe && pe.parts.slice(1).some(Boolean)) {
       block.append(h('details.pparts', h('summary', 'Principal parts'),
         h('div.partsgrid', PART_NAMES.map((name, i) => h('div.pp' + (pe.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, pe.parts[i] || '—'))))));
-    }
+    } else if (L.pos === 'V') block.append(h('div.muted.small', 'This verb doesn’t have principal parts.'));
     {
       const act = h('div.row.wrap', { style: { marginTop: '.6rem' } });
       if (status(L.n) !== 'known' || !K.cards.has('w:' + L.n)) {

@@ -20,8 +20,9 @@ function longDef(L) {
 /** A verb's principal parts as a small grid, shown with the answer (only when the verb has parts beyond the present). */
 const PART_NAMES = ['Present', 'Future', 'Aorist active', 'Perfect active', 'Perfect mid/pas', 'Aorist passive'];
 function partsBlock(L) {
-  const e = L.pos === 'V' ? D.parts.get(L.n) : null;
-  if (!e || !e.parts.slice(1).some(Boolean)) return null;
+  if (L.pos !== 'V') return null;
+  const e = D.parts.get(L.n);
+  if (!e || !e.parts.slice(1).some(Boolean)) return h('div.cardparts', h('div.small.muted', 'This verb doesn’t have principal parts.'));
   return h('div.cardparts', h('div.small.muted', 'Principal parts'),
     h('div.partsgrid', PART_NAMES.map((name, i) => h('div.pp' + (e.parts[i] ? '' : '.none'), h('small', name), h('span', { lang: 'grc' }, e.parts[i] || '—')))));
 }
