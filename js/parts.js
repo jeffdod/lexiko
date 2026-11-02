@@ -62,8 +62,8 @@ export function buildPartsSession(opts) {
 }
 /** Extra practice: nothing here is ever scheduled. 'trouble' = your shakiest parts; 'preview' = a few parts you haven't started. */
 export function buildPartsExtra(kind, scope = null) {
-  if (kind === 'trouble') return troubleCards('p:', 15).map((c) => ({ ...parseCardId(c.id), type: 'practice' })).filter((x) => eligible().get(x.n) && eligible().get(x.n).parts[x.slot]);
-  return planPartsSession({ scope, newLimit: 6 }).fresh.slice(0, 6).map((x) => ({ n: x.n, slot: x.slot, type: 'preview' }));
+  if (kind === 'trouble') return shuffle(troubleCards('p:', 15).map((c) => ({ ...parseCardId(c.id), type: 'practice' })).filter((x) => eligible().get(x.n) && eligible().get(x.n).parts[x.slot]));
+  return shuffle(planPartsSession({ scope, newLimit: 6 }).fresh.slice(0, 6).map((x) => ({ n: x.n, slot: x.slot, type: 'preview' })));
 }
 
 /* ---------- answer choices ---------- */
