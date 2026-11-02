@@ -301,3 +301,18 @@ summary { padding-block: .6rem; }
 #pop .partsgrid { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); margin-top: .4rem; }
 .cpart td { font-family: var(--greek); font-size: 1.02rem; white-space: nowrap; } .cpart thead th { text-transform: none; letter-spacing: 0; }
 @media (max-width: 420px) { .cpart td, .cpart th { padding: .35rem .3rem; } .cpart td { font-size: .92rem; } .cpart tbody th { font-size: .66rem; letter-spacing: 0; } }
+.cpart td[colspan="2"] { text-align: center; }
+
+.pformula { display: flex; flex-wrap: wrap; gap: .35rem; align-items: stretch; margin: .7rem 0; }
+.pformula > div { background: var(--surface-2); border-radius: 10px; padding: .4rem .6rem; text-align: center; min-width: 4.6rem; display: grid; gap: .1rem; }
+.pformula > div.opt { background: transparent; border: 1.5px dashed var(--line, #e2dacb); }
+.pformula small { font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); } .pformula small.low { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.pformula span[lang] { font-family: var(--greek); font-size: 1.1rem; } .pformula .plus { align-self: center; font-weight: 700; color: var(--muted); }
+.m { color: var(--accent); font-weight: 700; }
+.pcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .5rem; margin: .8rem 0; }
+.pcard { border: 1px solid var(--line, #e2dacb); border-radius: 12px; padding: .6rem .8rem; } .pcard b { font-family: var(--greek); font-size: 1.35rem; color: var(--accent); }
+.pcard .pat { float: right; font-weight: 800; font-size: .8rem; background: var(--accent-soft, #e1f0f5); color: var(--accent); border-radius: 99px; padding: .1rem .6rem; }
+.cpart tr.fam th, .ctable tr.fam th { background: var(--accent-soft, #e1f0f5); color: var(--accent); font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; }
+.cpart .sep { border-left: 2px solid var(--line, #e2dacb); }
+.cpart td .gl { display: block; font: .72rem var(--font, inherit); color: var(--muted); }
+@media (max-width: 480px) { .pformula { gap: .25rem; } .pformula > div { min-width: 0; padding: .3rem .45rem; flex: 1 1 auto; } .pformula small { font-size: .6rem; } .pformula .plus { display: none; } }
