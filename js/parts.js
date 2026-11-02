@@ -305,7 +305,7 @@ function landing(view) {
   clear(view).append(backHead('Principal parts', '#/learn', 'Learn'),
     h('div.stack',
       startButton(smart('parts')), paceNote,
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Look ahead at new parts'), chartsButton()),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Look ahead at new parts'), h('a.btn.sm', { href: TOPICS.parts.review }, 'Review parts I’ve learned'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/parts/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal, {

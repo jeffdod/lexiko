@@ -336,7 +336,7 @@ function wordsPage(view) {
       startButton(smart('words')),
       paceNote(wordsPace(), 'words'),
       verbHold(),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), h('a.btn.sm', { href: '#/learn/practice/recent' }, 'Review what I just learned'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Parse them')),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), h('a.btn.sm', { href: TOPICS.words.review }, 'Review what I’ve learned'), h('a.btn.sm', { href: '#/learn/practice/recent' }, 'Review what I just learned'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Parse them')),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal)),
