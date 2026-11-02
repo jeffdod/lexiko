@@ -112,17 +112,18 @@ const PART_PIECES = [['Reduplication', 'λε', 'perfect only', true], ['Tense st
 const PART_FORMATIVES = [['ο', 'Present; 2nd aorist active and middle'], ['σα', '1st aorist active and middle'], ['θε', '1st aorist passive'], ['ε', '2nd aorist passive'], ['κ', 'Perfect active']];
 const PART_MORPHEMES = [['ντ', '3-1-3', 'All active participles, and the aorist passive.'], ['οτ', '3-1-3', 'Perfect active only.'], ['μενο/η', '2-1-2', 'All middle / passive participles (all middle for the aorists).']];
 const PART_BUILD = [   // family, tense & voice, redup, stem, formative, morpheme, nominative plural
-  ['Present', 'Present active', '', 'present', 'ο', 'ντ / ουσα', 'λέγοντες'],
-  ['Present', 'Present mid/pas', '', 'present', 'ο', 'μενο/η', 'λεγόμενοι'],
-  ['First aorist', '1st aorist active', '', 'aorist active', 'σα', 'ντ / σα', 'λύσαντες'],
-  ['First aorist', '1st aorist middle', '', 'aorist active', 'σα', 'μενο/η', 'λυσάμενοι'],
-  ['First aorist', '1st aorist passive', '', 'aorist passive', 'θε', 'ντ', 'λυθέντες'],
-  ['Second aorist', '2nd aorist active', '', 'aorist active', 'ο', 'ντ', 'βαλόντες'],
-  ['Second aorist', '2nd aorist middle', '', 'aorist active', 'ο', 'μενο/η', 'γενόμενοι'],
-  ['Second aorist', '2nd aorist passive', '', 'aorist passive', 'ε', 'ντ', 'γραφέντες'],
-  ['Perfect', 'Perfect active', 'λε', 'perfect active', 'κ', 'οτ', 'λελυκότες'],
-  ['Perfect', 'Perfect mid/pas', 'λε', 'perfect mid/pas', '', 'μενο/η', 'λελυμένοι'],
+  ['Present', 'Present active', '', 'present', 'ο', 'ντ / ουσα', 'λέγοντες', 'pres-act'],
+  ['Present', 'Present mid/pas', '', 'present', 'ο', 'μενο/η', 'λεγόμενοι', 'pres-mp'],
+  ['First aorist', '1st aorist active', '', 'aorist active', 'σα', 'ντ / σα', 'λύσαντες', 'aor1-act'],
+  ['First aorist', '1st aorist middle', '', 'aorist active', 'σα', 'μενο/η', 'λυσάμενοι', 'aor1-mid'],
+  ['First aorist', '1st aorist passive', '', 'aorist passive', 'θε', 'ντ', 'λυθέντες', 'aor1-pas'],
+  ['Second aorist', '2nd aorist active', '', 'aorist active', 'ο', 'ντ', 'βαλόντες', 'aor2-act'],
+  ['Second aorist', '2nd aorist middle', '', 'aorist active', 'ο', 'μενο/η', 'γενόμενοι', 'aor2-mid'],
+  ['Second aorist', '2nd aorist passive', '', 'aorist passive', 'ε', 'ντ', 'γραφέντες', 'aor2-pas'],
+  ['Perfect', 'Perfect active', 'λε', 'perfect active', 'κ', 'οτ', 'λελυκότες', 'perf-act'],
+  ['Perfect', 'Perfect mid/pas', 'λε', 'perfect mid/pas', '', 'μενο/η', 'λελυμένοι', 'perf-mp'],
 ];
+const PART_ENDING_KEYS = [['pres-act', 'aor2-act'], ['pres-mp', 'aor2-mid'], ['aor1-act'], ['aor1-mid'], ['aor1-pas'], ['aor2-pas'], ['perf-act'], ['perf-mp']];
 const PART_ENDINGS = [   // tense & voice, nominative sg. M F N, genitive sg. M F N
   ['Present active, 2nd aorist active', 'ων', 'ουσα', 'ον', 'οντος', 'ουσης', 'οντος'],
   ['Present, 2nd aorist middle/pas', 'ομενος', 'ομενη', 'ομενον', 'ομενου', 'ομενης', 'ομενου'],
@@ -133,12 +134,12 @@ const PART_ENDINGS = [   // tense & voice, nominative sg. M F N, genitive sg. M 
   ['Perfect active', 'κως', 'κυια', 'κος', 'κοτος', 'κυιας', 'κοτος'],
   ['Perfect mid/pas', 'μενος', 'μενη', 'μενον', 'μενου', 'μενης', 'μενου'],
 ];
-function participleTables() {
+function participleTables(hi) {
   const G = (x, cls = '') => h('td' + cls, { lang: 'grc' }, x);
   const rows = []; let fam = null;
-  for (const [f, tv, rd, stem, fv, mo, nom] of PART_BUILD) {
+  for (const [f, tv, rd, stem, fv, mo, nom, key] of PART_BUILD) {
     if (f !== fam) { fam = f; rows.push(h('tr.fam', h('th', { colspan: 6 }, f))); }
-    rows.push(h('tr', h('th', { scope: 'row' }, tv), G(rd), h('td', stem), G(fv), G(mo, '.m'), G(nom)));
+    rows.push(h('tr' + (hi && hi.key === key ? '.hi' : ''), h('th', { scope: 'row' }, tv), G(rd), h('td', stem), G(fv), G(mo, '.m'), G(nom)));
   }
   return [
     h('p.small.muted', 'Every participle is built from the pieces below, in this order. The morpheme tells you the case-ending pattern.'),
@@ -151,7 +152,8 @@ function participleTables() {
     h('div.cblock', h('h3', 'Endings to memorize'), h('p.small.muted', 'Masculine, feminine and neuter in the nominative, then the genitive. In each middle/passive row, the endings keep the same pattern as the ones above them.'),
       h('div.cscroll', h('table.ctable.cpart', h('thead', h('tr', h('th', 'Tense & voice'), h('th', { colspan: 3 }, 'Nominative sg.'), h('th.sep', { colspan: 3 }, 'Genitive sg.')),
         h('tr', h('th', ''), ['M', 'F', 'N', 'M', 'F', 'N'].map((c, i) => h('th' + (i === 3 ? '.sep' : ''), c)))),
-        h('tbody', PART_ENDINGS.map(([tv, ...e]) => h('tr', h('th', { scope: 'row' }, tv), e.map((x, i) => G(x, i === 3 ? '.sep' : '')))))))),
+        h('tbody', PART_ENDINGS.map(([tv, ...e], r) => { const on = hi && PART_ENDING_KEYS[r].includes(hi.key), col = hi && hi.number === 'S' && 'MFN'.includes(hi.gender || '-') && (hi.case === 'N' ? 'MFN'.indexOf(hi.gender) : hi.case === 'G' ? 3 + 'MFN'.indexOf(hi.gender) : -1);
+        return h('tr' + (on ? '.hi' : ''), h('th', { scope: 'row' }, tv), e.map((x, i) => G(x, (i === 3 ? '.sep' : '') + (on && i === col ? '.cell' : '')))); }))))),
   ];
 }
 
@@ -161,12 +163,14 @@ const INF_ROWS = [   // [ending, meaning] per column
   ['Middle', [['εσθαι', 'to loose'], ['σασθαι', 'to loose'], ['εσθαι', 'to receive'], ['σθαι', 'to have thrown']]],
   ['Passive', [['εσθαι', 'to be loosed'], ['θηναι', 'to be loosed'], ['ηναι', 'to be written'], ['σθαι', 'to have been thrown']]],
 ];
-function infinitiveTables() {
+function infinitiveTables(hi) {
+  const col = hi ? (hi.tense === 'P' ? 0 : hi.tense === 'A' ? (hi.second ? 2 : 1) : hi.tense === 'R' ? 3 : -1) : -1;
+  const rowsOn = hi ? ('AQ'.includes(hi.voice) ? [0] : 'MD'.includes(hi.voice) ? [1] : 'PO'.includes(hi.voice) ? [2] : hi.voice === 'E' ? [1, 2] : []) : [];
   return [
     h('p.small.muted', 'An infinitive is just an ending on the stem. Each cell gives the ending and what it means.'),
     h('div.cblock', h('div.cscroll', h('table.ctable.cpart',
       h('thead', h('tr', h('th', ''), INF_COLS.map((c) => h('th', c)))),
-      h('tbody', INF_ROWS.map(([v, cells]) => h('tr', h('th', { scope: 'row' }, v), cells.map(([e, m]) => h('td', h('span.g', { lang: 'grc' }, e), h('span.gl', m))))))))),
+      h('tbody', INF_ROWS.map(([v, cells], r) => h('tr', h('th', { scope: 'row' }, v), cells.map(([e, m], c) => h('td' + (rowsOn.includes(r) && c === col ? '.hi' : ''), h('span.g', { lang: 'grc' }, e), h('span.gl', m))))))))),
     h('p.small.muted', 'The present and 2nd aorist middle and passive share one ending (εσθαι), and so do the perfect middle and passive (σθαι).'),
   ];
 }
@@ -175,17 +179,17 @@ const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], 
 
 /** Open the charts sheet. `highlight` is a master-chart row key (see chartRowFor). */
 export function openCharts({ tab = 'master', highlight = null } = {}) {
-  if (highlight && typeof highlight === 'object') tab = 'nouns';
+  if (highlight && typeof highlight === 'object') tab = highlight.kind === 'part' ? 'part' : highlight.kind === 'inf' ? 'inf' : 'nouns';
   const dlg = h('dialog.sheet.charts', { 'aria-label': 'Charts' }), body = h('div.cbody');
   const draw = (t) => {
     clear(body);
     if (t === 'master') body.append(h('p.small.muted', 'Indicative, with λύω as the model. Any verb’s principal part follows one of these rows.'), masterTable(highlight));
     else if (t === 'nouns') body.append(...nounEndingsTables(highlight));
     else if (t === 'contr') body.append(...contractionTables());
-    else if (t === 'part') body.append(...participleTables());
-    else if (t === 'inf') body.append(...infinitiveTables());
+    else if (t === 'part') body.append(...participleTables(highlight && highlight.kind === 'part' ? highlight : null));
+    else if (t === 'inf') body.append(...infinitiveTables(highlight && highlight.kind === 'inf' ? highlight : null));
     else body.append(endingsTable('Primary endings', PRIMARY_ACT, PRIMARY_MP, true), endingsTable('Secondary endings', SECOND_ACT, SECOND_MP, true));
-    const row = body.querySelector('tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
+    const row = body.querySelector('td.hi, tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
   };
   const tabs = h('div.seg', TABS.map(([id, label]) => h('button', { 'aria-pressed': String(id === tab), onclick: (e) => { [...tabs.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); draw(id); } }, label)));
   dlg.append(h('div.row.between', h('h2', 'Charts'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close charts', onclick: () => dlg.close() }, icon('close', 20))), tabs, body);
@@ -217,6 +221,17 @@ export function chartRowFor(slot, form) {
 }
 
 /** Master-chart row for a parsed indicative verb (RP slots), or null when the chart has no row for it. */
+/** Highlight for the Participles tab: which tense-and-voice row a parsed participle belongs to (null for a future participle). */
+export function participleHighlight(sl) {
+  if (!sl || sl.mood !== 'P') return null;
+  const act = 'AQ'.includes(sl.voice), pas = 'PO'.includes(sl.voice), sec = !!sl.second;
+  const key = sl.tense === 'P' ? (act ? 'pres-act' : 'pres-mp')
+    : sl.tense === 'A' ? 'aor' + (pas ? (sec ? '2-pas' : '1-pas') : act ? (sec ? '2-act' : '1-act') : (sec ? '2-mid' : '1-mid'))
+    : sl.tense === 'R' ? (act ? 'perf-act' : 'perf-mp') : null;
+  return { kind: 'part', key, case: sl.case, number: sl.number, gender: sl.gender };
+}
+export const infinitiveHighlight = (sl) => (sl && sl.mood === 'N' ? { kind: 'inf', tense: sl.tense, voice: sl.voice, second: !!sl.second } : null);
+
 export function chartRowForSlots(sl) {
   if (!sl || !sl.tense || sl.mood !== 'I') return null;
   const act = 'AQ'.includes(sl.voice), pas = 'PO'.includes(sl.voice), sec = !!sl.second;
