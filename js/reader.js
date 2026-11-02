@@ -1,7 +1,7 @@
 // The reader: Greek text with tap/click word popups, optional glosses for unknown words, readiness per chapter.
 import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange } from './data.js';
 import { decode } from './morph.js';
-import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, readinessLabel, readinessClass, markRead, setReadKey } from './know.js';
+import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection } from './know.js';
 import { h, clear, toAcute, pct, toast, icon, fmt } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -111,12 +111,12 @@ function verseHTML(vs, toks, seenGloss, opts) {
 
 /** Section heading with its readiness, a study shortcut and a read toggle. */
 function headingHTML(p) {
-  const sc = periScope(p), rd = scopeReadiness(sc), read = !!K.read[p.id];
+  const sc = periScope(p), rd = scopeReadiness(sc), read = sectionRead(p);
   return h('h3.peri', { id: 'pe-' + p.c1 + '-' + p.v1 },
     h('span.pt', h('span.pref', periRange(p)), p.title),
     h('span.pm', h('span.rdy.' + readinessClass(rd.known), pct(rd.known)),
       rd.distinctUnknown ? h('a.btn.sm', { href: '#/learn/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') }, 'Study') : null,
-      h('button.btn.sm' + (read ? '.primary' : ''), { dataset: { act: 'pread', pid: p.id }, 'aria-pressed': String(read), title: read ? 'Marked as read' : 'Mark this section as read' }, '✓'))).outerHTML;
+      h('button.btn.sm' + (read ? '.primary' : ''), { dataset: { act: 'pread', pid: p.id, pspan: p.c1 + '-' + p.c2 }, 'aria-pressed': String(read), title: read ? 'Marked as read' : 'Mark this section as read' }, '✓'))).outerHTML;
 }
 
 /* ---------------- view ---------------- */
@@ -205,7 +205,7 @@ export function renderReader(view, params) {
   const wordOf = (e) => e.target.closest && e.target.closest('.w');
   const click = async (e) => {
     const act = e.target.closest && e.target.closest('[data-act="pread"]');
-    if (act) { const id = act.dataset.pid, on = !K.read[id]; await setReadKey(id, on); toast(on ? 'Section marked as read' : 'Unmarked'); return redraw(); }
+    if (act) { const id = act.dataset.pid, [c1, c2] = act.dataset.pspan.split('-').map(Number), sec = { id, code: id.split(':')[1], c1, c2 }, on = !sectionRead(sec); if (on) await setReadKey(id, true); else await unmarkSection(sec); toast(on ? 'Section marked as read' : 'Unmarked'); return redraw(); }
     const w = wordOf(e); if (w) { e.preventDefault(); showPop(w, true, redraw); } };
   const redraw = () => { const y = scrollY; draw(); scrollTo(0, y); if (popAnchor) { const el = body.querySelector('.w[data-t="' + popAnchor.dataset.t + '"]'); if (el) showPop(el, true, redraw); } };
   const outside = (e) => { if (pop && !pop.hidden && popPinned && !pop.contains(e.target) && !wordOf(e)) hidePop(); };

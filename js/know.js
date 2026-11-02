@@ -31,6 +31,18 @@ export async function setReadKey(key, on) {          // key: 'JHN:1' (chapter) o
   await store.set('read', K.read);
 }
 export const markRead = (code, ch, on) => setReadKey(code + ':' + ch, on);
+/** A section counts as read when you marked it, or when every chapter it lies in is marked read. */
+export function sectionRead(p) {
+  if (K.read[p.id]) return true;
+  for (let ch = p.c1; ch <= p.c2; ch++) if (!K.read[p.code + ':' + ch]) return false;
+  return true;
+}
+/** Unmark a section, including the chapter marks that made it count as read. */
+export async function unmarkSection(p) {
+  if (K.read[p.id]) delete K.read[p.id];
+  for (let ch = p.c1; ch <= p.c2; ch++) delete K.read[p.code + ':' + ch];
+  await store.set('read', K.read);
+}
 
 export const cardId = (n) => 'w:' + n;
 export const getCard = (n) => K.cards.get(cardId(n));
