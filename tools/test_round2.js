@@ -113,6 +113,14 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
       kn.K.cards.set('w:9001', mk(9001, { lapses: 0, difficulty: 10 })); kn.K.cards.set('w:9002', mk(9002, { lapses: 1, difficulty: 5 }));
       const ids = kn.troubleCards('w:', 500).map((c) => c.id); kn.K.cards.delete('w:9001'); kn.K.cards.delete('w:9002'); return [ids.indexOf('w:9001'), ids.indexOf('w:9002')]; });
     ok(order[1] >= 0 && (order[0] < 0 || order[1] < order[0]), 'a card you missed ranks above one that is only overdue or hard (' + order.join(' vs ') + ')'); }
+  { const before = await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, false); return Object.keys(kn.K.read).length; });
+    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('.kpi:has-text("sections read")');
+    const n0 = +(await page.locator('.kpi', { has: page.locator('span', { hasText: /^sections read$/ }) }).locator('b').textContent());
+    await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, true); });
+    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('.kpi:has-text("sections read")');
+    const n1 = +(await page.locator('.kpi', { has: page.locator('span', { hasText: /^sections read$/ }) }).locator('b').textContent());
+    await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, false); });
+    ok(n1 > n0, 'marking a chapter read counts its sections as read (' + n0 + ' -> ' + n1 + ')'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');

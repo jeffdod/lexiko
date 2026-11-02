@@ -1,6 +1,6 @@
 // Progress: word knowledge, which parts of the NT are within reach, goals, recent activity.
 import { D, scopeLabel, periScope, periRange, periRef } from './data.js';
-import { K, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak } from './know.js';
+import { K, sectionRead, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak } from './know.js';
 import { h, clear, pct, icon, todayKey, fmt } from './util.js';
 import { readHref } from './reader.js';
 import { growthCard } from './growth.js';
@@ -21,7 +21,7 @@ export function periRows() {
 /** Sections worth reading next: unread, mostly familiar, nearest the ~97% comfort zone. */
 export function suggestions(n = 3, rows = periRows()) {
   const score = (r) => Math.abs(r.known - 0.97) - (r.known >= 0.9 ? 0.02 : 0);
-  return rows.filter((r) => !K.read[r.p.id] && r.tokens >= 40 && r.known >= 0.85 && r.known < 0.995)
+  return rows.filter((r) => !sectionRead(r.p) && r.tokens >= 40 && r.known >= 0.85 && r.known < 0.995)
     .sort((a, b) => score(a) - score(b) || a.p.bi - b.p.bi || a.p.c1 - b.p.c1 || a.p.v1 - b.p.v1).slice(0, n);
 }
 export const suggestionItem = (r, withChip = true) => h('a.li', { href: readHref(r.p.code, r.p.c1, r.p.v1) },
@@ -45,7 +45,7 @@ function milestone(goal, known, ratio) {
 export function renderProgress(view) {
   const chs = allChapters();
   const rows = periRows(), rowOf = new Map(rows.map((r) => [r.p.id, r]));
-  const secReady = rows.filter((r) => r.known >= 0.98).length, secRead = rows.filter((r) => K.read[r.p.id]).length;
+  const secReady = rows.filter((r) => r.known >= 0.98).length, secRead = rows.filter((r) => sectionRead(r.p)).length;
   const wc = counts(D.lex.map((l) => l.n));
   let kTok = 0, lTok = 0, tot = 0;
   for (const c of chs) { kTok += c.known * c.tokens; lTok += c.learning * c.tokens; tot += c.tokens; }
@@ -63,7 +63,7 @@ export function renderProgress(view) {
       h('div.chaps', list.map((c) => h('a.chap.' + readinessClass(c.known) + (c.read ? '.done' : ''), { href: readHref(b.code, c.ch), title: b.name + ' ' + c.ch + ' — ' + pct(c.known) + ' known (' + readinessLabel(c.known) + ')' }, c.ch))),
       h('details', { style: { marginTop: '.7rem' } }, h('summary', { style: { cursor: 'pointer', fontWeight: 700, fontSize: '.9rem' } }, 'Sections (' + D.periList.filter((p) => p.code === b.code).length + ')'),
         h('div.list', { style: { marginTop: '.5rem' } }, D.periList.filter((p) => p.code === b.code).map((p) => { const r = rowOf.get(p.id);
-          return h('a.li', { href: readHref(b.code, p.c1, p.v1) }, h('div.grow', h('div.t', (K.read[p.id] ? '✓ ' : '') + p.title), h('div.s', periRange(p) + ' · ' + r.tokens + ' words')), h('span.rdy.' + readinessClass(r.known), pct(r.known))); }))));
+          return h('a.li', { href: readHref(b.code, p.c1, p.v1) }, h('div.grow', h('div.t', (sectionRead(p) ? '✓ ' : '') + p.title), h('div.s', periRange(p) + ' · ' + r.tokens + ' words')), h('span.rdy.' + readinessClass(r.known), pct(r.known))); }))));
     return d;
   });
 
