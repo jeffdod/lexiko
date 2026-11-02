@@ -4,7 +4,7 @@
 //   recall    — you're shown a verb and a part name: pick the form (multiple choice) or remember it (self-graded)
 // "Auto" starts with multiple choice and moves to self-graded flashcards once you're reliable.
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
-import { K, status, setting, setSetting, partsId, partsCardsDue, partsNewToday, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
 import { smart, TOPICS } from './smart.js';
@@ -51,7 +51,7 @@ export function planPartsSession({ scope = null, size = setting('sessionSize'), 
     }
   }
   const fresh = byRank.flatMap((r) => (r || []).sort((a, b) => b.s - a.s));
-  const limit = newLimit != null ? newLimit : scope ? size : Math.max(0, setting('partsNewPerDay') - partsNewToday());
+  const limit = newLimit != null ? newLimit : scope ? size : partsPace().left;
   return { due, fresh, limit, size };
 }
 export function buildPartsSession(opts) {
@@ -275,10 +275,14 @@ function landing(view) {
     await setSetting('partsMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget)));
   } }, t)));
   const newSel = h('select', { 'aria-label': 'New parts per day', onchange: async (e) => { await setSetting('partsNewPerDay', +e.target.value); landing(view); } },
-    [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('partsNewPerDay') }, n)));
+    [...new Set([2, 3, 5, 8, 10, setting('partsNewPerDay')])].sort((a, b) => a - b).map((n) => h('option', { value: n, selected: n === setting('partsNewPerDay') }, n)));
+  const auto = setting('partsPace') !== 'fixed', pace = partsPace();
+  const seg2 = (key, items, after) => h('div.seg', items.map(([v, t]) => h('button', { 'aria-pressed': String(String(setting(key)) === String(v)), onclick: async () => { await setSetting(key, v); landing(view); } }, t)));
+  const paceNote = pace.paused ? h('div.card.small', h('b', 'New parts are paused.'), ' Turn this off in Options when you want more.')
+    : auto && pace.why ? h('div.card.small', h('b', 'Pace: ' + pace.n + ' new a day. '), pace.why) : null;
   clear(view).append(h('div.pagehead', h('h1', 'Principal parts')),
     h('div.stack',
-      startButton(smart('parts')),
+      startButton(smart('parts')), paceNote,
       h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Look ahead at new parts'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/parts/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
@@ -289,5 +293,8 @@ function landing(view) {
         })),
       fold('Options',
         h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Multiple choice checks you; flashcards ask you to remember, then rate yourself. Auto moves up when you’re reliable.')), modeSeg),
-        h('div.row.between', h('span', 'New parts per day'), newSel))));
+        h('div.stack', h('b', 'New parts'), seg2('partsPace', [['auto', 'Automatic'], ['fixed', 'Fixed number']]),
+          h('div.muted.small', auto ? 'Automatic pace looks at how many reviews are waiting and how you answered your last 40 parts. It slows down when reviews pile up or you’re below about 75% correct, and speeds up a little when you’re above 90% with little waiting. It never stays at zero for more than a few days.' : 'Exactly this many new parts every day.')),
+        h('div.row.between', h('span', auto ? 'Most new per day' : 'New per day'), newSel),
+        h('div.row.between', h('div', h('b', 'Pause new parts'), h('div.muted.small', 'Review only, until you turn it off.')), seg2('partsPause', [[false, 'Off'], [true, 'On']])))));
 }

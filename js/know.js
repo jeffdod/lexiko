@@ -6,9 +6,9 @@ import { todayKey, shuffle } from './util.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsNewPerDay: 10,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsNewPerDay: 5, partsPace: 'auto', partsPause: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, partsAcc: [], ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -17,6 +17,7 @@ export async function initKnow() {
   K.daily = (await store.get('daily')) || {};
   K.read = (await store.get('read')) || {};
   K.goal = (await store.get('goal')) || null;
+  K.partsAcc = (await store.get('partsAcc')) || [];
   K.ready = true;
 }
 
@@ -208,6 +209,27 @@ export const saveParseStats = (st) => store.set('parseStats', st);
 export const partsId = (n, slot) => 'p:' + n + ':' + slot;
 export const partsCardsDue = (now = Date.now()) => [...K.cards.values()].filter((c) => c.id.startsWith('p:') && c.state !== 'new' && c.due <= now);
 export const partsNewToday = () => (K.daily[todayKey()] || {}).ppn || 0;
+/** How many new principal parts to start today, and why. Automatic: slows when reviews pile up or answers slip, speeds up when you are secure. */
+export function partsPace(now = Date.now()) {
+  const max = Math.max(1, setting('partsNewPerDay')), today = partsNewToday(), due = partsCardsDue(now).length;
+  const out = (n, why, extra = {}) => ({ n, left: Math.max(0, n - today), due, why, auto: setting('partsPace') !== 'fixed', ...extra });
+  if (setting('partsPause')) return out(0, 'New parts are paused.', { paused: true });
+  if (setting('partsPace') === 'fixed') return out(max, '');
+  const cap = Math.max(10, setting('sessionSize') || 25), a = K.partsAcc, acc = a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  let n = Math.min(3, max), why = '';
+  if (due > cap) { n = 0; why = 'You have ' + due + ' to review, so new parts wait until you catch up.'; }
+  else if (due > cap / 2) { n = 1; why = 'You have ' + due + ' to review, so new parts are slowed until you catch up.'; }
+  else if (acc != null && acc < 0.75) { n = 1; why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new parts are slowed while these settle.'; }
+  else if (acc != null && acc < 0.85) { n = Math.min(2, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new parts come in gently.'; }
+  else if (acc != null && acc > 0.9 && due <= cap / 4) { n = Math.min(5, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly with little waiting, so a few more come in.'; }
+  if (n === 0 && today === 0) {                                  // never stay at zero for long
+    const days = Object.keys(K.daily).filter((k) => (K.daily[k].ppn || 0) > 0).sort().pop();
+    const gap = days ? (new Date(todayKey()) - new Date(days)) / 864e5 : 99;
+    if (gap >= 3) { n = 1; why = 'It’s been a few days, so one new part keeps things moving. ' + why; }
+  }
+  n = Math.min(n, max);
+  return out(n, why, { acc });
+}
 export async function rateParts(id, grade, ms = 0, meta = {}) {
   const now = Date.now();
   const prev = K.cards.get(id) || F.newCard(id);
