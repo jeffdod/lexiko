@@ -107,56 +107,67 @@ function contractionTables() {
   ];
 }
 
-/* ---------- participles: λύω as the model (rows N G D A; columns masculine, feminine, neuter) ---------- */
-const PART_CHARTS = [
-  { title: 'Present active', note: 'Third declension (masculine, neuter) with first declension feminine. Future active uses the same endings on the future stem.',
-    s: [['λύων', 'λύουσα', 'λῦον'], ['λύοντος', 'λυούσης', 'λύοντος'], ['λύοντι', 'λυούσῃ', 'λύοντι'], ['λύοντα', 'λύουσαν', 'λῦον']],
-    p: [['λύοντες', 'λύουσαι', 'λύοντα'], ['λυόντων', 'λυουσῶν', 'λυόντων'], ['λύουσι(ν)', 'λυούσαις', 'λύουσι(ν)'], ['λύοντας', 'λυούσας', 'λύοντα']] },
-  { title: 'Present middle / passive', note: 'Second and first declension endings, like an adjective. Future middle uses the same endings on the future stem.',
-    s: [['λυόμενος', 'λυομένη', 'λυόμενον'], ['λυομένου', 'λυομένης', 'λυομένου'], ['λυομένῳ', 'λυομένῃ', 'λυομένῳ'], ['λυόμενον', 'λυομένην', 'λυόμενον']],
-    p: [['λυόμενοι', 'λυόμεναι', 'λυόμενα'], ['λυομένων', 'λυομένων', 'λυομένων'], ['λυομένοις', 'λυομέναις', 'λυομένοις'], ['λυομένους', 'λυομένας', 'λυόμενα']] },
-  { title: 'Aorist active', note: 'First aorist, with the tense marker σα.',
-    s: [['λύσας', 'λύσασα', 'λῦσαν'], ['λύσαντος', 'λυσάσης', 'λύσαντος'], ['λύσαντι', 'λυσάσῃ', 'λύσαντι'], ['λύσαντα', 'λύσασαν', 'λῦσαν']],
-    p: [['λύσαντες', 'λύσασαι', 'λύσαντα'], ['λυσάντων', 'λυσασῶν', 'λυσάντων'], ['λύσασι(ν)', 'λυσάσαις', 'λύσασι(ν)'], ['λύσαντας', 'λυσάσας', 'λύσαντα']] },
-  { title: 'Aorist middle', note: 'Second and first declension endings, like the present middle / passive.',
-    s: [['λυσάμενος', 'λυσαμένη', 'λυσάμενον'], ['λυσαμένου', 'λυσαμένης', 'λυσαμένου'], ['λυσαμένῳ', 'λυσαμένῃ', 'λυσαμένῳ'], ['λυσάμενον', 'λυσαμένην', 'λυσάμενον']],
-    p: [['λυσάμενοι', 'λυσάμεναι', 'λυσάμενα'], ['λυσαμένων', 'λυσαμένων', 'λυσαμένων'], ['λυσαμένοις', 'λυσαμέναις', 'λυσαμένοις'], ['λυσαμένους', 'λυσαμένας', 'λυσάμενα']] },
-  { title: 'Aorist passive', note: 'Built on the passive stem with θ; the endings follow the third declension.',
-    s: [['λυθείς', 'λυθεῖσα', 'λυθέν'], ['λυθέντος', 'λυθείσης', 'λυθέντος'], ['λυθέντι', 'λυθείσῃ', 'λυθέντι'], ['λυθέντα', 'λυθεῖσαν', 'λυθέν']],
-    p: [['λυθέντες', 'λυθεῖσαι', 'λυθέντα'], ['λυθέντων', 'λυθεισῶν', 'λυθέντων'], ['λυθεῖσι(ν)', 'λυθείσαις', 'λυθεῖσι(ν)'], ['λυθέντας', 'λυθείσας', 'λυθέντα']] },
-  { title: 'Perfect active', note: 'Reduplicated stem with κ; the endings follow the third declension.',
-    s: [['λελυκώς', 'λελυκυῖα', 'λελυκός'], ['λελυκότος', 'λελυκυίας', 'λελυκότος'], ['λελυκότι', 'λελυκυίᾳ', 'λελυκότι'], ['λελυκότα', 'λελυκυῖαν', 'λελυκός']],
-    p: [['λελυκότες', 'λελυκυῖαι', 'λελυκότα'], ['λελυκότων', 'λελυκυιῶν', 'λελυκότων'], ['λελυκόσι(ν)', 'λελυκυίαις', 'λελυκόσι(ν)'], ['λελυκότας', 'λελυκυίας', 'λελυκότα']] },
-  { title: 'Perfect middle / passive', note: 'Reduplicated stem; second and first declension endings. The accent stays on the μέν syllable.',
-    s: [['λελυμένος', 'λελυμένη', 'λελυμένον'], ['λελυμένου', 'λελυμένης', 'λελυμένου'], ['λελυμένῳ', 'λελυμένῃ', 'λελυμένῳ'], ['λελυμένον', 'λελυμένην', 'λελυμένον']],
-    p: [['λελυμένοι', 'λελυμέναι', 'λελυμένα'], ['λελυμένων', 'λελυμένων', 'λελυμένων'], ['λελυμένοις', 'λελυμέναις', 'λελυμένοις'], ['λελυμένους', 'λελυμένας', 'λελυμένα']] },
+/* ---------- participles and infinitives: built from the user's grammar charts ---------- */
+const PART_PIECES = [['Reduplication', 'λε', 'perfect only', true], ['Tense stem', 'λυ'], ['Formative / vowel', 'varies', 'see below', true], ['Morpheme', 'ντ · οτ · μενο/η', '', false, true], ['Case ending', '3-1-3 or 2-1-2']];
+const PART_FORMATIVES = [['ο', 'Present; 2nd aorist active and middle'], ['σα', '1st aorist active and middle'], ['θε', '1st aorist passive'], ['ε', '2nd aorist passive'], ['κ', 'Perfect active']];
+const PART_MORPHEMES = [['ντ', '3-1-3', 'All active participles, and the aorist passive.'], ['οτ', '3-1-3', 'Perfect active only.'], ['μενο/η', '2-1-2', 'All middle / passive participles (all middle for the aorists).']];
+const PART_BUILD = [   // family, tense & voice, redup, stem, formative, morpheme, nominative plural
+  ['Present', 'Present active', '', 'present', 'ο', 'ντ / ουσα', 'λέγοντες'],
+  ['Present', 'Present mid/pas', '', 'present', 'ο', 'μενο/η', 'λεγόμενοι'],
+  ['First aorist', '1st aorist active', '', 'aorist active', 'σα', 'ντ / σα', 'λύσαντες'],
+  ['First aorist', '1st aorist middle', '', 'aorist active', 'σα', 'μενο/η', 'λυσάμενοι'],
+  ['First aorist', '1st aorist passive', '', 'aorist passive', 'θε', 'ντ', 'λυθέντες'],
+  ['Second aorist', '2nd aorist active', '', 'aorist active', 'ο', 'ντ', 'βαλόντες'],
+  ['Second aorist', '2nd aorist middle', '', 'aorist active', 'ο', 'μενο/η', 'γενόμενοι'],
+  ['Second aorist', '2nd aorist passive', '', 'aorist passive', 'ε', 'ντ', 'γραφέντες'],
+  ['Perfect', 'Perfect active', 'λε', 'perfect active', 'κ', 'οτ', 'λελυκότες'],
+  ['Perfect', 'Perfect mid/pas', 'λε', 'perfect mid/pas', '', 'μενο/η', 'λελυμένοι'],
+];
+const PART_ENDINGS = [   // tense & voice, nominative sg. M F N, genitive sg. M F N
+  ['Present active, 2nd aorist active', 'ων', 'ουσα', 'ον', 'οντος', 'ουσης', 'οντος'],
+  ['Present, 2nd aorist middle/pas', 'ομενος', 'ομενη', 'ομενον', 'ομενου', 'ομενης', 'ομενου'],
+  ['1st aorist active', 'σας', 'σασα', 'σαν', 'σαντος', 'σασης', 'σαντος'],
+  ['1st aorist middle', 'σαμενος', 'σαμενη', 'σαμενον', 'σαμενου', 'σαμενης', 'σαμενου'],
+  ['1st aorist passive', 'θεις', 'θεισα', 'θεν', 'θεντος', 'θεισης', 'θεντος'],
+  ['2nd aorist passive', 'εις', 'εισα', 'εν', 'εντος', 'εισης', 'εντος'],
+  ['Perfect active', 'κως', 'κυια', 'κος', 'κοτος', 'κυιας', 'κοτος'],
+  ['Perfect mid/pas', 'μενος', 'μενη', 'μενον', 'μενου', 'μενης', 'μενου'],
 ];
 function participleTables() {
-  const CASES = ['Nominative', 'Genitive', 'Dative', 'Accusative'];
-  const rows = (R) => R.map((v, i) => h('tr', h('th', { scope: 'row' }, CASES[i]), v.map((x) => h('td', { lang: 'grc' }, x))));
-  const out = [h('p.small.muted', 'Model verb λύω. Participles agree with the word they describe in gender, number and case. Read across for the gender and down for the case.')];
-  for (const c of PART_CHARTS) {
-    out.push(h('div.cblock', h('h3', c.title), h('p.small.muted', c.note), h('div.cscroll', h('table.ctable.cpart',
-      h('thead', h('tr', h('th', ''), ['Masculine', 'Feminine', 'Neuter'].map((g) => h('th', g)))),
-      h('tbody', h('tr', h('th.c', { colspan: 4 }, 'Singular')), rows(c.s), h('tr', h('th.c', { colspan: 4 }, 'Plural')), rows(c.p))))));
+  const G = (x, cls = '') => h('td' + cls, { lang: 'grc' }, x);
+  const rows = []; let fam = null;
+  for (const [f, tv, rd, stem, fv, mo, nom] of PART_BUILD) {
+    if (f !== fam) { fam = f; rows.push(h('tr.fam', h('th', { colspan: 6 }, f))); }
+    rows.push(h('tr', h('th', { scope: 'row' }, tv), G(rd), h('td', stem), G(fv), G(mo, '.m'), G(nom)));
   }
-  return out;
+  return [
+    h('p.small.muted', 'Every participle is built from the pieces below, in this order. The morpheme tells you the case-ending pattern.'),
+    h('div.pformula', PART_PIECES.flatMap(([t, g, sub, opt, m], i) => [i ? h('span.plus', '+') : null, h('div' + (opt ? '.opt' : ''), h('small', t), h('span' + (m ? '.m' : ''), { lang: 'grc' }, g), sub ? h('small.low', sub) : null)]).filter(Boolean)),
+    h('div.cscroll', h('table.ctable', h('thead', h('tr', h('th', 'Formative / vowel'), h('th', 'Used for'))),
+      h('tbody', PART_FORMATIVES.map(([f, u]) => h('tr', G(f, '.m'), h('td', u)))))),
+    h('div.pcards', PART_MORPHEMES.map(([m, p, d]) => h('div.pcard', h('span.pat', p), h('b', { lang: 'grc' }, m), h('p.small.muted', d)))),
+    h('div.cblock', h('h3', 'Tense by tense'), h('p.small.muted', 'Read across to see how each participle is assembled. The nominative plural is the form to remember.'),
+      h('div.cscroll', h('table.ctable.cpart', h('thead', h('tr', ['Tense & voice', 'Redup.', 'Stem', 'Formative / vowel', 'Morpheme & case ending', 'Nom. plural'].map((c) => h('th', c)))), h('tbody', rows)))),
+    h('div.cblock', h('h3', 'Endings to memorize'), h('p.small.muted', 'Masculine, feminine and neuter in the nominative, then the genitive. In each middle/passive row, the endings keep the same pattern as the ones above them.'),
+      h('div.cscroll', h('table.ctable.cpart', h('thead', h('tr', h('th', 'Tense & voice'), h('th', { colspan: 3 }, 'Nominative sg.'), h('th.sep', { colspan: 3 }, 'Genitive sg.')),
+        h('tr', h('th', ''), ['M', 'F', 'N', 'M', 'F', 'N'].map((c, i) => h('th' + (i === 3 ? '.sep' : ''), c)))),
+        h('tbody', PART_ENDINGS.map(([tv, ...e]) => h('tr', h('th', { scope: 'row' }, tv), e.map((x, i) => G(x, i === 3 ? '.sep' : '')))))))),
+  ];
 }
 
-/* ---------- infinitives: λύω as the model ---------- */
-const INF_ROWS = [
-  ['Present', [['λύειν'], ['λύεσθαι', 2]]],
-  ['Future', [['λύσειν'], ['λύσεσθαι'], ['λυθήσεσθαι']]],
-  ['Aorist', [['λῦσαι'], ['λύσασθαι'], ['λυθῆναι']]],
-  ['Perfect', [['λελυκέναι'], ['λελύσθαι', 2]]],
+const INF_COLS = ['Present', '1st aorist', '2nd aorist', 'Perfect'];
+const INF_ROWS = [   // [ending, meaning] per column
+  ['Active', [['ειν', 'to loose'], ['σαι', 'to loose'], ['ειν', 'to receive'], ['κεναι', 'to have loosed']]],
+  ['Middle', [['εσθαι', 'to loose'], ['σασθαι', 'to loose'], ['εσθαι', 'to receive'], ['σθαι', 'to have thrown']]],
+  ['Passive', [['εσθαι', 'to be loosed'], ['θηναι', 'to be loosed'], ['ηναι', 'to be written'], ['σθαι', 'to have been thrown']]],
 ];
 function infinitiveTables() {
   return [
-    h('p.small.muted', 'Model verb λύω. An infinitive does not change for person, number, gender or case. Where one form serves both middle and passive, it is shown once across both.'),
+    h('p.small.muted', 'An infinitive is just an ending on the stem. Each cell gives the ending and what it means.'),
     h('div.cblock', h('div.cscroll', h('table.ctable.cpart',
-      h('thead', h('tr', h('th', ''), ['Active', 'Middle', 'Passive'].map((g) => h('th', g)))),
-      h('tbody', INF_ROWS.map(([t, cells]) => h('tr', h('th', { scope: 'row' }, t), cells.map(([f, span]) => h('td', { lang: 'grc', colspan: span || 1 }, f)))))))),
-    h('p.small.muted', 'The present infinitive describes ongoing action, the aorist simple action, and the perfect a completed state. In the future, the passive uses the passive stem with σ.'),
+      h('thead', h('tr', h('th', ''), INF_COLS.map((c) => h('th', c)))),
+      h('tbody', INF_ROWS.map(([v, cells]) => h('tr', h('th', { scope: 'row' }, v), cells.map(([e, m]) => h('td', h('span.g', { lang: 'grc' }, e), h('span.gl', m))))))))),
+    h('p.small.muted', 'The present and 2nd aorist middle and passive share one ending (εσθαι), and so do the perfect middle and passive (σθαι).'),
   ];
 }
 
