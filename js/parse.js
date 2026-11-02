@@ -1,12 +1,13 @@
 // Parsing practice: pick the parts of a form in a fixed order (guided one-at-a-time, or quick all-at-once),
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, parsePace, waitingVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
+import { paceNote, paceOptions } from './pace.js';
 import { readHref } from './reader.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
@@ -79,8 +80,9 @@ export function planParseSession({ scope = null, kind = 'all', size = setting('s
   const due = parseCardsDue(now).map((c) => ({ c, id: keyMap.get(c.id) }))
     .filter((x) => x.id != null && itemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
     .sort((a, b) => a.c.due - b.c.due).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);       // one entry per form
-  const limit = newLimit != null ? newLimit : scope ? size : Math.max(0, setting('parseNewPerDay') - parseNewToday());
-  const fresh = pool.filter((x) => isFresh(x.id));
+  const limit = newLimit != null ? newLimit : scope ? size : parsePace().left;
+  const waiting = new Set(waitingVerbs());                    // verbs you only know the meaning of wait their turn for principal parts and parsing
+  const fresh = pool.filter((x) => isFresh(x.id) && !waiting.has(D.forms[x.id].an[0].s));
   return { due, fresh, limit, size };
 }
 
@@ -342,6 +344,7 @@ async function landing(view) {
     h('div.pagehead', h('h1', 'Parsing')),
     h('div.stack',
       startButton(smart('parse')),
+      paceNote(parsePace(), 'forms'),
       h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('div.row', h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practise'), h('a.btn.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/verb' }, 'Verbs only'))) : null,
@@ -352,6 +355,7 @@ async function landing(view) {
           info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(canon[t >> 4])) ids.add(canon[t >> 4]); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
         })),
       fold('Options',
+        ...paceOptions('parse', 'forms', () => landing(view)),
         h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Guided asks one part at a time. Quick shows all parts at once. Auto moves up when you’re reliable.')), modeSeg), note,
         h('div.row.between', h('span', 'New forms per day'), newSel),
         h('div.row.wrap', h('a.btn.sm', { href: '#/parse/run/mix/verb' }, 'Verbs only'), h('a.btn.sm', { href: '#/parse/run/mix/noun' }, 'Nouns, adjectives & pronouns only'))),

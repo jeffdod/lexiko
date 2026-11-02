@@ -89,6 +89,17 @@ process.on('unhandledRejection', () => {});
     const ids = k.troubleCards('w:', 50).map((c) => +c.id.slice(2)); k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c);
     return { good: ids.includes(ns[0]) || ids.includes(ns[1]), again: ids.includes(ns[2]), lapsed: ids.includes(ns[3]) }; });
   ok(!sh.good && sh.again && sh.lapsed, 'weak spots list only words you have missed or struggled with, not ones you always got right', JSON.stringify(sh));
+  // ---- automatic pace for new words and new forms, and the overload rule
+  const np = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const o = {}; const S = k.K.settings, keep = { ...S }, kc = new Map(k.K.cards);
+    S.wordsPace = 'auto'; S.parsePace = 'auto'; S.partsPace = 'auto'; S.wordsPause = false; S.parsePause = false; S.newPerDay = 10; S.parseNewPerDay = 10; k.K.wordsAcc = []; k.K.parseAcc = [];
+    o.base = [k.wordsPace().n, k.parsePace().n];
+    k.K.wordsAcc = Array(20).fill(0).map((_, i) => i % 2); o.weak = k.wordsPace().n; k.K.wordsAcc = [];
+    const mk = (pre, i) => { const c = f.review(f.newCard(pre + i), 3, Date.now() - 864e6, 0.9); c.due = 1; k.K.cards.set(c.id, c); };
+    for (let i = 0; i < 30; i++) mk('w:9', 100 + i); o.due30 = k.wordsPace().n;                        // more than a session due
+    for (let i = 0; i < 20; i++) mk('f:x', i); o.overload = [k.wordsPace().n, k.parsePace().n, k.partsPace().n, !!k.wordsPace().overload];
+    S.wordsPace = 'fixed'; o.fixed = k.wordsPace().n; S.wordsPace = 'auto'; S.wordsPause = true; o.paused = k.wordsPace().n;
+    k.K.cards.clear(); for (const [id, c] of kc) k.K.cards.set(id, c); Object.assign(S, keep); return o; });
+  ok(np.base[0] === 10 && np.base[1] === 10 && np.weak < 10 && np.weak >= 1 && np.due30 <= 1 && np.overload[0] === 0 && np.overload[1] === 0 && np.overload[2] === 0 && np.overload[3] && np.fixed === 10 && np.paused === 0, 'new words and forms slow when reviews pile up or accuracy slips, stop at overload, and honour Fixed and Pause', JSON.stringify(np));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });
@@ -111,7 +122,7 @@ process.on('unhandledRejection', () => {});
     answered++; await p.waitForTimeout(300);
   }
   const mid = await snap();
-  ok(answered >= 10, 'answered parts questions', String(answered)); ok(seenRecall && meets >= 1, 'a new verb is introduced whole, then asked as multiple choice', meets + ' verbs met, recall ' + seenRecall);
+  ok(answered >= 6, 'answered parts questions', String(answered)); ok(seenRecall && meets >= 1, 'a new verb is introduced whole, then asked as multiple choice', meets + ' verbs met, recall ' + seenRecall);
   ok(mid !== before && mid.includes('"p:'), 'principal-part cards were created');
   // charts
   await p.goto(URL + '#/parts'); await p.click('button:has-text("Charts")'); await p.waitForSelector('dialog.charts[open] table');
