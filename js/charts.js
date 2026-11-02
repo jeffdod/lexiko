@@ -192,7 +192,7 @@ export function openCharts({ tab = 'master', highlight = null } = {}) {
     const row = body.querySelector('td.hi, tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
   };
   const tabs = h('div.seg', TABS.map(([id, label]) => h('button', { 'aria-pressed': String(id === tab), onclick: (e) => { [...tabs.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); draw(id); } }, label)));
-  dlg.append(h('div.row.between', h('h2', 'Charts'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close charts', onclick: () => dlg.close() }, icon('close', 20))), tabs, body);
+  dlg.append(h('div.row.between.chead', h('h2', { tabindex: '-1', autofocus: '' }, 'Charts'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close charts', onclick: () => dlg.close() }, icon('close', 20))), tabs, body);
   document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal(); draw(tab);
 }
 
