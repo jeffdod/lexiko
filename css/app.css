@@ -316,3 +316,4 @@ summary { padding-block: .6rem; }
 .cpart .sep { border-left: 2px solid var(--line, #e2dacb); }
 .cpart td .gl { display: block; font: .72rem var(--font, inherit); color: var(--muted); }
 @media (max-width: 480px) { .pformula { gap: .25rem; } .pformula > div { min-width: 0; padding: .3rem .45rem; flex: 1 1 auto; } .pformula small { font-size: .6rem; } .pformula .plus { display: none; } }
+@media (max-width: 400px) { .qtop { gap: .45rem; } .qtop .btn .lbl { display: none; } .qtop .bar { min-width: 2.5rem; } }

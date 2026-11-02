@@ -193,7 +193,7 @@ export function openCharts({ tab = 'master', highlight = null } = {}) {
 }
 
 /** A "Charts" button for a quiz's top bar; `getHighlight()` is asked for the row to light up when it is pressed. */
-export const chartsButton = (getHighlight) => h('button.btn.sm', { 'aria-label': 'Open charts', onclick: () => openCharts({ highlight: getHighlight ? getHighlight() : null }) }, icon('table', 18), 'Charts');
+export const chartsButton = (getHighlight) => h('button.btn.sm', { 'aria-label': 'Open charts', onclick: () => openCharts({ highlight: getHighlight ? getHighlight() : null }) }, icon('table', 18), h('span.lbl', 'Charts'));
 
 /**
  * Which master-chart row builds a principal part (0 present, 1 future, 2 aorist, 3 perfect active, 4 perfect mid/pas, 5 aorist passive)?

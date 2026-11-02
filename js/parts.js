@@ -119,7 +119,7 @@ async function recordResult(st, grade) {
 }
 
 function runSession(view, queue, { scope, restart, practice }) {
-  const total = queue.length, S = { shown: 0, done: 0, good: 0, fresh: 0 };
+  const total = queue.length, S = { shown: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, fresh: 0 };
   const added = [];
   let st = null, t0 = 0;
 
@@ -133,7 +133,14 @@ function runSession(view, queue, { scope, restart, practice }) {
           h('a.btn', { href: '#/parts' }, 'Back to Principal parts'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
-  const advance = async () => { stop(); const c = queue.shift(); if (!c) return finish(); S.shown++; st = await getPartsStats(); show(c); };
+  const retryQ = [];                                      // missed parts wait here and come back after the last one, in a retry round
+  const advance = async () => {
+    stop(); let c = queue.shift();
+    if (!c && retryQ.length) { queue.push(...retryQ.splice(0)); S.round = 1; S.R = queue.length; S.rk = 0; c = queue.shift(); }
+    if (!c) return finish();
+    if (S.round) S.rk++; else S.shown++;
+    st = await getPartsStats(); show(c);
+  };
 
   async function grade(c, g) {
     const first = !c.retry;
@@ -141,7 +148,7 @@ function runSession(view, queue, { scope, restart, practice }) {
       if (!practice) { await rateParts(partsId(c.n, c.slot), g, Date.now() - t0, { m: c.fmt }); await recordResult(st, g); if (c.type === 'new') S.fresh++; }
       S.done++; if (g >= 3) S.good++;
     }
-    if (g < 3) queue.splice(Math.min(queue.length, g === 1 ? 3 : 6), 0, { ...c, retry: true });
+    if (g < 3) retryQ.push({ ...c, retry: true });
     advance();
   }
 
@@ -150,7 +157,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.shown - 1) / (S.shown + queue.length)) + '%' } })), h('span.qcount', { 'aria-label': 'Item ' + S.shown + ' of ' + (S.shown + queue.length) }, S.shown + ' / ' + (S.shown + queue.length)), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? (S.rk - 1) / S.R : (S.shown - 1) / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
       practice ? practiceBanner(c.type === 'preview') : null, inner, ctl || null));
   }
 
