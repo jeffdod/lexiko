@@ -90,6 +90,8 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
     ok(hit && await page.locator('#pop details.pparts[open]').count() === 0 && await page.locator('#pop details.pparts .pp').count() === 6, 'reader popup offers collapsed principal parts for a verb'); }
   await page.goto(URL + '#/parse'); await page.click('button:has-text("Charts")'); await page.click('dialog button:has-text("Participles")');
   ok(await page.locator('dialog table.cpart').count() === 7 && /λύων/.test(await page.textContent('dialog .cbody')), 'participle chart shows seven tables');
+  await page.click('dialog button:has-text("Infinitives")');
+  ok(/λελυκέναι/.test(await page.textContent('dialog .cbody')), 'infinitive chart shows');
   await page.keyboard.press('Escape');
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');

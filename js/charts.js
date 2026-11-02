@@ -143,7 +143,24 @@ function participleTables() {
   return out;
 }
 
-const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings'], ['contr', 'Contractions'], ['part', 'Participles']];
+/* ---------- infinitives: λύω as the model ---------- */
+const INF_ROWS = [
+  ['Present', [['λύειν'], ['λύεσθαι', 2]]],
+  ['Future', [['λύσειν'], ['λύσεσθαι'], ['λυθήσεσθαι']]],
+  ['Aorist', [['λῦσαι'], ['λύσασθαι'], ['λυθῆναι']]],
+  ['Perfect', [['λελυκέναι'], ['λελύσθαι', 2]]],
+];
+function infinitiveTables() {
+  return [
+    h('p.small.muted', 'Model verb λύω. An infinitive does not change for person, number, gender or case. Where one form serves both middle and passive, it is shown once across both.'),
+    h('div.cblock', h('div.cscroll', h('table.ctable.cpart',
+      h('thead', h('tr', h('th', ''), ['Active', 'Middle', 'Passive'].map((g) => h('th', g)))),
+      h('tbody', INF_ROWS.map(([t, cells]) => h('tr', h('th', { scope: 'row' }, t), cells.map(([f, span]) => h('td', { lang: 'grc', colspan: span || 1 }, f)))))))),
+    h('p.small.muted', 'The present infinitive describes ongoing action, the aorist simple action, and the perfect a completed state. In the future, the passive uses the passive stem with σ.'),
+  ];
+}
+
+const TABS = [['master', 'Master verb chart'], ['endings', 'Personal endings'], ['nouns', 'Noun endings'], ['contr', 'Contractions'], ['part', 'Participles'], ['inf', 'Infinitives']];
 
 /** Open the charts sheet. `highlight` is a master-chart row key (see chartRowFor). */
 export function openCharts({ tab = 'master', highlight = null } = {}) {
@@ -155,6 +172,7 @@ export function openCharts({ tab = 'master', highlight = null } = {}) {
     else if (t === 'nouns') body.append(...nounEndingsTables(highlight));
     else if (t === 'contr') body.append(...contractionTables());
     else if (t === 'part') body.append(...participleTables());
+    else if (t === 'inf') body.append(...infinitiveTables());
     else body.append(endingsTable('Primary endings', PRIMARY_ACT, PRIMARY_MP, true), endingsTable('Secondary endings', SECOND_ACT, SECOND_MP, true));
     const row = body.querySelector('tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
   };
