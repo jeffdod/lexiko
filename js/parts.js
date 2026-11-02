@@ -6,7 +6,7 @@
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
 import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
+import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
@@ -45,11 +45,14 @@ export function planPartsSession({ scope = null, size = setting('sessionSize'), 
   const unstarted = (n) => cardParts(eligible().get(n)).filter((slot) => { const c = K.cards.get(partsId(n, slot)); return !c || c.state === 'new'; });
   const limit = newLimit != null ? newLimit : scope ? size : partsPace().left;
   const fresh = [], seen = new Set();                    // fresh: one group per verb, [{ n, slot }] in teaching order
-  for (const { n } of verbs) {                          // verbs already begun: finish their remaining parts first
-    if (!partsVerbStarted(n)) continue;
-    const slots = unstarted(n); if (slots.length) { fresh.push({ n, started: true, items: slots.map((slot) => ({ n, slot })) }); seen.add(n); }
-  }
   let added = 0;
+  for (const { n } of verbs) {                          // verbs already begun: finish them first; ones begun today are always finished, older ones use up the daily verb allowance
+    if (!partsVerbStarted(n)) continue;
+    const slots = unstarted(n); if (!slots.length) continue;
+    const today = (K.partsVerbs[n] || {}).began === todayKey();
+    if (!today) { if (added >= limit) continue; added++; }
+    fresh.push({ n, started: true, items: slots.map((slot) => ({ n, slot })) }); seen.add(n);
+  }
   for (const { n } of verbs) {
     if (added >= limit) break; if (seen.has(n) || partsVerbStarted(n)) continue;
     const slots = unstarted(n); if (!slots.length) continue;
@@ -122,7 +125,7 @@ async function recordResult(st, grade) {
 }
 
 function runSession(view, queue, { scope, restart, practice }) {
-  const total = queue.length, S = { missed: new Map(), shown: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, fresh: 0 };
+  const itemTotal = queue.length, total = new Set(queue.map((x) => x.n)).size, seenVerbs = new Set(), S = { missed: new Map(), shown: 0, items: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, fresh: 0 };
   const added = [];
   let st = null, t0 = 0;
 
@@ -143,7 +146,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     stop(); let c = queue.shift();
     if (!c && retryQ.length) { queue.push(...retryQ.splice(0)); S.round = 1; S.R = queue.length; S.rk = 0; c = queue.shift(); }
     if (!c) return finish();
-    if (S.round) S.rk++; else S.shown++;
+    if (S.round) S.rk++; else { seenVerbs.add(c.n); S.shown = seenVerbs.size; S.items++; }
     st = await getPartsStats(); show(c);
   };
 
@@ -164,7 +167,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? (S.rk - 1) / S.R : (S.shown - 1) / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1] + (practice || c.retry ? '' : ' · ' + (verbStage(c.n) === 'cold' ? 'cold' : 'multiple choice')))),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? (S.rk - 1) / S.R : (S.items - 1) / itemTotal)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Verb ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total + (total === 1 ? ' verb' : ' verbs')), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1] + (practice || c.retry ? '' : ' · ' + (verbStage(c.n) === 'cold' ? 'cold' : 'multiple choice')))),
       practice ? practiceBanner(c.type === 'preview') : null, inner, ctl || null));
   }
 

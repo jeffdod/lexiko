@@ -251,7 +251,7 @@ export async function rateParts(id, grade, ms = 0, meta = {}) {
   const newVerb = prev.state === 'new' && !partsVerbStarted(id.split(':')[1]);
   await saveCard(next);
   const d = (K.daily[todayKey()] ||= {}); d.ppr = (d.ppr || 0) + 1; if (prev.state === 'new') d.ppn = (d.ppn || 0) + 1;
-  if (newVerb) d.ppv = (d.ppv || 0) + 1;
+  if (newVerb) { d.ppv = (d.ppv || 0) + 1; const n = id.split(':')[1], v = (K.partsVerbs[n] ||= { stage: 'learn', days: {}, miss: 0 }); v.began = todayKey(); await store.set('partsVerbs', K.partsVerbs); }
   await store.set('daily', K.daily);
   await store.addLog([{ t: now, id, g: grade, k: 'parts', ms, ...meta }]);
   return next;
