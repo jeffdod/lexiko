@@ -1,6 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
-import { setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, partsPace, studiedCount } from './know.js';
+import { setting, dueCards, newToday, parseCardsDue, parseNewToday, partsCardsDue, studiedCount } from './know.js';
+import { planPartsSession } from './parts.js';
 
 export const TOPICS = {
   words: { title: 'Vocabulary', page: '#/learn/words', go: '#/learn/daily', reinforce: '#/learn/practice/trouble', preview: '#/learn/practice/preview', noun: 'words', blurb: 'Learn and review Greek words' },
@@ -9,12 +10,15 @@ export const TOPICS = {
 };
 const ORDER = ['words', 'parse', 'parts'];
 
+/** New parts a normal session would add: every part of the next verbs, after the reviews that are due. */
+const partsFresh = () => { const p = planPartsSession(), room = Math.max(0, p.size - Math.min(p.due.length, p.size)); return Math.min(room, p.fresh.reduce((n, g) => n + g.items.length, 0)); };
+
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
   return {
     words: { due: dueCards().length, fresh: Math.max(0, setting('newPerDay') - newToday()), studied: studiedCount('w:') },
     parse: { due: parseCardsDue().length, fresh: Math.max(0, setting('parseNewPerDay') - parseNewToday()), studied: studiedCount('f:') },
-    parts: { due: partsCardsDue().length, fresh: partsPace().left, studied: studiedCount('p:') },
+    parts: { due: partsCardsDue().length, fresh: partsFresh(), studied: studiedCount('p:') },
   };
 }
 
