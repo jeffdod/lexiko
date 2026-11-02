@@ -167,7 +167,7 @@ function runSession(view, queue, { scope, restart, practice }) {
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? (S.rk - 1) / S.R : (S.items - 1) / itemTotal)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Verb ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total + (total === 1 ? ' verb' : ' verbs')), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? S.rk / S.R : S.items / itemTotal)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Verb ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total + (total === 1 ? ' verb' : ' verbs')), chartsButton(() => (c.revealed ? chartRowFor(c.slot, entry.parts[c.slot]) : null)), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
       practice || c.retry ? null : h('div.muted.small', { style: { margin: '-.2rem 0 .5rem' } }, verbStage(c.n) === 'cold' ? 'Cold question — you know this verb' : 'Learning this verb — multiple choice'),
       practice ? practiceBanner(c.type === 'preview') : null, inner, ctl || null));
   }
