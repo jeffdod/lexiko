@@ -4,7 +4,7 @@
 //   recall    — you're shown a verb and a part name: pick the form (multiple choice) or remember it (self-graded)
 // "Auto" starts with multiple choice and moves to self-graded flashcards once you're reliable.
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
-import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, unfinishedVerbs, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, unfinishedVerbs, reviewCards, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
 import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, TOPICS } from './smart.js';
@@ -77,6 +77,7 @@ export function buildPartsSession(opts) {
 }
 /** Extra practice: nothing here is ever scheduled. 'trouble' = your shakiest parts; 'preview' = a few parts you haven't started. */
 export function buildPartsExtra(kind, scope = null) {
+  if (kind === 'review') return shuffle(reviewCards('p:', 15).map((c) => ({ ...parseCardId(c.id), type: 'recent' })).filter((x) => eligible().get(x.n) && eligible().get(x.n).parts[x.slot]));
   if (kind === 'trouble') return shuffle(troubleCards('p:', 15).map((c) => ({ ...parseCardId(c.id), type: 'practice' })).filter((x) => eligible().get(x.n) && eligible().get(x.n).parts[x.slot]));
   return shuffle(planPartsSession({ scope, newLimit: 3 }).fresh.flatMap((g) => g.items).slice(0, 6).map((x) => ({ n: x.n, slot: x.slot, type: 'preview' })));
 }
@@ -167,7 +168,7 @@ function runSession(view, queue, { scope, restart, practice }) {
   }
 
   function frame(c, entry, inner, ctl) {
-    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
+    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Review'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     S.previewOnly = c.type === 'preview';
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
@@ -279,12 +280,12 @@ export function renderParts(view, params) {
       const [, book, c1, v1, c2, v2] = rest; if (!D.bookByCode.has(book)) { location.hash = '#/parts'; return; }
       scope = { book, c1: +c1, v1: +v1 || 1, c2: +c2 || +c1, v2: +v2 || 999 }; queue = buildPartsSession({ scope });
     } else if (rest[0] === 'extra') {
-      practice = true; scope = rest[2] === 'goal' && K.goal && K.goal.book ? K.goal : null; queue = buildPartsExtra(rest[1] === 'preview' ? 'preview' : 'trouble', scope);
+      practice = true; scope = rest[2] === 'goal' && K.goal && K.goal.book ? K.goal : null; queue = buildPartsExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'review' ? 'review' : 'trouble', scope);
     } else queue = buildPartsSession({});
     if (!queue.length) {
       if (!scope && !practice) { const alt = smart('parts'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }
       clear(view).append(h('div.pagehead', h('h1', 'Principal parts')), h('div.card.stack',
-        h('p', practice ? (rest[1] === 'preview' ? 'You’ve already started every part available right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the parts you’ve studied.')
+        h('p', practice ? (rest[1] === 'preview' ? 'You’ve already started every part available right now.' : rest[1] === 'review' ? 'You haven’t started any principal parts yet, so there is nothing to review.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the parts you’ve studied.')
           : scope ? 'There are no principal parts to learn in ' + scopeLabel(scope) + '.' : 'You’re all caught up. 🎉'), h('a.btn', { href: '#/parts' }, 'Back')));
       return;
     }
