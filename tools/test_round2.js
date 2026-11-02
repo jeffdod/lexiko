@@ -121,6 +121,12 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
     const n1 = +(await page.locator('.kpi', { has: page.locator('span', { hasText: /^sections read$/ }) }).locator('b').textContent());
     await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, false); });
     ok(n1 > n0, 'marking a chapter read counts its sections as read (' + n0 + ' -> ' + n1 + ')'); }
+  { const r = await page.evaluate(async () => { const kn = await import('./js/know.js'); const sm = await import('./js/smart.js'); const F = await import('./js/fsrs.js'); const ids = [1510, 3004, 2316].map((n) => 'w:' + n);
+      for (const id of ids) kn.K.cards.set(id, { ...F.newCard(id), state: 'review', stability: 1, reps: 3, last: Date.now() - 864e5 * 5, due: Date.now() - 864e5 });
+      const label = sm.smart('words').sub, tile = sm.topicNote('words'), total = kn.buildSession({ kind: 'daily' }).length;
+      for (const id of ids) kn.K.cards.delete(id);
+      const sum = (label.match(/\d+/g) || []).reduce((a, b) => a + +b, 0); return { label, tile, total, sum }; });
+    ok(r.label === r.tile && Math.abs(r.sum - r.total) <= 1, 'the Start label and Learn tile say what the session holds (' + r.label + ' vs ' + r.total + ' cards)'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');

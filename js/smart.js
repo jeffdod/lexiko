@@ -21,12 +21,21 @@ export function counts() {
 /** What the big button says for a topic's normal session: names the activity instead of just "Start". */
 const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Learn new words') : topic === 'parse' ? 'Practise parsing' : 'Practise principal parts';
 
-const work = (c) => [c.due ? c.due + ' to review' : '', c.fresh ? c.fresh + ' new' : ''].filter(Boolean).join(' + ');
+/** Everything a normal session will contain, so the button never promises less than it delivers. Vocabulary sessions also slip in a few check-ins on words you said you already know. */
+const work = (c, topic = 'words') => {
+  const parts = [c.due ? c.due + ' to review' : '', c.fresh ? c.fresh + ' new' : ''];
+  if (topic === 'words' && (c.due || c.fresh) && setting('level') != null) {
+    const items = Math.min(c.due, Math.max(setting('sessionSize'), 30)) + c.fresh, rate = setting('probeRate');
+    const n = Math.round(items * rate / (1 - rate)) || (items ? 1 : 0);
+    if (n) parts.push(n + (n > 1 ? ' check-ins' : ' check-in'));
+  }
+  return parts.filter(Boolean).join(' + ');
+};
 
 /** The best next step for one topic: { href, label, sub, kind: 'go' | 'reinforce' | 'preview' }. */
 export function smart(topic, c = counts()[topic]) {
   const T = TOPICS[topic];
-  if (c.due || c.fresh) return { href: T.go, label: GO_LABEL(topic, c), sub: work(c), kind: 'go', topic };
+  if (c.due || c.fresh) return { href: T.go, label: GO_LABEL(topic, c), sub: work(c, topic), kind: 'go', topic };
   if (c.studied) return { href: T.reinforce, label: 'Strengthen weak spots', sub: 'You’re caught up — firm up your shakiest ' + T.noun, kind: 'reinforce', topic };
   return { href: T.preview, label: 'Look ahead', sub: 'See a few new ' + T.noun, kind: 'preview', topic };
 }
@@ -42,4 +51,4 @@ export function smartAll() {
 }
 
 /** Short status for a topic card: only says something when there is something to say. */
-export function topicNote(topic) { const c = counts()[topic]; return c.due ? c.due + ' to review' : TOPICS[topic].blurb; }
+export function topicNote(topic) { const c = counts()[topic]; return c.due || c.fresh ? work(c, topic) : TOPICS[topic].blurb; }
