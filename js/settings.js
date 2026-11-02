@@ -130,7 +130,7 @@ export function renderSettings(view) {
       h('p.small', 'lexiko — free, offline, no login. Greek text: Robinson–Pierpont Byzantine Textform with Strong’s numbers and RP morphology. Glosses: a Dodson Greek–English Lexicon derivative (public domain), with case notes added for prepositions. Type: Gentium Porsonic by SIL Global, SIL Open Font License 1.1, modified web subset renamed “Lexiko Serif”.'),
       h('p.small.muted', 'Scheduling uses the open FSRS algorithm. ' + fmt(D.lex.length) + ' words · ' + fmt(D.totalTokens) + ' tokens · ' + (studiedCount('w:') ? studiedCount('w:') + ' words studied.' : 'nothing studied yet.')),
       h('div.row.wrap', h('button.btn.sm', { onclick: showLicense }, 'Font license'), h('a.btn.sm', { href: 'https://github.com/jeffdod/lexiko', target: '_blank', rel: 'noopener' }, 'Source'),
-        h('button.btn.sm.danger', { onclick: async () => { if (confirm('Erase ALL progress and settings on this device? Back up first if unsure.') && confirm('Really erase everything?')) { await store.clearAll(); try { localStorage.removeItem('lexiko-theme'); } catch { /* ignore */ } location.reload(); } } }, 'Erase everything')))));
+        h('button.btn.sm.danger', { onclick: async () => { if (confirm('Erase ALL progress and settings on this device? Back up first if unsure.') && confirm('Really erase everything?')) { await store.clearAll(); try { localStorage.removeItem('lexiko-theme'); } catch { /* ignore */ } location.replace(location.pathname + location.search); /* back to Home, so the first-run questions appear */ } } }, 'Erase everything')))));
 }
 
 /** Ask for the passphrase of a locked backup; resolves with the decrypted backup, or null if cancelled. */
