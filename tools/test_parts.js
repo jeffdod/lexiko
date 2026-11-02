@@ -66,7 +66,7 @@ process.on('unhandledRejection', () => {});
     o.full = k.unfinishedVerbs().length; o.waiting = k.waitingVerbs().length; o.promotedFull = k.promotedVerbs().size;
     const n0 = verbs[0]; k.K.partsVerbs[n0] = { stage: 'cold', days: {}, miss: 0 }; k.K.verbParse[n0] = Array(20).fill(1);
     o.afterOne = k.unfinishedVerbs().length; o.promoted = k.promotedVerbs().size; o.waitingAfter = k.waitingVerbs().length;
-    const first = m.planPartsSession({}).fresh.map((g) => g.n); const prom = k.promotedVerbs(); o.promotedFirst = prom.size > 0 && prom.has(first[0]);
+    const first = m.planPartsSession({}).fresh.map((g) => g.n); const prom = new Set(k.unfinishedVerbs()); o.promotedFirst = prom.size > 0 && prom.has(first[0]);
     k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); k.K.partsVerbs = sp; k.K.verbParse = sv; return o; });
   ok(vq.full === 3 && vq.waiting === 2 && vq.promotedFull === 0 && vq.afterOne === 3 && vq.promoted === 1 && vq.waitingAfter === 1 && vq.promotedFirst, 'verbs marked known wait for a free slot, then come first for principal parts', JSON.stringify(vq));
   // ---- tap a part to see its forms (read from the text's own forms)
@@ -105,6 +105,12 @@ process.on('unhandledRejection', () => {});
     const mk = (n, born) => { const c = f.review(f.newCard('w:' + n), 3, Date.now(), 0.9); c.src = 'new'; c.born = born; k.K.cards.set('w:' + n, c); };
     mk(9101, Date.now() - 864e5); mk(9102, Date.now() - 20 * 864e5); const r = k.recentWords(); k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); return { r: r.includes(9101), old: r.includes(9102) }; });
   ok(rw.r && !rw.old, 'recent words include ones started yesterday and exclude ones from weeks ago', JSON.stringify(rw));
+  // ---- the verbs you are learning come first in principal parts, even when few verbs are known
+  const lf = await p.evaluate(async () => { const k = await import('./js/know.js'); const m = await import('./js/parts.js'); const { D } = await import('./js/data.js'); const saved = new Map(k.K.cards);
+    k.K.cards.clear(); const vs = D.lex.filter((L) => L.pos === 'V' && m.eligible().has(L.n)).slice(5, 8).map((L) => L.n);
+    for (const n of vs) await k.rate(n, 3, 'new'); const got = m.planPartsSession({}).fresh.map((g) => g.n);
+    k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); return { ok: vs.every((n) => got.slice(0, 3).includes(n)) }; });
+  ok(lf.ok, 'verbs you are learning come first in principal parts, even when you know few verbs', JSON.stringify(lf));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });
