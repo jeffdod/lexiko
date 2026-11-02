@@ -100,9 +100,9 @@ export function buildParseSession(opts) {
 /** Extra practice: never scheduled. 'trouble' = your shakiest forms; 'preview' = a few frequent forms you haven't started. */
 export function buildParseExtra(kind) {
   ensureIndex();
-  if (kind === 'trouble') return troubleCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'practice' })).filter((x) => x.id != null && itemOf(x.id)).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);
+  if (kind === 'trouble') return shuffle(troubleCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'practice' })).filter((x) => x.id != null && itemOf(x.id)).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i));
   const fresh = candidatePool(null, KINDS.all).filter((x) => isFresh(x.id));
-  return fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s).slice(0, 6).map((o) => ({ id: o.x.id, type: 'preview' }));
+  return shuffle(fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s).slice(0, 6).map((o) => ({ id: o.x.id, type: 'preview' })));
 }
 
 /* ---------- adaptive mode: guided until you're reliable, then quick ---------- */

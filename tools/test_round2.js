@@ -106,6 +106,13 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   { for (let i = 0; i < 80 && !(await page.locator('.missed').count()); i++) { await page.click('button:has-text("I don’t know")').catch(() => {}); await page.waitForSelector('.fb,.missed').catch(() => {}); if (await page.locator('.fb').count()) await page.click('button.primary.block'); await page.waitForTimeout(120); }
     ok(await page.locator('.missed .miss').count() >= 1, 'session-complete lists the words you missed');
     await page.click('button:has-text("Practise these")'); await page.waitForSelector('.qcard'); ok(await page.locator('.qcount').count() === 1, 'Practise these starts a session of the missed words'); }
+  { await page.evaluate(async () => { const kn = await import('./js/know.js'); for (const n of [3588, 846, 1510, 3004, 2316, 4771, 3056, 2962]) { await kn.rate(n, 1, 'new', 3000); await kn.rate(n, 1, 'review', 3000); } });
+    const firsts = new Set(); for (let i = 0; i < 10; i++) { await page.goto(URL + '#/home'); await page.goto(URL + '#/learn/practice/trouble'); await page.waitForSelector('.qcard'); firsts.add(await page.textContent('.qcard')); }
+    ok(firsts.size > 1, 'weak-spot practice does not always start with the same card (' + firsts.size + ' different starts in 10)'); }
+  { const order = await page.evaluate(async () => { const kn = await import('./js/know.js'); const F = await import('./js/fsrs.js'); const mk = (n, o) => ({ ...F.newCard('w:' + n), state: 'review', stability: 1, reps: 5, last: Date.now() - 864e5 * 400, due: Date.now() - 864e5 * 399, ...o });
+      kn.K.cards.set('w:9001', mk(9001, { lapses: 0, difficulty: 10 })); kn.K.cards.set('w:9002', mk(9002, { lapses: 1, difficulty: 5 }));
+      const ids = kn.troubleCards('w:', 500).map((c) => c.id); kn.K.cards.delete('w:9001'); kn.K.cards.delete('w:9002'); return [ids.indexOf('w:9001'), ids.indexOf('w:9002')]; });
+    ok(order[1] >= 0 && (order[0] < 0 || order[1] < order[0]), 'a card you missed ranks above one that is only overdue or hard (' + order.join(' vs ') + ')'); }
   // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
   await page.click('summary:has-text("Study by how common")');

@@ -258,7 +258,7 @@ export function renderLearn(view, params) {
   if (mode === 'practice') {                                   // extra practice: never touches the schedule
     const preview = rest[0] === 'preview';
     const goal = K.goal && K.goal.book ? K.goal : null;
-    const items = preview ? previewWords(goal).map((n) => ({ n, type: 'preview' })) : troubleCards('w:', 15).map((c) => ({ n: +c.id.slice(2), type: 'practice' }));
+    const items = shuffle(preview ? previewWords(goal).map((n) => ({ n, type: 'preview' })) : troubleCards('w:', 15).map((c) => ({ n: +c.id.slice(2), type: 'practice' })));      // shuffled: the worst card shouldn't always come first
     if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Look ahead at new words' : 'Strengthen weak spots')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'You haven’t studied any words yet, so there are no trouble spots to practise.'), h('a.btn', { href: '#/learn' }, 'Back'))); return; }
     return void runSession(view, items, { title: 'Strengthen weak spots', practice: true });
   }

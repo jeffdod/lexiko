@@ -215,7 +215,7 @@ export function troubleScore(c, now = Date.now()) { return (c.lapses || 0) * 2 +
 export function troubleCards(prefix, limit = 15) {
   const now = Date.now();
   return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new' && (prefix !== 'w:' || liveWord(c))).map((c) => ({ c, s: troubleScore(c, now) }))
-    .sort((a, b) => b.s - a.s).slice(0, limit).map((x) => x.c);
+    .sort((a, b) => ((b.c.lapses || 0) > 0) - ((a.c.lapses || 0) > 0) || b.s - a.s).slice(0, limit).map((x) => x.c);        // cards you have actually missed come first; only if there are fewer than `limit` of them are others (overdue or rated Hard) added
 }
 export const studiedCount = (prefix) => { let n = 0; for (const c of K.cards.values()) if (c.id.startsWith(prefix) && c.state !== 'new' && (prefix !== 'w:' || liveWord(c))) n++; return n; };
 
