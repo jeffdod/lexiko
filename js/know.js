@@ -346,9 +346,10 @@ export function troubleScore(c, now = Date.now()) { return (c.lapses || 0) * 2 +
 /** A card is shaky only if you have actually struggled with it: it lapsed, or it was rated Again/Hard so its difficulty rose. Never-missed cards are not. */
 /** Studied cards you are least likely to remember right now, for a plain review when nothing is due. Never writes anything. */
 export function reviewCards(prefix, limit = 15) {
-  const now = Date.now();
+  const now = Date.now(), fresh = new Set(recentWords(3, now));
+  const strongs = (id) => +(prefix === 'p:' ? id.split(':')[1] : id.split(':').pop());   // words you just learned come first
   return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new' && c.src !== 'probe' && (prefix !== 'w:' || liveWord(c)))
-    .sort((a, b) => F.retrievability(a, now) - F.retrievability(b, now)).slice(0, limit);
+    .sort((a, b) => (fresh.has(strongs(b.id)) - fresh.has(strongs(a.id))) || F.retrievability(a, now) - F.retrievability(b, now)).slice(0, limit);
 }
 export const isShaky = (c) => (c.lapses || 0) > 0 || (c.difficulty || 5) >= 6;
 export function troubleCards(prefix, limit = 15) {
