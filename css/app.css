@@ -323,3 +323,8 @@ summary { padding-block: .6rem; }
 .miss { padding: .5rem 0; border-top: 1px solid var(--line); display: grid; gap: .05rem; } .miss:first-of-type { border-top: 0; }
 .miss .g { font-family: var(--greek); font-size: 1.2rem; font-weight: 700; } .miss small { color: var(--muted); font-size: .8rem; } .miss small.wrong { color: var(--bad, #9a3b22); font-weight: 700; }
 .missed .row { margin-top: .6rem; }
+
+/* the Charts header stays put while the tables scroll under it, with its own background and room for the close button's focus ring */
+dialog.charts { padding-top: 0; }
+.chead { position: sticky; top: 0; z-index: 3; background: var(--surface); padding: .9rem .1rem .6rem; margin: 0 0 .2rem; } .chead h2 { margin: 0; outline: none; }
+.chead .btn.icon { flex: none; margin-right: .1rem; }
