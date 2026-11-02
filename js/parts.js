@@ -6,7 +6,7 @@
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
 import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock } from './util.js';
+import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks } from './util.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { readHref } from './reader.js';
@@ -138,7 +138,7 @@ function runSession(view, queue, { scope, restart, practice }) {
         missedBlock([...S.missed.values()].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: SLOT_NAMES[m.slot] }; }),
           () => runSession(view, [...S.missed.values()].map((m) => ({ ...m, type: 'practice', retry: false })), { scope, restart, practice: true })),
         h('div.row.wrap', h('button.btn' + (S.missed.size ? '' : '.primary'), { onclick: restart }, practice ? 'Another round' : 'Practise more'),
-          h('a.btn', { href: '#/parts' }, 'Back to Principal parts'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
+          ...backLinks('#/parts', 'Back to Principal parts'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
   const retryQ = [];                                      // missed parts wait here and come back after the last one, in a retry round

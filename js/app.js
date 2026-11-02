@@ -11,7 +11,7 @@ import { renderParts } from './parts.js';
 import { renderSearch } from './search.js';
 import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
-import { h, clear, icon } from './util.js';
+import { h, clear, icon, noteRoute } from './util.js';
 
 const view = document.getElementById('view');
 const navEl = document.getElementById('nav');
@@ -24,6 +24,7 @@ function buildNav() {
     ...TABS.map(([id, label, ic]) => h('a', { href: id === 'read' ? '#/read' : '#/' + id, dataset: { tab: id } }, icon(ic, 24), label)));
 }
 function route() {
+  noteRoute(location.hash);
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/').map(decodeURIComponent);
   const name = routes[parts[0]] ? parts[0] : 'home';
   if (cleanup) { try { cleanup(); } catch (e) { console.error(e); } cleanup = null; }

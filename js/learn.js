@@ -2,7 +2,7 @@
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
 import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock } from './util.js';
+import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
@@ -101,7 +101,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         missedBlock([...missed].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: L.brief }; }),
           () => runSession(view, [...missed].map((m) => ({ ...m, type: 'practice', seen: false, retry: false })), { title, scope, back, practice: true })),
         h('div.row.wrap', addBtn, scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null,
-          h('a.btn' + (scope ? '' : '.primary'), { href: '#/learn' }, 'Back to Learn'), h('a.btn', { href: '#/progress' }, 'Progress'))));
+          ...backLinks('#/learn', 'Back to Learn', !scope), h('a.btn', { href: '#/progress' }, 'Progress'))));
   };
 
   const retryQ = [];                                      // missed cards wait here and come back after the last card, in a retry round
