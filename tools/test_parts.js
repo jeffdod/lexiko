@@ -100,6 +100,11 @@ process.on('unhandledRejection', () => {});
     S.wordsPace = 'fixed'; o.fixed = k.wordsPace().n; S.wordsPace = 'auto'; S.wordsPause = true; o.paused = k.wordsPace().n;
     k.K.cards.clear(); for (const [id, c] of kc) k.K.cards.set(id, c); Object.assign(S, keep); return o; });
   ok(np.base[0] === 10 && np.base[1] === 10 && np.weak < 10 && np.weak >= 1 && np.due30 <= 1 && np.overload[0] === 0 && np.overload[1] === 0 && np.overload[2] === 0 && np.overload[3] && np.fixed === 10 && np.paused === 0, 'new words and forms slow when reviews pile up or accuracy slips, stop at overload, and honour Fixed and Pause', JSON.stringify(np));
+  // ---- review what I just learned: words started in the last few days, not older ones
+  const rw = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const saved = new Map(k.K.cards);
+    const mk = (n, born) => { const c = f.review(f.newCard('w:' + n), 3, Date.now(), 0.9); c.src = 'new'; c.born = born; k.K.cards.set('w:' + n, c); };
+    mk(9101, Date.now() - 864e5); mk(9102, Date.now() - 20 * 864e5); const r = k.recentWords(); k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); return { r: r.includes(9101), old: r.includes(9102) }; });
+  ok(rw.r && !rw.old, 'recent words include ones started yesterday and exclude ones from weeks ago', JSON.stringify(rw));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });

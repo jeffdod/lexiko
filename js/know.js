@@ -83,7 +83,7 @@ export async function rate(n, grade, kind = 'review', ms = 0) {
   const prev = K.cards.get('w:' + n) || F.newCard('w:' + n);
   lastRate = { id: 'w:' + n, before: K.cards.has('w:' + n) ? { ...K.cards.get('w:' + n) } : null, grade, wasNew: prev.state === 'new', day: todayKey() };
   const next = F.review(prev, grade, now, K.settings.retention);
-  next.src = prev.src || kind;
+  next.src = prev.src || kind; if (prev.state === 'new') next.born = now;
   await saveCard(next);
   bumpDaily('r'); if (prev.state === 'new') bumpDaily('n'); if (grade >= 3) bumpDaily('c');
   await store.set('daily', K.daily);
@@ -228,6 +228,16 @@ export const verbSlots = () => Math.max(0, VERB_CAP - unfinishedVerbs().length);
 export function admitVerbs(ns) {
   let room = verbSlots();
   return ns.filter((n) => { if (!isVerb(n)) return true; if (room > 0) { room--; return true; } return false; });
+}
+/** Words you started learning in the last few days (for a quick refresher; never touches the schedule). */
+export function recentWords(days = 3, now = Date.now()) {
+  const since = now - days * 864e5, out = [];
+  for (const c of K.cards.values()) {
+    if (!c.id.startsWith('w:') || c.state === 'new' || c.src === 'probe' || liveWord(c) === false) continue;
+    const t = c.born || (c.reps <= 3 ? c.last : 0);                       // cards from before first-seen dates were kept: judge by the last review of a young card
+    if (t >= since) out.push({ n: +c.id.slice(2), t });
+  }
+  return out.sort((a, b) => b.t - a.t).map((x) => x.n);
 }
 /* ---------- parsing practice: form-level cards ('f:<form>:<strongs>') ---------- */
 export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;

@@ -6,7 +6,7 @@
 import { D, lexeme, scopeCounts, scopeLabel } from './data.js';
 import { K, status, setting, setSetting, partsId, partsCardsDue, partsPace, partsVerbStarted, promotedVerbs, verbStage, noteVerbAnswer, rateParts, getPartsStats, savePartsStats, troubleCards } from './know.js';
 import * as F from './fsrs.js';
-import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks } from './util.js';
+import { todayKey, h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { partsGrid } from './partforms.js';
@@ -298,7 +298,7 @@ function landing(view) {
   const seg2 = (key, items, after) => h('div.seg', items.map(([v, t]) => h('button', { 'aria-pressed': String(String(setting(key)) === String(v)), onclick: async () => { await setSetting(key, v); landing(view); } }, t)));
   const paceNote = pace.paused ? h('div.card.small', h('b', 'New verbs are paused.'), ' Turn this off in Options when you want more.')
     : auto && pace.why ? h('div.card.small', h('b', pace.slow ? 'New verbs are slowed. ' : 'Pace: ' + pace.n + ' new verb' + (pace.n === 1 ? '' : 's') + ' a day. '), pace.why) : null;
-  clear(view).append(h('div.pagehead', h('h1', 'Principal parts')),
+  clear(view).append(backHead('Principal parts', '#/learn', 'Learn'),
     h('div.stack',
       startButton(smart('parts')), paceNote,
       h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parts.preview + (goal ? '/goal' : '') }, 'Look ahead at new parts'), chartsButton()),

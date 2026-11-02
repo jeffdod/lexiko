@@ -1,11 +1,11 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, wordsPace } from './know.js';
+import { K, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, wordsPace, recentWords } from './know.js';
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
 import { paceNote, paceOptions } from './pace.js';
 import { unfinishedVerbs, waitingVerbs, verbProgress, VERB_CAP } from './know.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks } from './util.js';
+import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, smartAll, TOPICS, topicNote } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
@@ -140,12 +140,12 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   }
 
   function frame(item, inner) {
-    const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
+    const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'recent' ? ['', 'Refresher'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.round ? stats.rk / stats.R : stats.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': stats.round ? 'Retry ' + stats.rk + ' of ' + stats.R : 'Item ' + stats.shown + ' of ' + total }, stats.round ? '↻ ' + stats.rk + ' / ' + stats.R : stats.shown + ' / ' + total), chartsButton(),
         h('span.chip' + (label[0] ? '.' + label[0] : ''), label[1])),
-      practice ? practiceBanner(item.type === 'preview') : null, inner,
+      practice ? practiceBanner(item.type === 'preview', item.type === 'recent') : null, inner,
       undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));
   }
 
@@ -262,6 +262,11 @@ export function renderLearn(view, params) {
   if (mode === 'practice') {                                   // extra practice: never touches the schedule
     const preview = rest[0] === 'preview';
     const goal = K.goal && K.goal.book ? K.goal : null;
+    if (rest[0] === 'recent') {
+      const ns = recentWords().slice(0, 30);
+      if (!ns.length) { clear(view).append(backHead('Review what I just learned', '#/learn/words', 'Vocabulary'), h('div.card.stack', h('p', 'You haven’t started any words in the last few days.'), ...backLinks('#/learn/words', 'Back to Vocabulary'))); return; }
+      return void runSession(view, shuffle(ns.map((n) => ({ n, type: 'recent' }))), { title: 'Review what I just learned', practice: true });
+    }
     const items = shuffle(preview ? previewWords(goal).map((n) => ({ n, type: 'preview' })) : troubleCards('w:', 15).map((c) => ({ n: +c.id.slice(2), type: 'practice' })));      // shuffled: the worst card shouldn't always come first
     if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Look ahead at new words' : 'Strengthen weak spots')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the words you’ve studied.'), h('a.btn', { href: '#/learn' }, 'Back'))); return; }
     return void runSession(view, items, { title: 'Strengthen weak spots', practice: true });
@@ -307,7 +312,7 @@ function verbHold() {
 /** Which verbs are still being learned, and what each one needs. */
 function verbsPage(view) {
   const open = unfinishedVerbs().map((n) => ({ n, L: lexeme(n), p: verbProgress(n) })), waiting = waitingVerbs();
-  clear(view).append(h('div.pagehead', h('h1', 'Verbs to finish')),
+  clear(view).append(backHead('Verbs to finish', '#/learn/words', 'Vocabulary'),
     h('div.stack',
       open.length ? h('div.card', open.map(({ L, p }) => h('div.row.between', { style: { padding: '.5rem 0' } },
         h('div', h('b', { lang: 'grc' }, L.head), ' ', h('span.muted.small', L.brief),
@@ -321,12 +326,12 @@ function verbsPage(view) {
 function wordsPage(view) {
   const goal = K.goal && K.goal.book ? K.goal : null;
   clear(view).append(
-    h('div.pagehead', h('h1', 'Vocabulary')),
+    backHead('Vocabulary', '#/learn', 'Learn'),
     h('div.stack',
       startButton(smart('words')),
       paceNote(wordsPace(), 'words'),
       verbHold(),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words')),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), h('a.btn.sm', { href: '#/learn/practice/recent' }, 'Review what I just learned'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Parse them')),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
         passagePicker(view, goal)),

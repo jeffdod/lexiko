@@ -1,9 +1,9 @@
 // Parsing practice: pick the parts of a form in a fixed order (guided one-at-a-time, or quick all-at-once),
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, parsePace, waitingVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, recentWords, parsePace, waitingVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
@@ -103,6 +103,12 @@ export function buildParseSession(opts) {
 export function buildParseExtra(kind) {
   ensureIndex();
   if (kind === 'trouble') return shuffle(troubleCards('f:', 15).map((c) => ({ id: keyMap.get(c.id), type: 'practice' })).filter((x) => x.id != null && itemOf(x.id)).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i));
+  if (kind === 'recent') {                                      // forms of the words you started in the last few days, a few of each
+    const ws = new Set(recentWords()), per = new Map(), out = [];
+    const cand = [...members.keys()].filter((id) => itemOf(id) && ws.has(D.forms[id].an[0].s)).map((id) => ({ id, s: Math.sqrt(D.forms[id].count) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s);
+    for (const o of cand) { const k = D.forms[o.id].an[0].s, n = per.get(k) || 0; if (n < 3 && out.length < 20) { out.push({ id: o.id, type: 'recent' }); per.set(k, n + 1); } }
+    return shuffle(out);
+  }
   const fresh = candidatePool(null, KINDS.all).filter((x) => isFresh(x.id));
   return shuffle(fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s).slice(0, 6).map((o) => ({ id: o.x.id, type: 'preview' })));
 }
@@ -157,11 +163,11 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
   };
 
   function frame(c, inner) {
-    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
+    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Refresher'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? S.rk / S.R : S.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
-      practice ? practiceBanner(c.type === 'preview') : null, inner));
+      practice ? practiceBanner(c.type === 'preview', c.type === 'recent') : null, inner));
   }
 
   function prompt(c, it) {
@@ -309,8 +315,8 @@ export function renderParse(view, params) {
     ensureIndex();
     let scope = null, kind = 'all';
     if (rest[0] === 'extra') {
-      const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : 'trouble');
-      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
+      const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'recent' ? 'recent' : 'trouble');
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practise yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'passage') {
@@ -341,11 +347,11 @@ async function landing(view) {
   const newSel = h('select', { 'aria-label': 'New forms per day', onchange: async (e) => { await setSetting('parseNewPerDay', +e.target.value); landing(view); } }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)));
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
   clear(view).append(
-    h('div.pagehead', h('h1', 'Parsing')),
+    backHead('Parsing', '#/learn', 'Learn'),
     h('div.stack',
       startButton(smart('parse')),
       paceNote(parsePace(), 'forms'),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), chartsButton()),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), h('a.btn.sm', { href: '#/parse/run/extra/recent' }, 'Forms of words I just learned'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('div.row', h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practise'), h('a.btn.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/verb' }, 'Verbs only'))) : null,
         passagePicker(view, goal, {
