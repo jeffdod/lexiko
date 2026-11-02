@@ -347,12 +347,13 @@ async function landing(view) {
   } }, t)));
   const newSel = h('select', { 'aria-label': 'New forms per day', onchange: async (e) => { await setSetting('parseNewPerDay', +e.target.value); landing(view); } }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)));
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
+  const sm = smart('parse');
   clear(view).append(
     backHead('Parsing', '#/learn', 'Learn'),
     h('div.stack',
-      startButton(smart('parse')),
+      startButton(sm),
       paceNote(parsePace(), 'forms'),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), chartsButton()),
+      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), chartsButton()),
       fold('Study a passage',
         goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('div.row', h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practise'), h('a.btn.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/verb' }, 'Verbs only'))) : null,
         passagePicker(view, goal, {
