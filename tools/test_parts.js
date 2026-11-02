@@ -26,6 +26,15 @@ process.on('unhandledRejection', () => {});
   ok(r.short < r.n * 0.02, 'nearly always four form choices', r.short + ' of ' + r.n + ' short');
   ok(r.rows['ἐλύθην'] === 'aor1-pas' && r.rows['ἐγράφην'] === 'aor2-pas' && r.rows['ἔλυσα'] === 'aor1-act' && r.rows['ἔμεινα'] === 'aor-liq-act' && r.rows['ἔβαλον'] === 'aor2-act' && r.rows['ἐγενόμην'] === 'aor2-mid' && r.rows['λέλυκα'] === 'perf1-act' && r.rows['γέγονα'] === 'perf2-act' && r.rows['μενῶ'] === 'fut-liq-act' && r.rows['λύσω'] === 'fut-act', 'chart rows picked correctly');
 
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('partsPace', 'fixed'); await k.setSetting('partsNewPerDay', 10); });
+  // ---- automatic pace for new parts
+  const pc = await p.evaluate(async () => { const k = await import('./js/know.js'); const o = {}; const S = k.K.settings; const keep = { ...S };
+    S.partsPace = 'auto'; S.partsNewPerDay = 3; S.partsPause = false; k.K.partsAcc = []; o.base = k.partsPace().n;
+    k.K.partsAcc = Array(20).fill(1); o.good = k.partsPace().n; k.K.partsAcc = Array(20).fill(0).map((_, i) => i % 2); o.weak = k.partsPace().n;
+    S.partsNewPerDay = 1; k.K.partsAcc = Array(20).fill(1); o.capped = k.partsPace().n; S.partsNewPerDay = 3;
+    S.partsPause = true; o.paused = k.partsPace().n; S.partsPause = false; S.partsPace = 'fixed'; S.partsNewPerDay = 5; o.fixed = k.partsPace().n;
+    Object.assign(S, keep); k.K.partsAcc = []; return o; });
+  ok(pc.base === 2 && pc.good === 3 && pc.weak === 1 && pc.capped === 1 && pc.paused === 0 && pc.fixed === 5, 'pace: 2 normally, 3 when doing well, 1 when slipping, capped by the setting, paused, fixed', JSON.stringify(pc));
   // ---- landing + a normal session (multiple choice, both formats) answers and saves cards
   await p.goto(URL + '#/parts'); await p.waitForSelector('.start');
   await p.screenshot({ path: out + '/parts-landing.png', fullPage: true });
