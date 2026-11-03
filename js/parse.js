@@ -1,5 +1,6 @@
 // Parsing practice: pick the parts of a form in a fixed order (guided one-at-a-time, or quick all-at-once),
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
+import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
@@ -87,7 +88,7 @@ function candidatePool(scope, kinds) {
 /** What a session would contain right now: the due forms, then new ones up to the daily allowance. */
 export function planParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
   ensureIndex();
-  const kinds = KINDS[kind] || KINDS.all, now = Date.now();
+  const kinds = KINDS[kind] || KINDS.all, now = clockNow();
   const pool = candidatePool(scope, kinds), inPool = new Set(pool.map((x) => x.id));
   const due = parseCardsDue(now).map((c) => ({ c, id: keyMap.get(c.id) }))
     .filter((x) => x.id != null && itemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
@@ -221,7 +222,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     const head = res.full ? ['ok', 'Correct'] : res.wrong.length === 1 && res.total >= 3 ? ['mid', 'Almost — one part off'] : ['bad', 'Not quite'];
     const chips = Object.entries(res.perSlot).map(([k, v]) => h('span.pslot.' + (v.ok ? 'ok' : 'bad'), h('small', SLOT_TITLE[k]), v.ok ? labelOf(k, v.expected) : (v.user ? labelOf(k, v.user) + ' → ' : '') + labelOf(k, v.expected), v.ok ? ' ✓' : ''));
     const fb = h('div.fb.' + head[0],
-      h('div.row.between', h('b', head[1]), first && next ? h('span.small.muted', 'next review in ' + fmtInterval(next.due - Date.now())) : h('span.small.muted', 'practice only')),
+      h('div.row.between', h('b', head[1]), first && next ? h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow())) : h('span.small.muted', 'practice only')),
       h('div.parsed', describe(best), ' ', h('span.chip', best.code)),
       others.length ? h('div.small.muted', 'Also valid: ' + others.map((o) => describe(o) + ' (' + o.code + ')').join(' · ')) : null,
       h('div.pslots', chips),
@@ -237,18 +238,18 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
 
   function show(c) {
     const it = itemOf(c.id), mode = effectiveMode(groupOfItem(it), st);
-    const parse = (aided = false, verbOk = false) => (mode === 'quick' ? quick : guided)(c, it, Date.now(), aided);
+    const parse = (aided = false, verbOk = false) => (mode === 'quick' ? quick : guided)(c, it, clockNow(), aided);
     if (it.group === 'V') verbStep(c, it, parse); else parse();
   }
 
   /* ----- first step for a verb form: which verb is it? (a wrong answer skips the parse and brings the form back) ----- */
   function verbStep(c, it, parse) {
-    const L = D.lexByN.get(it.strongs), t0 = Date.now(), opts = verbChoices(it.strongs); let aided = false, locked = false;
+    const L = D.lexByN.get(it.strongs), t0 = clockNow(), opts = verbChoices(it.strongs); let aided = false, locked = false;
     const area = h('div.pq'), hintBox = h('div');
     const tally = (ok) => { if (c.retry) return; for (const o of [S.slots, st.slots]) { const s = (o.verb ||= [0, 0]); s[1]++; if (ok) s[0]++; } };
     const miss = async () => {                                   // the verb was not known: no parse; the form is rated as missed and comes round again
       tally(false); stop();
-      const ms = Date.now() - t0; let next = null;
+      const ms = clockNow() - t0; let next = null;
       if (!c.retry) {
         if (!practice) next = await rateParse(cardIdFor(c.id), 1, ms, { m: 'v', w: 'verb' });
         S.missed.push({ id: c.id, wrong: ['verb'] }); S.done++; if (c.type === 'new') S.fresh++;
@@ -256,7 +257,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
         if (!practice) await saveParseStats(st);
       }
       const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
-      area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - Date.now()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.')), go);
+      area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.')), go);
       go.focus({ preventScroll: true });
       keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
       document.addEventListener('keydown', keyHandler);
@@ -323,7 +324,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     const end = () => {
       const clean = {}; for (const k of Object.keys(answers)) if (!k.endsWith('_ok')) clean[k] = answers[k];
       const res = check(it, clean);
-      area.remove(); feedback(c, it, res, { ms: Date.now() - t0, aided, mode: 'g' });
+      area.remove(); feedback(c, it, res, { ms: clockNow() - t0, aided, mode: 'g' });
     };
     frame(c, [prompt(c, it), area]); draw(); keys(null);
   }
@@ -347,7 +348,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       const res = check(it, giveUp ? {} : answers);
       draw(); checkBtn.remove(); skip.remove();
       rows.querySelectorAll('.srow').forEach((r, i) => { const slot = shownSlots()[i], v = res.perSlot[slot]; if (v) r.classList.add(v.ok ? 'ok' : 'bad'); });
-      feedback(c, it, res, { ms: Date.now() - t0, aided: aided0, mode: 'q' });
+      feedback(c, it, res, { ms: clockNow() - t0, aided: aided0, mode: 'q' });
     };
     checkBtn.onclick = () => run(false);
     const skip = h('button.btn.ghost.sm', { onclick: () => run(true) }, 'I don’t know');

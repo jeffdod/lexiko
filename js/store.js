@@ -104,6 +104,7 @@ export const BACKUP_FORMAT = 'lexiko-backup';
 
 export async function makeBackup() {
   const [kv, cards, log] = await Promise.all([store.allKV(), store.allCards(), store.allLog()]);
+  delete kv.ttBackup;                                                  // the time-travel snapshot is never part of a backup
   return { format: BACKUP_FORMAT, version: 1, exported: new Date().toISOString(), kv, cards, log };
 }
 

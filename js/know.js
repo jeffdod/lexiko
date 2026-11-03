@@ -1,4 +1,5 @@
 // Knowledge model: which words does the learner know? Combines the level they declared with SRS cards.
+import { clockNow } from './clock.js';
 import { requiredStems } from './stems.js';
 import { D, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBook } from './data.js';
 import { store } from './store.js';
@@ -33,7 +34,7 @@ export async function setSetting(k, v) {
   K.settings[k] = v; await store.set('settings', K.settings);
   try { if (k === 'theme') localStorage.setItem('lexiko-theme', v); } catch { /* storage may be blocked */ }
 }
-export async function setGoal(g) { K.goal = g ? { ...g, since: g.since || Date.now() } : null; await store.set('goal', K.goal); }
+export async function setGoal(g) { K.goal = g ? { ...g, since: g.since || clockNow() } : null; await store.set('goal', K.goal); }
 
 /* ---------- goals: one set of words you are working toward (a word-frequency band, a passage, or a section) ---------- */
 export const FREQ_LADDER = [100, 50, 30, 20, 15, 10, 7, 5, 3, 2];
@@ -78,7 +79,7 @@ export function noteGoalDone(g = K.goal) {
   if (!g || !goalFinished(g)) return null;
   const id = goalId(g); let e = K.goalsDone.find((x) => x.id === id);
   if (!e) {
-    e = { id, goal: { ...g }, words: goalStats(g).total, finished: Date.now(), days: g.since ? Math.max(1, Math.round((Date.now() - g.since) / 864e5)) : null };
+    e = { id, goal: { ...g }, words: goalStats(g).total, finished: clockNow(), days: g.since ? Math.max(1, Math.round((clockNow() - g.since) / 864e5)) : null };
     K.goalsDone.push(e); store.set('goalsDone', K.goalsDone);
   }
   return e;
@@ -109,7 +110,7 @@ export function goalLabel(g) {
   return g.kind === 'pericope' && g.title ? g.title + ' (' + scopeLabel(g) + ')' : scopeLabel(g);
 }
 export async function setReadKey(key, on) {          // key: 'JHN:1' (chapter) or 'p:JHN:1:1' (section)
-  if (on) K.read[key] = Date.now(); else delete K.read[key];
+  if (on) K.read[key] = clockNow(); else delete K.read[key];
   await store.set('read', K.read);
 }
 export const markRead = (code, ch, on) => setReadKey(code + ':' + ch, on);
@@ -157,7 +158,7 @@ export async function undoRate() {
 }
 
 export async function rate(n, grade, kind = 'review', ms = 0) {
-  const now = Date.now();
+  const now = clockNow();
   const prev = K.cards.get('w:' + n) || F.newCard('w:' + n);
   lastRate = { acc: K.wordsAcc.slice(), id: 'w:' + n, before: K.cards.has('w:' + n) ? { ...K.cards.get('w:' + n) } : null, grade, wasNew: prev.state === 'new', day: todayKey() };
   const next = F.review(prev, grade, now, K.settings.retention);
@@ -172,12 +173,12 @@ export async function rate(n, grade, kind = 'review', ms = 0) {
 
 /** "I already know this" — create a stable card without a quiz. */
 export async function markKnown(n, full = false) {      // full: a verb whose parsing you know too (otherwise its parts and parsing are still to learn)
-  const c = F.review(F.newCard('w:' + n), 4, Date.now(), K.settings.retention); c.src = full ? 'full' : 'manual';
+  const c = F.review(F.newCard('w:' + n), 4, clockNow(), K.settings.retention); c.src = full ? 'full' : 'manual';
   await saveCard(c); return c;
 }
 /** "I don't know this" — put it in the learning pile, due now. */
 export async function markLearning(n) {
-  const c = F.review(F.newCard('w:' + n), 1, Date.now(), K.settings.retention); c.due = Date.now(); c.src = 'manual';
+  const c = F.review(F.newCard('w:' + n), 1, clockNow(), K.settings.retention); c.due = clockNow(); c.src = 'manual';
   await saveCard(c); return c;
 }
 export async function setLevel(level) { await setSetting('level', level); }
@@ -207,7 +208,7 @@ export const readinessClass = (p) => (p >= 0.98 ? 'r4' : p >= 0.95 ? 'r3' : p >=
 
 /** A word card that is still in use (a preposition that is now reviewed per case no longer uses its old single card). */
 export const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const L = D.lexByN.get(+c.id.slice(2)); return !L || !L.senses; };
-export function dueCards(now = Date.now()) {
+export function dueCards(now = clockNow()) {
   const out = [];
   for (const c of K.cards.values()) if (liveWord(c) && c.state !== 'new' && c.due <= now) out.push(c);
   return out.sort((a, b) => a.due - b.due);
@@ -215,7 +216,7 @@ export function dueCards(now = Date.now()) {
 export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
 
 export function streak() {
-  let s = 0; const d = new Date();
+  let s = 0; const d = new Date(clockNow());
   const did = (k) => { const x = K.daily[todayKey(k)] || {}; return x.r || x.pr; };      // any studying counts: words or parsing
   if (!did(d)) d.setDate(d.getDate() - 1);   // today not done yet doesn't break the streak
   while (did(d)) { s++; d.setDate(d.getDate() - 1); }
@@ -238,7 +239,7 @@ export function goalNext(g = currentGoal(), limit = 200) {
   return admitVerbs(ns).slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
 }
 /** Plain-words reason a passage has nothing to study right now. */
-export function waitNote(ps, now = Date.now()) {
+export function waitNote(ps, now = clockNow()) {
   const bits = [];
   if (ps.held) bits.push(ps.held + (ps.held === 1 ? ' verb is' : ' verbs are') + ' paused for now (see Verbs)');
   if (ps.started) bits.push(ps.started + (ps.started === 1 ? ' word you’ve started comes' : ' words you’ve started come') + ' back ' + (isFinite(ps.soonest) ? whenIn(ps.soonest, now) : 'on schedule'));
@@ -246,7 +247,7 @@ export function waitNote(ps, now = Date.now()) {
 }
 const whenIn = (t, now) => { const m = Math.round((t - now) / 6e4); return m < 60 ? 'in ' + Math.max(1, m) + ' min' : m < 1440 ? 'in ' + Math.round(m / 60) + ' h' : 'in ' + Math.round(m / 1440) + ' days'; };
 /** What studying a passage can actually deliver right now, and why the rest can't be studied yet (read-only). */
-export function passageStudy(scope, now = Date.now()) {
+export function passageStudy(scope, now = clockNow()) {
   const dueSet = new Set(dueCards().map((c) => +c.id.slice(2)));
   let fresh = [], due = 0, started = 0, soonest = Infinity;
   for (const { n } of passageWords(scope)) {
@@ -350,7 +351,7 @@ export function admitVerbs(ns) {
   });
 }
 /** Words you started learning in the last few days (for a quick refresher; never touches the schedule). */
-export function recentWords(days = 3, now = Date.now()) {
+export function recentWords(days = 3, now = clockNow()) {
   const since = now - days * 864e5, out = [];
   for (const c of K.cards.values()) {
     if (!c.id.startsWith('w:') || c.state === 'new' || c.src === 'probe' || liveWord(c) === false) continue;
@@ -361,10 +362,10 @@ export function recentWords(days = 3, now = Date.now()) {
 }
 /* ---------- parsing practice: form-level cards ('f:<form>:<strongs>') ---------- */
 export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;
-export const parseCardsDue = (now = Date.now()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && c.state !== 'new' && c.due <= now);
+export const parseCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && c.state !== 'new' && c.due <= now);
 export const parseNewToday = () => (K.daily[todayKey()] || {}).pn || 0;
 export async function rateParse(id, grade, ms = 0, meta = {}) {
-  const now = Date.now();
+  const now = clockNow();
   const prev = K.cards.get(id) || F.newCard(id);
   const next = F.review(prev, grade, now, K.settings.retention);
   await saveCard(next);
@@ -382,9 +383,9 @@ export const saveParseStats = (st) => store.set('parseStats', st);
 
 /* ---------- how many new items to start today (vocabulary and parsing): automatic pace ---------- */
 export const OVERLOAD = 40;                                   // reviews due across both topics before no new items start anywhere
-export const dueTotal = (now = Date.now()) => dueCards(now).length + parseCardsDue(now).length;
+export const dueTotal = (now = clockNow()) => dueCards(now).length + parseCardsDue(now).length;
 const meanOf = (a) => (a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null);
-function itemPace(topic, now = Date.now()) {
+function itemPace(topic, now = clockNow()) {
   const words = topic === 'words', noun = words ? 'words' : 'forms', pre = topic;
   const max = Math.max(0, setting(words ? 'newPerDay' : 'parseNewPerDay')), today = words ? newToday() : parseNewToday(), due = words ? dueCards(now).length : parseCardsDue(now).length;
   const out = (n, why, extra = {}) => ({ n, left: Math.max(0, n - today), due, why, auto: setting(pre + 'Pace') !== 'fixed', ...extra });
@@ -406,18 +407,18 @@ export const wordsPace = (now) => itemPace('words', now);
 export const parsePace = (now) => itemPace('parse', now);
 
 /* ---------- extra practice: which studied cards give you the most trouble (never writes anything) ---------- */
-export function troubleScore(c, now = Date.now()) { return (c.lapses || 0) * 2 + ((c.difficulty || 5) - 5) / 2 + (1 - F.retrievability(c, now)) * 3; }
+export function troubleScore(c, now = clockNow()) { return (c.lapses || 0) * 2 + ((c.difficulty || 5) - 5) / 2 + (1 - F.retrievability(c, now)) * 3; }
 /** A card is shaky only if you have actually struggled with it: it lapsed, or it was rated Again/Hard so its difficulty rose. Never-missed cards are not. */
 /** Studied cards you are least likely to remember right now, for a plain review when nothing is due. Never writes anything. */
 export function reviewCards(prefix, limit = 15) {
-  const now = Date.now(), fresh = new Set(recentWords(3, now));
+  const now = clockNow(), fresh = new Set(recentWords(3, now));
   const strongs = (id) => +(prefix === 'p:' ? id.split(':')[1] : id.split(':').pop());   // words you just learned come first
   return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new' && c.src !== 'probe' && (prefix !== 'w:' || liveWord(c)))
     .sort((a, b) => (fresh.has(strongs(b.id)) - fresh.has(strongs(a.id))) || F.retrievability(a, now) - F.retrievability(b, now)).slice(0, limit);
 }
 export const isShaky = (c) => (c.lapses || 0) > 0 || (c.difficulty || 5) >= 6;
 export function troubleCards(prefix, limit = 15) {
-  const now = Date.now();
+  const now = clockNow();
   return [...K.cards.values()].filter((c) => c.id.startsWith(prefix) && c.state !== 'new' && isShaky(c) && (prefix !== 'w:' || liveWord(c))).map((c) => ({ c, s: troubleScore(c, now) }))
     .sort((a, b) => ((b.c.lapses || 0) > 0) - ((a.c.lapses || 0) > 0) || b.s - a.s).slice(0, limit).map((x) => x.c);        // cards you have actually missed come first
 }

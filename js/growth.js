@@ -1,4 +1,5 @@
 // "Words you've started learning" over time, drawn from the per-day counts lexiko already keeps.
+import { clockNow } from './clock.js';
 import { K } from './know.js';
 import { h } from './util.js';
 
@@ -10,7 +11,7 @@ const key = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, 
 export function growthSeries(days = 84) {
   const keys = Object.keys(K.daily).filter((k) => (K.daily[k].n || 0) > 0).sort();
   let total = keys.reduce((a, k) => a + K.daily[k].n, 0);
-  const pts = []; const d = new Date(); d.setHours(12, 0, 0, 0);
+  const pts = []; const d = new Date(clockNow()); d.setHours(12, 0, 0, 0);
   for (let i = 0; i < days; i++) { pts.unshift({ date: new Date(d), total }); total -= (K.daily[key(d)] || {}).n || 0; d.setDate(d.getDate() - 1); }
   return { pts, started: pts[pts.length - 1].total, weekAgo: pts[Math.max(0, pts.length - 8)].total, firstDay: keys[0] };
 }

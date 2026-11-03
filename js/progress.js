@@ -1,4 +1,5 @@
 // Progress: word knowledge, which parts of the NT are within reach, goals, recent activity.
+import { clockNow } from './clock.js';
 import { D, scopeLabel, periScope, periRange, periRef } from './data.js';
 import { K, sectionRead, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak, currentGoal, goalStats, goalLabel, noteGoalDone } from './know.js';
 import { goalPicker } from './goals.js';
@@ -88,7 +89,7 @@ export function renderProgress(view) {
     h('p.muted.small', 'A record of what you have finished. Nothing here is graded or timed.')) : null;
 
   // activity
-  const days = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push({ k: todayKey(d), d, r: (K.daily[todayKey(d)] || {}).r || 0 }); }
+  const days = []; for (let i = 13; i >= 0; i--) { const d = new Date(clockNow()); d.setDate(d.getDate() - i); days.push({ k: todayKey(d), d, r: (K.daily[todayKey(d)] || {}).r || 0 }); }
   const mx = Math.max(10, ...days.map((d) => d.r));
   const act = h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: '4px', height: '4.5rem' }, role: 'img', 'aria-label': 'Reviews per day over the last two weeks' },
     days.map((d) => h('div', { title: d.k + ': ' + d.r + ' reviews', style: { flex: 1, height: Math.max(3, 100 * d.r / mx) + '%', background: d.r ? 'var(--accent)' : 'var(--surface-2)', borderRadius: '4px' } })));

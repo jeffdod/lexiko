@@ -1,5 +1,6 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
+import { clockNow } from './clock.js';
 import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, verbBrake, setting, dueCards, newToday, parseCardsDue, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
@@ -18,7 +19,7 @@ export function counts() {
 }
 
 /** When studied cards come due next (read-only). Per topic and overall: the soonest time, plus counts for later today, tomorrow and the next 7 days. */
-export function upcoming(now = Date.now()) {
+export function upcoming(now = clockNow()) {
   const eod = new Date(now); eod.setHours(24, 0, 0, 0); const today = +eod, tomorrow = today + 864e5, week = today + 6 * 864e5;
   const mk = () => ({ next: Infinity, nextCount: 0, today: 0, tomorrow: 0, week: 0, due: 0 });
   const out = { words: mk(), parse: mk(), all: mk() };
@@ -35,7 +36,7 @@ export function upcoming(now = Date.now()) {
   return out;
 }
 /** "in 20 min", "in 3 h", "tomorrow", "in 3 days" */
-export function whenText(t, now = Date.now()) {
+export function whenText(t, now = clockNow()) {
   if (!isFinite(t)) return '';
   const m = Math.round((t - now) / 6e4);
   if (m < 60) return 'in ' + Math.max(1, m) + ' min';

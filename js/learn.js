@@ -1,4 +1,5 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
+import { clockNow } from './clock.js';
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
 import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, goalNext, currentGoal, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
 import * as F from './fsrs.js';
@@ -130,7 +131,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   }
   async function grade(item, g) {
     undoState = { item, wasSeen: !!item.seen, stats: { ...stats }, rated: !practice, rescue: snap(item) };
-    if (!practice) await rate(item.n, g, item.type, Date.now() - t0);
+    if (!practice) await rate(item.n, g, item.type, clockNow() - t0);
     if (!item.seen) {                       // first time this card is answered in the session
       item.seen = true;
       if (item.type === 'new') stats.fresh++;
@@ -154,13 +155,13 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   }
 
   function show(item) {
-    t0 = Date.now();
+    t0 = clockNow();
     const L = lexeme(item.n), flash = setting('mode') !== 'choice' && !item.rescue;
     const pos = POSNAME[L.pos] || L.pos;
     const head = [h('div.qgreek', { lang: 'grc' }, L.head), h('div.qmeta', pos + ' · G' + (L.base || L.n) + ' · ' + fmt(L.freq) + '×')];
     const reveal = (extra) => {
       const card = getCard(item.n) || F.newCard('w:' + item.n);
-      const pv = F.preview(card, Date.now(), setting('retention'));
+      const pv = F.preview(card, clockNow(), setting('retention'));
       const answer = [h('div.qgloss', L.brief), longDef(L), partsBlock(L), contextFor(L.n, scope)];
       const grades = h('div.grades' + (practice ? '.two' : ''),
         (practice ? [[1, 'Again'], [3, 'Got it']] : [[1, 'Again'], [2, 'Hard'], [3, 'Good'], [4, 'Easy']]).map(([g, name]) => h('button.g' + g, { onclick: () => grade(item, g) }, name, practice ? null : h('small', fmtInterval(pv[g])))));
