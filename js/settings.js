@@ -108,7 +108,7 @@ export function renderSettings(view) {
       levelPicker()),
     h('div.card.stack', h('h2', 'Studying'),
       h('div.row.between', h('b', 'Quiz style'), seg([['flash', 'Flashcards'], ['choice', 'Multiple choice']], setting('mode'), (v) => setSetting('mode', v))),
-      h('div.row.between', h('b', 'New words per day'), h('input', { type: 'number', min: 0, max: 100, 'aria-label': 'New words per day', value: setting('newPerDay'), style: { width: '5rem' }, onchange: (e) => setSetting('newPerDay', Math.max(0, Math.min(100, +e.target.value || 0))) }))),
+      h('div.row.between', h('b', 'New words per day'), h('input', { type: 'number', min: 0, max: 40, 'aria-label': 'New words per day', value: setting('newPerDay'), style: { width: '5rem' }, onchange: (e) => setSetting('newPerDay', Math.max(0, Math.min(40, +e.target.value || 0))) }))),
     fold('Advanced',
       h('div.row.between', h('div', h('b', 'Spot-checks'), h('div.muted.small', 'How often words you’ve said you know are mixed into sessions to check them.')),
         seg([[0, 'Off'], [0.06, 'Light'], [0.12, 'Normal'], [0.2, 'More']], setting('probeRate'), (v) => setSetting('probeRate', v))),

@@ -1,5 +1,6 @@
 // First run: two plain questions (how much Greek do you know? what first?), then straight into the app.
-import { setSetting, setLevel } from './know.js';
+import { setSetting, setLevel, setGoal, suggestGoal, goalLabel, freqCoverage } from './know.js';
+import { goalPicker, previewLine } from './goals.js';
 import { levelStats } from './settings.js';
 import { h, clear, fmt } from './util.js';
 
@@ -11,15 +12,10 @@ const LEVEL_CHOICES = [
   [20, 'I can read with a lexicon', 'I read the New Testament, but look up a lot'],
   [5, 'I read Greek regularly', 'Show me mainly the words I don’t know'],
 ];
-const GOAL_CHOICES = [
-  ['read', 'Read the Greek New Testament', 'Tap any word for its meaning. lexiko points out the words worth learning.', '#/read/JHN/1'],
-  ['words', 'Build my vocabulary', 'Short daily reviews, most common words first.', '#/learn/daily'],
-  ['forms', 'Practise word forms', 'Recognise tense, case, person and number, with charts to help.', '#/parse'],
-];
 
 /** Shows the first-run flow in `view`; calls done(href|null) when finished or skipped. */
 export function renderWelcome(view, done) {
-  let level = 50, goal = 'read', pick = 'I know the basics';
+  let level = 50, pick = 'I know the basics';
   const finish = async (href) => { await setLevel(level); await setSetting('probeRate', pick === 'rusty' ? 0.2 : 0.12); await setSetting('levelAsked', true); done(href); };
   const choice = (title, sub, on, onclick) => h('button.choice', { 'aria-pressed': String(on), onclick }, h('b', title), h('span', sub));
   const step1 = () => {
@@ -37,17 +33,23 @@ export function renderWelcome(view, done) {
       h('button.btn.primary.block', { onclick: step2 }, 'Continue'),
       h('p.muted.small.center', 'Free. No sign-up. Your progress stays on this device.')));
   };
-  const step2 = () => {
-    const list = h('div.choices');
-    const drawList = () => clear(list).append(...GOAL_CHOICES.map(([g, t, s]) => choice(t, s, goal === g, () => { goal = g; drawList(); })));
-    drawList();
-    clear(view).append(h('div.welcome.stack',
-      h('div.row.between', h('button.btn.ghost.sm', { onclick: step1 }, '‹ Back'), h('span.muted.small', 'Step 2 of 2')),
-      h('h1', 'What would you like to do first?'),
-      h('p.muted', 'Pick one to start. Everything else is still one tap away.'),
-      list,
-      h('button.btn.primary.block', { onclick: () => finish(GOAL_CHOICES.find((c) => c[0] === goal)[3]) }, 'Start'),
-      h('button.btn.ghost.block', { onclick: () => finish(null) }, 'Skip for now')));
+  const step2 = async () => {
+    await setLevel(level);                                          // so the goal's counts already know what you know
+    let goal = suggestGoal(level), choosing = false;
+    const draw = () => {
+      const card = h('div.card.stack.goal-pick', h('b', goalLabel(goal)), h('div.muted', previewLine(goal)),
+        goal.kind === 'freq' ? h('div.muted', 'When you finish you will recognise ' + Math.round(freqCoverage(goal.min) * 100) + '% of the New Testament.') : null);
+      clear(view).append(h('div.welcome.stack',
+        h('div.row.between', h('button.btn.ghost.sm', { onclick: step1 }, '‹ Back'), h('span.muted.small', 'Step 2 of 2')),
+        h('h1', 'What do you want to work toward?'),
+        h('p.muted', level == null ? 'Here is a goal to start with.' : 'You said you know the most common words. Here is a goal to start with.'),
+        choosing ? goalPicker({ initial: goal, confirmLabel: 'Start with this goal', onPick: (g) => { goal = g; go(); } }) : card,
+        choosing ? null : h('button.btn.block', { onclick: () => { choosing = true; draw(); } }, 'Choose a different goal ›'),
+        choosing ? null : h('button.btn.primary.block', { onclick: go }, 'Start with this goal'),
+        h('p.muted.small.center', 'You can change your goal at any time.')));
+    };
+    const go = async () => { await setGoal(goal); finish(null); };
+    draw();
   };
   step1();
 }

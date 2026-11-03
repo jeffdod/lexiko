@@ -1,26 +1,29 @@
 // Knowledge model: which words does the learner know? Combines the level they declared with SRS cards.
-import { D, scopeCounts, scopeVerses } from './data.js';
+import { requiredStems } from './stems.js';
+import { D, scopeCounts, scopeVerses, scopeLabel, periScope, periBook } from './data.js';
 import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, partsMode: 'auto', partsVerbsPerDay: 2, partsPace: 'auto', partsPause: false, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, partsAcc: [], wordsAcc: [], parseAcc: [], partsVerbs: {}, verbParse: {}, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
   K.settings = { ...DEFAULTS, ...s };
   K.cards = new Map((await store.allCards()).map((c) => [c.id, c]));
+  for (const id of [...K.cards.keys()]) if (id.startsWith('p:')) { K.cards.delete(id); await store.deleteCard(id); }      // principal parts are no longer scheduled: drop their old cards and stage data
+  for (const k of ['partsVerbs', 'partsAcc', 'partsStats']) if ((await store.get(k)) !== undefined) await store.set(k, undefined);
   K.daily = (await store.get('daily')) || {};
   K.read = (await store.get('read')) || {};
   K.goal = (await store.get('goal')) || null;
-  K.partsAcc = (await store.get('partsAcc')) || [];
+  K.goalsDone = (await store.get('goalsDone')) || [];
+  K.verbAcc = (await store.get('verbAcc')) || [];
   K.wordsAcc = (await store.get('wordsAcc')) || [];
   K.parseAcc = (await store.get('parseAcc')) || [];
-  K.partsVerbs = (await store.get('partsVerbs')) || {};
   K.verbParse = (await store.get('verbParse')) || {};
   K.ready = true;
 }
@@ -30,7 +33,81 @@ export async function setSetting(k, v) {
   K.settings[k] = v; await store.set('settings', K.settings);
   try { if (k === 'theme') localStorage.setItem('lexiko-theme', v); } catch { /* storage may be blocked */ }
 }
-export async function setGoal(g) { K.goal = g; await store.set('goal', g); }
+export async function setGoal(g) { K.goal = g ? { ...g, since: g.since || Date.now() } : null; await store.set('goal', K.goal); }
+
+/* ---------- goals: one set of words you are working toward (a word-frequency band, a passage, or a section) ---------- */
+export const FREQ_LADDER = [100, 50, 30, 20, 15, 10, 7, 5, 3, 2];
+/** The goal in force: the one you chose, else a frequency goal one rung above what you said you know. Passage goals saved before kinds existed count as passages. */
+export function currentGoal() {
+  const g = K.goal;
+  if (g && g.kind) return g;
+  if (g && g.book) return { kind: 'passage', ...g };
+  return suggestGoal(K.settings.level);
+}
+/** The first goal to offer: just above the words you already know ("just starting" gets 50 or more). */
+export function suggestGoal(level) {
+  if (level == null) return { kind: 'freq', min: 50 };
+  return { kind: 'freq', min: FREQ_LADDER.find((t) => t < level) || FREQ_LADDER[FREQ_LADDER.length - 1] };
+}
+/** The words in a goal, as lexicon numbers (a preposition counts once per case, like in reviews). */
+export function goalWords(g) {
+  if (!g) return [];
+  if (g.kind === 'freq') return D.lex.filter((L) => L.freq >= g.min).map((L) => L.n);
+  return [...scopeCounts(g).keys()];
+}
+/** How far along a goal is, counting a word as known the way it is known everywhere else. */
+export function goalStats(g) {
+  const ws = goalWords(g); let known = 0;
+  for (const n of ws) if (status(n) === 'known') known++;
+  return { total: ws.length, known, left: ws.length - known, pct: ws.length ? known / ws.length : 1 };
+}
+/** Share of the New Testament's running words that the words occurring `min` or more times make up. */
+/** How much of the New Testament's running text you recognise today (words you know, weighted by how often they occur). */
+export function ntShareKnown() {
+  let all = 0, part = 0;
+  for (const L of D.lex) { all += L.freq; if (status(L.n) === 'known') part += L.freq; }
+  return all ? part / all : 0;
+}
+
+/* ---------- finishing goals ---------- */
+/** True when every word in the goal is known. */
+export function goalFinished(g = currentGoal()) { const s = goalStats(g); return s.total > 0 && s.left === 0; }
+const goalId = (g) => (g.kind === 'freq' ? 'f' + g.min : [g.book, g.c1, g.v1 || 1, g.c2, g.v2 || 999].join(':')) + '@' + (g.since || 0);
+/** Writes a finished goal into the history, once. Returns the entry. */
+export function noteGoalDone(g = K.goal) {
+  if (!g || !goalFinished(g)) return null;
+  const id = goalId(g); let e = K.goalsDone.find((x) => x.id === id);
+  if (!e) {
+    e = { id, goal: { ...g }, words: goalStats(g).total, finished: Date.now(), days: g.since ? Math.max(1, Math.round((Date.now() - g.since) / 864e5)) : null };
+    K.goalsDone.push(e); store.set('goalsDone', K.goalsDone);
+  }
+  return e;
+}
+/** The goal to suggest after finishing this one: the next rung up the ladder, or the next section in the book; always one with words still to learn. */
+export function nextGoal(g) {
+  const open = (x) => goalStats(x).left > 0;
+  if (g.kind !== 'freq' && g.book) {
+    const endC = g.c2, endV = g.v2 >= 999 ? 999 : g.v2;
+    for (const p of periBook(g.book)) {
+      if (!(p.c1 > endC || (p.c1 === endC && p.v1 > endV))) continue;               // only sections that start after this goal ends
+      const x = { kind: 'pericope', ...periScope(p), title: p.title, id: p.id };
+      if (open(x)) return x;
+    }
+  }
+  const from = g.kind === 'freq' ? g.min : Infinity;
+  const t = FREQ_LADDER.find((t) => t < from && open({ kind: 'freq', min: t }));
+  return t ? { kind: 'freq', min: t } : null;
+}
+export const freqCoverage = (min) => {
+  let all = 0, part = 0;
+  for (const L of D.lex) { all += L.freq; if (L.freq >= min) part += L.freq; }
+  return all ? part / all : 0;
+};
+export function goalLabel(g) {
+  if (!g) return '';
+  if (g.kind === 'freq') return 'Words occurring ' + g.min + ' or more times';
+  return g.kind === 'pericope' && g.title ? g.title + ' (' + scopeLabel(g) + ')' : scopeLabel(g);
+}
 export async function setReadKey(key, on) {          // key: 'JHN:1' (chapter) or 'p:JHN:1:1' (section)
   if (on) K.read[key] = Date.now(); else delete K.read[key];
   await store.set('read', K.read);
@@ -139,23 +216,31 @@ export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
 
 export function streak() {
   let s = 0; const d = new Date();
-  const did = (k) => { const x = K.daily[todayKey(k)] || {}; return x.r || x.pr || x.ppr; };      // any studying counts: words, parsing or principal parts
+  const did = (k) => { const x = K.daily[todayKey(k)] || {}; return x.r || x.pr; };      // any studying counts: words or parsing
   if (!did(d)) d.setDate(d.getDate() - 1);   // today not done yet doesn't break the streak
   while (did(d)) { s++; d.setDate(d.getDate() - 1); }
   return s;
 }
 
 /* ---------- queue building ---------- */
-/** Words to study for a passage: not yet known, most useful first. */
+/** Words to study for a passage: not yet known, in the order they first occur (so studying feels like working through the text). */
 export function passageWords(scope) {
-  const m = scopeCounts(scope);
-  return [...m.entries()].filter(([n]) => status(n) !== 'known')
-    .sort((a, b) => b[1] - a[1] || D.lexByN.get(b[0]).freq - D.lexByN.get(a[0]).freq).map(([n, c]) => ({ n, c }));
+  const m = scopeCounts(scope);                                          // a Map keeps first-occurrence order
+  return [...m.entries()].filter(([n]) => status(n) !== 'known').map(([n, c]) => ({ n, c }));
+}
+/** New words for a goal, in teaching order: passages and sections by first occurrence, frequency goals most frequent first.
+ *  Words you have started or already know are left out, and new verbs are let in only as the verb gate allows. */
+export function goalNext(g = currentGoal(), limit = 200) {
+  const fresh = (n) => { const c = K.cards.get('w:' + n); return (!c || c.state === 'new') && status(n) !== 'known'; };
+  let ns;
+  if (g && g.kind === 'freq') ns = D.lex.filter((L) => L.freq >= g.min && fresh(L.n)).sort((a, b) => b.freq - a.freq).map((L) => L.n);
+  else ns = passageWords(g).map((x) => x.n).filter(fresh);
+  return admitVerbs(ns).slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
 }
 /** Plain-words reason a passage has nothing to study right now. */
 export function waitNote(ps, now = Date.now()) {
   const bits = [];
-  if (ps.held) bits.push(ps.held + (ps.held === 1 ? ' verb is' : ' verbs are') + ' waiting until you finish the verbs you’re on');
+  if (ps.held) bits.push(ps.held + (ps.held === 1 ? ' verb is' : ' verbs are') + ' paused for now (see Verbs)');
   if (ps.started) bits.push(ps.started + (ps.started === 1 ? ' word you’ve started comes' : ' words you’ve started come') + ' back ' + (isFinite(ps.soonest) ? whenIn(ps.soonest, now) : 'on schedule'));
   return bits.length ? 'Nothing to study right now: ' + bits.join('; ') + '.' : '';
 }
@@ -175,9 +260,9 @@ export function passageStudy(scope, now = Date.now()) {
 }
 /** Next most-frequent words the learner doesn't know yet (level builder). */
 export function nextByLevel(limit) {
-  const out = []; let room = verbSlots();
-  for (const L of D.lex) { if (status(L.n) === 'unknown') { if (L.pos === 'V') { if (room <= 0) continue; room--; } out.push({ n: L.n, c: L.freq }); if (out.length >= limit) break; } }
-  return out;
+  const out = [];
+  for (const L of D.lex) { if (status(L.n) === 'unknown') { out.push(L.n); if (out.length >= limit * 3) break; } }
+  return admitVerbs(out).slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
 }
 /** Assumed-known words (no card yet) to spot-check, weighted toward the edge of the declared level. */
 export function probeCandidates(limit, exclude = new Set()) {
@@ -205,7 +290,7 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
   if (kind === 'review') fresh = [];
   else if (only) fresh = D.lex.filter((L) => only.has(L.n) && (!K.cards.has('w:' + L.n) || getCard(L.n).state === 'new') && status(L.n) === 'unknown').map((L) => L.n);
   else if (scope) fresh = passageWords(scope).filter((x) => !K.cards.has('w:' + x.n) || getCard(x.n).state === 'new').map((x) => x.n);
-  else fresh = nextByLevel(200).map((x) => x.n);
+  else { fresh = goalNext(currentGoal(), 200).map((x) => x.n); if (!fresh.length) fresh = nextByLevel(200).map((x) => x.n); }      // goal finished: carry on with the commonest unknown words
   if (kind !== 'review' && (only || scope)) fresh = admitVerbs(fresh);
   const cap = newLimit != null ? newLimit : scope || only ? K.settings.newPerDay : wordsPace().left;
   dueList.slice(0, Math.max(size, 30)).forEach((n) => push(n, 'review'));
@@ -214,44 +299,55 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
     const nProbe = Math.round(items.length * K.settings.probeRate / (1 - K.settings.probeRate)) || (items.length ? 1 : 0);
     probeCandidates(nProbe, seen).forEach((x) => push(x.n, 'probe'));
   }
-  return shuffle(items).slice(0, scope || only ? 400 : Math.max(size, 40));
+  const order = items.filter((x) => x.type === 'new'), mixed = shuffle(items);
+  const newSlots = mixed.map((x, i) => x.type === 'new' ? i : -1).filter((i) => i >= 0);
+  newSlots.forEach((i, k) => { mixed[i] = order[k]; });                  // new words keep their teaching order; reviews and probes are mixed in around them
+  return mixed.slice(0, scope || only ? 400 : Math.max(size, 40));
 }
 
-/* ---------- verb gate: new verbs wait until the ones you've started are fully learned ---------- */
-export const VERB_CAP = 3;
+/* ---------- verbs: what you must know, when the forms are learned, and how new verbs arrive ---------- */
+export const LEARNED_ACC = 0.9, LEARNED_WINDOW = 10;          // a verb's forms are learned at 90% right over your last 10 answers (and each chosen form known)
+export const BRAKE_ACC = 0.75, BRAKE_WINDOW = 20, BRAKE_MIN = 15, UNLEARNED_MAX = 5;   // new verbs pause under 75% right over the last 20 verb-form answers, or when more than 5 verbs are unlearned
+export const VERB_SHARE = 4;                                  // about one new verb for every four other new words
 const isVerb = (n) => { const L = D.lexByN.get(n); return !!L && L.pos === 'V'; };
-/** What a verb still needs: meaning learned, every principal part known cold, parsing at 95%+ over its last 20 answers (at least 8). */
-export function verbProgress(n) {
-  const c = K.cards.get('w:' + n), e = D.parts.get(n), slots = e ? [1, 2, 3, 4, 5].filter((i) => e.parts[i]) : [];
-  const v = K.partsVerbs[n] || {}, cold = verbStage(n) === 'cold';
-  const secure = cold ? slots.length : slots.filter((sl) => ((v.days || {})[sl] || []).length >= 2).length;
-  const coldDone = slots.filter((sl) => (v.coldOk || {})[sl]).length;
-  const a = K.verbParse[n] || [], acc = a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
-  const meaning = !!c && c.state === 'review', parts = !slots.length || (cold && coldDone === slots.length), parsing = a.length >= 8 && acc >= 0.95;
-  return { meaning, parts, parsing, cold, coldDone, done: meaning && parts && parsing, secure, total: slots.length, acc, answers: a.length };
+const cardKnown = (c) => !!c && c.state === 'review' && ((c.stability || 0) >= 7 || (c.reps || 0) >= 2);       // the word-card rule
+const formKnown = (rows) => rows.some((i) => cardKnown(K.cards.get(parseId(D.forms[i]))));
+const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+/** Where one verb stands: its required stems and chosen forms (known or not), and whether its forms are learned. Null for a word with no verb forms. */
+export function verbStatus(n) {
+  const rs = requiredStems(n); if (!rs) return null;
+  const stems = rs.stems.map((s) => { const forms = s.forms.map((f) => ({ w: f.w, count: f.count, rows: f.rows, known: formKnown(f.rows) })); return { slot: s.slot, name: s.name, share: s.share, forms, known: forms.filter((f) => f.known).length, total: forms.length }; });
+  const total = stems.reduce((x, s) => x + s.total, 0), known = stems.reduce((x, s) => x + s.known, 0);
+  const a = (K.verbParse[n] || []).slice(-LEARNED_WINDOW), acc = a.length ? mean(a) : null;
+  return { n, uses: rs.total, share: rs.share, stems, total, known, acc, answers: a.length, learned: total > 0 && known === total && acc != null && acc >= LEARNED_ACC };
 }
-/** Verbs being worked on: ones you began learning here, plus verbs you said you know whose turn has come. (Spot-checked words don't count.) */
-function verbLists() {
-  const mine = [], queue = [];
+/** Verbs you have begun: a word card for the verb (not a spot-check), or any of its forms started in Parsing. */
+export function startedVerbs() {
+  const out = new Set();
   for (const [id, c] of K.cards) {
-    if (!id.startsWith('w:') || c.state === 'new') continue;
-    const n = +id.slice(2); if (!isVerb(n)) continue;
-    if (c.src === 'new' || (c.src === 'manual' && c.state !== 'review')) { if (!verbProgress(n).done) mine.push(n); }
-    else if (c.src === 'manual') { if (!verbProgress(n).done) queue.push(n); }        // "I know this": meaning only, parts and parsing still to learn
+    if (c.state === 'new' || c.src === 'probe') continue;
+    if (id.startsWith('w:')) { const n = +id.slice(2); if (isVerb(n)) out.add(n); }
+    else if (id.startsWith('f:')) { const n = +id.split(':')[2]; if (isVerb(n)) out.add(n); }
   }
-  queue.sort((a, b) => D.lexByN.get(b).freq - D.lexByN.get(a).freq);
-  const promoted = queue.slice(0, Math.max(0, VERB_CAP - mine.length));
-  return { mine, promoted, waiting: queue.slice(promoted.length) };
+  return [...out].sort((a, b) => D.lexByN.get(b).freq - D.lexByN.get(a).freq);
 }
-export function unfinishedVerbs() { const v = verbLists(); return [...v.mine, ...v.promoted]; }
-/** Verbs you marked as known: the next ones to get their principal parts and parsing, as soon as there is room. */
-export const promotedVerbs = () => new Set(verbLists().promoted);
-export const waitingVerbs = () => verbLists().waiting;
-export const verbSlots = () => Math.max(0, VERB_CAP - unfinishedVerbs().length);
-/** Keeps nouns and everything else but lets in only as many new verbs as the gate allows. */
+/** Begun verbs whose forms are not yet learned. */
+export const unlearnedVerbs = () => startedVerbs().filter((n) => { const v = verbStatus(n); return v && !v.learned; });
+/** The soft brake on new verbs: pause when recent verb-form answers are under 75% right, or when more than five verbs are still unlearned. */
+export function verbBrake() {
+  const open = unlearnedVerbs().length, a = K.verbAcc.slice(-BRAKE_WINDOW), acc = a.length >= BRAKE_MIN ? mean(a) : null;
+  if (open > UNLEARNED_MAX) return { braked: true, open, acc, why: 'New verbs are paused while you finish the ' + open + ' you are learning.' };
+  if (acc != null && acc < BRAKE_ACC) return { braked: true, open, acc, why: 'You are answering ' + Math.round(acc * 100) + '% of verb forms correctly, so new verbs are paused while these settle.' };
+  return { braked: false, open, acc, why: '' };
+}
+/** Keeps every other word, and lets verbs in at about one for every four others, unless the brake is on. */
 export function admitVerbs(ns) {
-  let room = verbSlots();
-  return ns.filter((n) => { if (!isVerb(n)) return true; if (room > 0) { room--; return true; } return false; });
+  const brake = verbBrake().braked; let verbs = 0, others = 0;
+  return ns.filter((n) => {
+    if (!isVerb(n)) { others++; return true; }
+    if (brake || verbs > Math.floor(others / VERB_SHARE)) return false;
+    verbs++; return true;
+  });
 }
 /** Words you started learning in the last few days (for a quick refresher; never touches the schedule). */
 export function recentWords(days = 3, now = Date.now()) {
@@ -275,7 +371,8 @@ export async function rateParse(id, grade, ms = 0, meta = {}) {
   const d = (K.daily[todayKey()] ||= {}); d.pr = (d.pr || 0) + 1; if (prev.state === 'new') d.pn = (d.pn || 0) + 1;
   await store.set('daily', K.daily);
   K.parseAcc.push(grade >= 3 ? 1 : 0); if (K.parseAcc.length > 40) K.parseAcc.shift(); await store.set('parseAcc', K.parseAcc);
-  const sn = id.split(':')[2]; if (sn) { const a = (K.verbParse[sn] ||= []); a.push(grade >= 3 ? 1 : 0); if (a.length > 20) a.shift(); await store.set('verbParse', K.verbParse); }
+  const sn = id.split(':')[2]; if (sn && isVerb(+sn)) { K.verbAcc.push(grade >= 3 ? 1 : 0); if (K.verbAcc.length > 40) K.verbAcc.shift(); await store.set('verbAcc', K.verbAcc); }
+  if (sn) { const a = (K.verbParse[sn] ||= []); a.push(grade >= 3 ? 1 : 0); if (a.length > 20) a.shift(); await store.set('verbParse', K.verbParse); }
   await store.addLog([{ t: now, id, g: grade, k: 'parse', ms, ...meta }]);
   return next;
 }
@@ -283,33 +380,9 @@ export const PARSE_DEFAULT = { slots: {}, recent: { verb: [], other: [] }, mode:
 export async function getParseStats() { return { ...PARSE_DEFAULT, ...((await store.get('parseStats')) || {}) }; }
 export const saveParseStats = (st) => store.set('parseStats', st);
 
-/* ---------- principal parts: one card per printed part ('p:<strongs>:<slot>') ---------- */
-export const partsId = (n, slot) => 'p:' + n + ':' + slot;
-export const partsCardsDue = (now = Date.now()) => [...K.cards.values()].filter((c) => c.id.startsWith('p:') && c.state !== 'new' && c.due <= now);
-export const partsNewToday = () => (K.daily[todayKey()] || {}).ppv || 0;      // new verbs started today
-export const partsVerbStarted = (n) => { const pre = 'p:' + n + ':'; for (const [id, c] of K.cards) if (id.startsWith(pre) && c.state !== 'new') return true; return false; };
-
-/* Each verb is either being learned (multiple choice) or known well enough for cold, self-graded questions. */
-export const verbStage = (n) => (K.partsVerbs[n] && K.partsVerbs[n].stage) || 'learn';
-/** After an answer: a part answered correctly in multiple choice on two different days counts as learned; when every part is, the verb goes cold. Two cold misses in a row send it back. */
-export async function noteVerbAnswer(n, slot, ok, cold, slots) {
-  const v = (K.partsVerbs[n] ||= { stage: 'learn', days: {}, miss: 0 }), day = todayKey();
-  if (cold) {
-    if (!v.coldSince) { v.coldSince = day; v.coldOk = v.coldOk || {}; }
-    if (ok && day > v.coldSince) (v.coldOk ||= {})[slot] = true;           // a part counts as known cold once you get it right on a later day than when the verb went cold
-    v.miss = ok ? 0 : (v.miss || 0) + 1;
-    if (v.miss >= 2) { v.stage = 'learn'; v.days = {}; v.miss = 0; v.coldSince = null; v.coldOk = {}; }
-  } else if (ok) {
-    const d = (v.days[slot] ||= []); if (!d.includes(day)) d.push(day);
-    if (slots.every((sl) => (v.days[sl] || []).length >= 2)) { v.stage = 'cold'; v.miss = 0; v.coldSince = day; v.coldOk = {}; }
-  }
-  await store.set('partsVerbs', K.partsVerbs);
-}
-
-
-/* ---------- how many new items to start today (vocabulary and parsing): automatic pace, like principal parts ---------- */
-export const OVERLOAD = 40;                                   // reviews due across all three topics before no new items start anywhere
-export const dueTotal = (now = Date.now()) => dueCards(now).length + parseCardsDue(now).length + partsCardsDue(now).length;
+/* ---------- how many new items to start today (vocabulary and parsing): automatic pace ---------- */
+export const OVERLOAD = 40;                                   // reviews due across both topics before no new items start anywhere
+export const dueTotal = (now = Date.now()) => dueCards(now).length + parseCardsDue(now).length;
 const meanOf = (a) => (a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null);
 function itemPace(topic, now = Date.now()) {
   const words = topic === 'words', noun = words ? 'words' : 'forms', pre = topic;
@@ -318,7 +391,7 @@ function itemPace(topic, now = Date.now()) {
   if (setting(pre + 'Pause')) return out(0, 'New ' + noun + ' are paused.', { paused: true });
   if (setting(pre + 'Pace') === 'fixed') return out(max, '');
   const total = dueTotal(now);
-  if (total > OVERLOAD) return out(0, 'You have ' + total + ' reviews waiting across vocabulary, parsing and principal parts, so new ' + noun + ' wait until you catch up.', { slow: true, overload: true });
+  if (total > OVERLOAD) return out(0, 'You have ' + total + ' reviews waiting across vocabulary and parsing, so new ' + noun + ' wait until you catch up.', { slow: true, overload: true });
   const cap = Math.max(10, setting('sessionSize') || 25), acc = meanOf(words ? K.wordsAcc : K.parseAcc), field = words ? 'n' : 'pn';
   const last = Object.keys(K.daily).filter((k) => (K.daily[k][field] || 0) > 0).sort().pop();
   const gap = last ? (new Date(todayKey()) - new Date(last)) / 864e5 : 99;
@@ -331,42 +404,6 @@ function itemPace(topic, now = Date.now()) {
 }
 export const wordsPace = (now) => itemPace('words', now);
 export const parsePace = (now) => itemPace('parse', now);
-
-/** How many new verbs to start today, and why. Automatic: slows when reviews pile up or answers slip, speeds up when you are secure. */
-export function partsPace(now = Date.now()) {
-  const max = Math.max(1, setting('partsVerbsPerDay')), today = partsNewToday(), due = partsCardsDue(now).length;
-  const out = (n, why, extra = {}) => ({ n, left: Math.max(0, n - today), due, why, auto: setting('partsPace') !== 'fixed', ...extra });
-  if (setting('partsPause')) return out(0, 'New verbs are paused.', { paused: true });
-  if (setting('partsPace') === 'fixed') return out(max, '');
-  const total = dueTotal(now);
-  if (total > OVERLOAD) return out(0, 'You have ' + total + ' reviews waiting across vocabulary, parsing and principal parts, so new verbs wait until you catch up.', { slow: true, overload: true });
-  const cap = Math.max(10, setting('sessionSize') || 25), a = K.partsAcc, acc = a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null;
-  const last = Object.keys(K.daily).filter((k) => (K.daily[k].ppv || 0) > 0).sort().pop();
-  const gap = last ? (new Date(todayKey()) - new Date(last)) / 864e5 : 99;
-  let n = Math.min(1, max), why = '', slow = false;
-  if (due > cap) { n = 0; slow = true; why = 'You have ' + due + ' to review, so new verbs wait until you catch up.'; }
-  else if (due > cap / 2) { n = gap >= 2 ? 1 : 0; slow = true; why = 'You have ' + due + ' to review, so new verbs are slowed until you catch up.'; }
-  else if (acc != null && acc < 0.75) { n = gap >= 2 ? 1 : 0; slow = true; why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new verbs are slowed while these settle.'; }
-  else if (acc != null && acc > 0.9 && due <= cap / 4) { n = Math.min(2, max); why = 'You’re answering ' + Math.round(acc * 100) + '% correctly with little waiting, so an extra verb comes in.'; }
-  if (n === 0 && today === 0 && gap >= 3) { n = 1; why = 'It’s been a few days, so one new verb keeps things moving. ' + why; }
-  return out(Math.min(n, max), why, { acc, slow });
-}
-export async function rateParts(id, grade, ms = 0, meta = {}) {
-  const now = Date.now();
-  const prev = K.cards.get(id) || F.newCard(id);
-  const next = F.review(prev, grade, now, K.settings.retention);
-  if (meta.m && meta.m !== 'flash' && grade >= 3) { next.stability = Math.min(next.stability, 1); next.due = Math.min(next.due, now + 864e5); }   // picking from choices is easier than recalling: due within a day, but it still graduates from learning
-  const newVerb = prev.state === 'new' && !partsVerbStarted(id.split(':')[1]);
-  await saveCard(next);
-  const d = (K.daily[todayKey()] ||= {}); d.ppr = (d.ppr || 0) + 1; if (prev.state === 'new') d.ppn = (d.ppn || 0) + 1;
-  if (newVerb) { d.ppv = (d.ppv || 0) + 1; const n = id.split(':')[1], v = (K.partsVerbs[n] ||= { stage: 'learn', days: {}, miss: 0 }); v.began = todayKey(); await store.set('partsVerbs', K.partsVerbs); }
-  await store.set('daily', K.daily);
-  await store.addLog([{ t: now, id, g: grade, k: 'parts', ms, ...meta }]);
-  return next;
-}
-export const PARTS_DEFAULT = { recent: [], mode: 'choice', total: 0 };
-export async function getPartsStats() { return { ...PARTS_DEFAULT, ...((await store.get('partsStats')) || {}) }; }
-export const savePartsStats = (st) => store.set('partsStats', st);
 
 /* ---------- extra practice: which studied cards give you the most trouble (never writes anything) ---------- */
 export function troubleScore(c, now = Date.now()) { return (c.lapses || 0) * 2 + ((c.difficulty || 5) - 5) / 2 + (1 - F.retrievability(c, now)) * 3; }

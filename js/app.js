@@ -38,9 +38,9 @@ function route() {
 }
 
 /* Keep the "next review in…" text and the big button honest while a screen stays open: redraw when something changes. */
-const LIVE = new Set(['', '#/home', '#/learn', '#/learn/words', '#/parse', '#/parts']);
+const LIVE = new Set(['', '#/home', '#/learn', '#/learn/words', '#/parse', '#/learn/verbs']);
 let liveSig = '';
-const signature = () => { const u = upcoming(), c = counts(), a = smartAll(); return [u.all.due, whenText(u.all.next), c.words.due, c.parse.due, c.parts.due, a.label, a.sub].join('|'); };
+const signature = () => { const u = upcoming(), c = counts(), a = smartAll(); return [u.all.due, whenText(u.all.next), c.words.due, c.parse.due, a.label, a.sub].join('|'); };
 function refreshLive() {
   if (document.visibilityState !== 'visible' || !LIVE.has(location.hash.replace(/\/$/, ''))) return;
   try { const sig = signature(); if (liveSig && sig !== liveSig) { const y = window.scrollY; route(); window.scrollTo(0, y); } liveSig = sig; } catch (e) { console.error(e); }

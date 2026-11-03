@@ -1,7 +1,7 @@
 // Parsing practice: pick the parts of a form in a fixed order (guided one-at-a-time, or quick all-at-once),
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, reviewCards, recentWords, parsePace, waitingVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
@@ -9,6 +9,9 @@ import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
 import { paceNote, paceOptions } from './pace.js';
 import { readHref } from './reader.js';
+import { verbChoices } from './verbq.js';
+import { requiredStems } from './stems.js';
+import { currentGoal, goalWords } from './know.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
 /** Answer codes that have no button of their own, and the button that stands for them. */
@@ -40,6 +43,14 @@ const cardIdFor = (id) => {
 };
 const isFresh = (id) => { const c = K.cards.get(cardIdFor(id)); return !c || c.state === 'new'; };
 const itemOf = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
+/** The forms a verb requires (its chosen forms in each required stem), as form ids; cached per verb. */
+const reqCache = new Map();
+const requiredFormIds = (n) => {
+  let r = reqCache.get(n);
+  if (!r) { r = new Set(); const rs = requiredStems(n); if (rs) for (const s of rs.stems) for (const f of s.forms) for (const row of f.rows) r.add(canon[row]); reqCache.set(n, r); }
+  return r;
+};
+const isVerbForm = (id) => { const it = itemOf(id); return !!it && it.group === 'V'; };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
 
 /* ---------- context sentence with the form highlighted ---------- */
@@ -67,8 +78,9 @@ function candidatePool(scope, kinds) {
     return out;
   }
   const take = (pred) => { for (const id of members.keys()) { const it = itemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
-  take((f) => status(f.an[0].s) !== 'unknown');
-  if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400); }   // nothing known yet: start with the most common words
+  const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]);        // a verb comes in through the forms it requires; its other forms are practised, never required
+  take((f) => status(f.an[0].s) !== 'unknown' && mine(f));
+  if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400 && mine(f)); }   // nothing known yet: start with the most common words
   return out;
 }
 
@@ -81,8 +93,7 @@ export function planParseSession({ scope = null, kind = 'all', size = setting('s
     .filter((x) => x.id != null && itemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
     .sort((a, b) => a.c.due - b.c.due).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);       // one entry per form
   const limit = newLimit != null ? newLimit : scope ? size : parsePace().left;
-  const waiting = new Set(waitingVerbs());                    // verbs you only know the meaning of wait their turn for principal parts and parsing
-  const fresh = pool.filter((x) => isFresh(x.id) && !waiting.has(D.forms[x.id].an[0].s));
+  const fresh = pool.filter((x) => isFresh(x.id));
   return { due, fresh, limit, size };
 }
 
@@ -90,11 +101,20 @@ export function buildParseSession(opts) {
   const { due, fresh, limit, size } = planParseSession(opts);
   const dueIds = due.slice(0, size).map((x) => ({ id: x.id, type: 'due' }));
   const want = Math.min(limit, Math.max(0, size - dueIds.length));
-  const ranked = fresh.map((x) => ({ x, s: Math.sqrt(x.w) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s);
+  const goal = new Set(goalWords(currentGoal())), steer = (id) => (goal.has(D.forms[id].an[0].s) ? 1.6 : 1);          // the forms of your goal's words come first
+  const ranked = fresh.map((x) => ({ x, s: Math.sqrt(x.w) * steer(x.id) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s);
   // variety: no single word (εἰμί, λέγω, the article…) fills the session; take at most a few forms of each, then relax if there aren't enough words
+  // verb forms are reserved up to 40% of the new slots, so the many noun forms do not crowd them out
   const cap = size > 20 ? 3 : 2, per = new Map(), lex = (id) => D.forms[id].an[0].s, picked = [], rest = [];
-  for (const o of ranked) { const k = lex(o.x.id), n = per.get(k) || 0; if (picked.length < want && n < cap) { picked.push(o); per.set(k, n + 1); } else rest.push(o); }
-  for (const o of rest) { if (picked.length >= want) break; picked.push(o); }
+  let verbRoom = Math.round(want * 0.4), otherRoom = want - verbRoom;
+  const nVerbs = ranked.filter((o) => isVerbForm(o.x.id)).length; if (nVerbs < verbRoom) { otherRoom += verbRoom - nVerbs; verbRoom = nVerbs; }
+  for (const o of ranked) {
+    const k = lex(o.x.id), n = per.get(k) || 0, v = isVerbForm(o.x.id);
+    if (picked.length < want && n < cap && (v ? verbRoom : otherRoom) > 0) { picked.push(o); per.set(k, n + 1); if (v) verbRoom--; else otherRoom--; } else rest.push(o);
+  }
+  const rest2 = [];
+  for (const o of rest) { const k = lex(o.x.id), n = per.get(k) || 0; if (picked.length < want && n < cap) { picked.push(o); per.set(k, n + 1); } else rest2.push(o); }      // a share that nobody fills goes to whoever is left, still a few per word
+  for (const o of rest2) { if (picked.length >= want) break; picked.push(o); }
   const newIds = picked.map((o) => ({ id: o.x.id, type: 'new' }));
   return shuffle([...dueIds, ...newIds]);
 }
@@ -171,9 +191,9 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       practice ? practiceBanner(c.type === 'preview', c.type === 'recent') : null, inner));
   }
 
-  function prompt(c, it) {
+  function prompt(c, it, { ask = 'Parse this word', hideVerb = false } = {}) {
     const f = it.form, L = D.lexByN.get(it.strongs), ctx = formContext(c.id);
-    return h('div.qcard.pcard', h('div.qask', 'Parse this word'), h('div.qgreek', { lang: 'grc' }, f.plain), h('div.qmeta', L.head + ' · ' + L.brief),
+    return h('div.qcard.pcard', h('div.qask', ask), h('div.qgreek', { lang: 'grc' }, f.plain), hideVerb ? null : h('div.qmeta', L.head + ' · ' + L.brief),
       ctx ? h('details.ctxfold', h('summary', 'See it in a verse'), ctx) : null);
   }
   const chartLink = (it, d) => (it.group === 'V' && d.slots.mood === 'P' ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'part', highlight: participleHighlight(d.slots) }) }, icon('table', 18), 'Participle chart')
@@ -216,13 +236,51 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
   }
 
   function show(c) {
-    const it = itemOf(c.id), mode = effectiveMode(groupOfItem(it), st), t0 = Date.now();
-    (mode === 'quick' ? quick : guided)(c, it, t0);
+    const it = itemOf(c.id), mode = effectiveMode(groupOfItem(it), st);
+    const parse = (aided = false, verbOk = false) => (mode === 'quick' ? quick : guided)(c, it, Date.now(), aided);
+    if (it.group === 'V') verbStep(c, it, parse); else parse();
+  }
+
+  /* ----- first step for a verb form: which verb is it? (a wrong answer skips the parse and brings the form back) ----- */
+  function verbStep(c, it, parse) {
+    const L = D.lexByN.get(it.strongs), t0 = Date.now(), opts = verbChoices(it.strongs); let aided = false, locked = false;
+    const area = h('div.pq'), hintBox = h('div');
+    const tally = (ok) => { if (c.retry) return; for (const o of [S.slots, st.slots]) { const s = (o.verb ||= [0, 0]); s[1]++; if (ok) s[0]++; } };
+    const miss = async () => {                                   // the verb was not known: no parse; the form is rated as missed and comes round again
+      tally(false); stop();
+      const ms = Date.now() - t0; let next = null;
+      if (!c.retry) {
+        if (!practice) next = await rateParse(cardIdFor(c.id), 1, ms, { m: 'v', w: 'verb' });
+        S.missed.push({ id: c.id, wrong: ['verb'] }); S.done++; if (c.type === 'new') S.fresh++;
+        retryQ.push({ ...c, retry: true });
+        if (!practice) await saveParseStats(st);
+      }
+      const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
+      area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - Date.now()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.')), go);
+      go.focus({ preventScroll: true });
+      keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
+      document.addEventListener('keydown', keyHandler);
+    };
+    const pick = (o, btn) => {
+      if (locked) return; locked = true;
+      const grid = area.querySelector('.vgrid'); grid.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      if (o.n === it.strongs) { btn.classList.add('right'); tally(true); stop(); setTimeout(() => parse(aided), 420); return; }
+      btn.classList.add('wrong'); grid.querySelector('[data-n="' + it.strongs + '"]').classList.add('right');
+      hintBox.remove(); area.querySelector('.vrow')?.remove(); miss();
+    };
+    clear(area).append(
+      h('div.vgrid', { dataset: { answer: it.strongs } }, opts.map((o, i) => h('button.popt.vopt', { dataset: { n: o.n }, onclick: (e) => pick(o, e.currentTarget) }, h('kbd', i + 1), h('b', { lang: 'grc' }, o.head), h('span.vgl', o.brief)))),
+      h('div.row.between.vrow', h('button.btn.ghost.sm', { onclick: () => { aided = true; hintBox.replaceChildren(h('div.hint', 'Hint: look past any ending, and any prefix added at the front, to the part that stays the same.')); } }, 'Hint'),
+        h('button.btn.ghost.sm', { onclick: () => { if (locked) return; locked = true; area.querySelector('.vgrid').querySelectorAll('button').forEach((b) => { b.disabled = true; }); area.querySelector('[data-n="' + it.strongs + '"]').classList.add('right'); area.querySelector('.vrow').remove(); hintBox.remove(); miss(); } }, 'I don’t know')), hintBox);
+    frame(c, [prompt(c, it, { ask: 'Which verb is this?', hideVerb: true }), area]);
+    stop();
+    keyHandler = (e) => { const n = +e.key; if (!n) return; const b = area.querySelectorAll('.vopt')[n - 1]; if (b && !b.disabled) b.click(); };
+    document.addEventListener('keydown', keyHandler);
   }
 
   /* ----- guided: one part at a time, immediate feedback ----- */
-  function guided(c, it, t0) {
-    const answers = {}; let cands = it.valid.slice(), aided = false, gaveUp = false;
+  function guided(c, it, t0, aided0 = false) {
+    const answers = {}; let cands = it.valid.slice(), aided = aided0, gaveUp = false;
     const L = D.lexByN.get(it.strongs);
     const area = h('div.pq'), hintBox = h('div');
     const nextSlot = () => cands[0].keys.find((k) => !(k in answers));
@@ -271,7 +329,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
   }
 
   /* ----- quick: every part at once, then check ----- */
-  function quick(c, it, t0) {
+  function quick(c, it, t0, aided0 = false) {
     const answers = {}; let locked = false;
     const rows = h('div.srows'), checkBtn = h('button.btn.primary.block', 'Check');
     const shownSlots = () => {
@@ -289,7 +347,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       const res = check(it, giveUp ? {} : answers);
       draw(); checkBtn.remove(); skip.remove();
       rows.querySelectorAll('.srow').forEach((r, i) => { const slot = shownSlots()[i], v = res.perSlot[slot]; if (v) r.classList.add(v.ok ? 'ok' : 'bad'); });
-      feedback(c, it, res, { ms: Date.now() - t0, aided: false, mode: 'q' });
+      feedback(c, it, res, { ms: Date.now() - t0, aided: aided0, mode: 'q' });
     };
     checkBtn.onclick = () => run(false);
     const skip = h('button.btn.ghost.sm', { onclick: () => run(true) }, 'I don’t know');
@@ -302,7 +360,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
 }
 
 function slotBars(slots) {
-  const order = ['tense', 'voice', 'mood', 'person', 'number', 'case', 'gender', 'possessorNumber'];
+  const order = ['verb', 'tense', 'voice', 'mood', 'person', 'number', 'case', 'gender', 'possessorNumber'];
   return h('div.pbars', order.filter((k) => slots[k] && slots[k][1]).map((k) => {
     const [ok, n] = slots[k], p = ok / n;
     return h('div.pbar', h('span', SLOT_TITLE[k]), h('div.bar', h('i', { style: { width: (p * 100) + '%', background: p >= 0.9 ? 'var(--good)' : p >= 0.7 ? 'var(--warn)' : 'var(--bad)' } })), h('b', pct(p)), h('small', n + '×'));
@@ -319,6 +377,15 @@ export function renderParse(view, params) {
       const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'recent' ? 'recent' : rest[1] === 'review' ? 'review' : 'trouble');
       if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practise yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
+    }
+    if (rest[0] === 'verbs') {                                    // the required forms of the verbs you are working on (or one verb)
+      const ns = rest[1] ? [+rest[1]] : startedVerbs(), ids = [...new Set(ns.flatMap((n) => [...requiredFormIds(n)]))].filter((id) => itemOf(id));
+      const due = new Set(parseCardsDue().map((c) => keyMap.get(c.id)));
+      const dueQ = ids.filter((id) => due.has(id) && !isFresh(id)).map((id) => ({ id, type: 'due' })), newQ = shuffle(ids.filter((id) => isFresh(id))).slice(0, Math.max(5, setting('sessionSize') - dueQ.length)).map((id) => ({ id, type: 'new' }));
+      let q = shuffle([...dueQ, ...newQ]), practice = false;
+      if (!q.length) { q = shuffle(ids.map((id) => ({ id, type: 'practice' }))); practice = true; }
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Verb forms')), h('div.card.stack', h('p', 'There are no forms to practise yet. Verbs come in with your vocabulary.'), ...backLinks('#/learn/verbs', 'Back to Verbs'))); return; }
+      return runSession(view, q, { title: 'Verb forms', practice, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'passage') {
       const [, book, c1, v1, c2, v2, k] = rest; if (!D.bookByCode.has(book)) { location.hash = '#/parse'; return; }

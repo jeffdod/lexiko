@@ -148,6 +148,7 @@ process.on('unhandledRejection', () => {});
     await p.goto(URL + url); await p.waitForTimeout(600);
     const has = await p.$('.qcard'); let n = 0;
     for (let i = 0; i < 40 && (await p.$('.qcard')); i++) {
+      if (await p.$('.vgrid')) { const a = await (await p.$('.vgrid')).getAttribute('data-answer'); await p.click('.vopt[data-n="' + a + '"]'); await p.waitForTimeout(600); continue; }
       if (await p.$('button:has-text("Show answer")')) { await p.click('button:has-text("Show answer")'); await p.click('.grades button >> nth=-1'); n++; await p.waitForTimeout(250); continue; }
       const cont = await p.$('.qwrap button.btn.primary.block');
       if (cont && !(await p.$('.pgrid .popt:not([disabled])'))) { await cont.click(); n++; await p.waitForTimeout(250); continue; }
