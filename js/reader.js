@@ -3,7 +3,7 @@ import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, pe
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal } from './know.js';
 import { partsGrid } from './partforms.js';
-import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons } from './util.js';
+import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -200,7 +200,7 @@ export function renderReader(view, params) {
       h('button.title.grow', { onclick: pick, 'aria-label': 'Choose book and chapter' }, book.name + ' ' + ch, h('span.muted', '▾')),
       h('button.btn.ghost.sm', { onclick: options, 'aria-label': 'Reading options' }, 'Aa'),
       h('a.btn.ghost.icon.sm', { href: nav(1), 'aria-label': 'Next chapter' }, icon('chevR', 20))));
-  clear(view).append(bar, meta, body, foot);
+  clear(view).append(...[readBack(), bar, meta, body, foot].filter(Boolean));      // readBack() is null unless the reader was opened from search or a Learn page
 
   // word interactions (delegated)
   const wordOf = (e) => e.target.closest && e.target.closest('.w');

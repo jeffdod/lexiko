@@ -18,6 +18,8 @@ export const D = {
   totalTokens: 0, ready: false,
 };
 
+/** Words the text tags as verb forms but which are used as interjections ('Lo! Behold!': ἰδού, ἴδε). They are learned as vocabulary words only: no parsing, and no verb stems. */
+export const NOT_PARSED = new Set([2400, 2396]);
 export const pack = (bi, ch, vs) => bi * 100000 + ch * 1000 + vs;
 export const unpack = (p) => ({ bi: Math.floor(p / 100000), ch: Math.floor((p % 100000) / 1000), vs: p % 1000 });
 

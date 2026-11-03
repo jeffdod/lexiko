@@ -115,16 +115,17 @@ export function missedBlock(rows, onPractise) {
 }
 
 /* ---------- "Back to …" after a quiz: offer the place the quiz was started from ---------- */
-export const origin = { href: null, prev: null };
+export const origin = { href: null, prev: null, readFrom: null };
 const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage)|parse\/run|parts\/exercise)/;
 /** Called on every route change: remembers where a quiz was launched from (not from another quiz). */
 export function noteRoute(hash) {
   const cur = hash || '#/';
   if (QUIZ.test(cur) && !QUIZ.test(origin.prev || '')) origin.href = origin.prev == null ? null : origin.prev || '#/';
+  if (cur.startsWith('#/read') && !(origin.prev || '').startsWith('#/read')) origin.readFrom = origin.prev || null;      // where the reader was entered from
   origin.prev = cur;
 }
 const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/progress/, 'Back to Progress'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Learn'],
-  [/^#\/parse$/, 'Back to Parsing'], [/^#\/learn\/verbs$/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to search']];
+  [/^#\/parse$/, 'Back to Parsing'], [/^#\/learn\/verbs?(\/|$)/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to search']];
 /** The usual "Back to <topic page>" button, preceded by one to wherever the quiz was started from when that is somewhere else. */
 export function backLinks(defaultHref, defaultLabel, primary = false) {
   const o = origin.href, hit = o && o !== defaultHref && ORIGIN_LABEL.find(([re]) => re.test(o));
@@ -138,6 +139,12 @@ export function knowButtons(L, markKnown, after) {
   if (L.pos !== 'V') return [h('button.btn.sm', { onclick: go(false, 'Marked as known') }, '✓ I know this')];
   return [h('button.btn.sm', { onclick: go(false, 'Marked: you know the meaning. Its forms are still to learn.') }, '✓ I know the meaning'),
     h('button.btn.sm', { onclick: go(true, 'Marked as known, meaning and parsing') }, '✓ I know the meaning and parsing')];
+}
+
+/** A "‹ Back to …" link for the reader when it was opened from search or a Learn page (an installed app has no browser back button). Null otherwise. */
+export function readBack() {
+  const o = origin.readFrom, hit = o && /^#\/(search|learn\/(words|verbs?)|learn$|parse$)/.test(o) && ORIGIN_LABEL.find(([re]) => re.test(o));
+  return hit ? h('div.readback', h('a.btn.ghost.sm', { href: o }, icon('chevL', 18), hit[1])) : null;
 }
 
 /** A page heading with a visible way back, for when there is no browser back button (installed app). */

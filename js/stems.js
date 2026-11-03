@@ -1,6 +1,6 @@
 // Which stems of a verb you need to know, and which forms stand for each stem.
 // Everything here is counted from the Greek text's own forms and RP morphology tags; nothing is written by hand.
-import { D } from './data.js';
+import { D, NOT_PARSED } from './data.js';
 
 /** The six stems of a verb, in principal-part order. */
 export const STEMS = ['Present', 'Future', 'Aorist active/middle', 'Perfect active', 'Perfect middle/passive', 'Aorist passive'];
@@ -28,7 +28,7 @@ function tally() {
   if (byVerb) return byVerb;
   byVerb = new Map();
   D.forms.forEach((f, i) => {
-    const a = f.an[0]; if (!a) return;
+    const a = f.an[0]; if (!a || NOT_PARSED.has(a.s)) return;
     const s = stemOf(a.m); if (s == null) return;
     let v = byVerb.get(a.s); if (!v) byVerb.set(a.s, v = { total: 0, stems: [0, 1, 2, 3, 4, 5].map(() => new Map()) });
     v.total += f.count;
