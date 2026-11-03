@@ -55,7 +55,7 @@ export const getCard = (n) => K.cards.get(cardId(n));
 /** 'known' | 'learning' | 'unknown' — drives the reader, readiness and queues. */
 export function status(n) {
   const c = K.cards.get('w:' + n);
-  if (c) return c.state === 'review' ? 'known' : 'learning';
+  if (c) return c.state === 'review' && ((c.stability || 0) >= 7 || (c.reps || 0) >= 2) ? 'known' : 'learning';      // one right answer isn't knowing a word yet
   const L = D.lexByN.get(n);
   return K.settings.level != null && L && L.freq >= K.settings.level ? 'known' : 'unknown';
 }
@@ -74,6 +74,7 @@ export async function undoRate() {
   const u = lastRate; if (!u) return false; lastRate = null;
   if (u.before) await saveCard(u.before); else { K.cards.delete(u.id); await store.deleteCard(u.id); }
   const d = K.daily[u.day]; if (d) { d.r = Math.max(0, (d.r || 0) - 1); if (u.wasNew) d.n = Math.max(0, (d.n || 0) - 1); if (u.grade >= 3) d.c = Math.max(0, (d.c || 0) - 1); await store.set('daily', K.daily); }
+  if (u.acc) { K.wordsAcc = u.acc; await store.set('wordsAcc', K.wordsAcc); }
   await store.dropLastLog();
   return true;
 }
@@ -81,9 +82,9 @@ export async function undoRate() {
 export async function rate(n, grade, kind = 'review', ms = 0) {
   const now = Date.now();
   const prev = K.cards.get('w:' + n) || F.newCard('w:' + n);
-  lastRate = { id: 'w:' + n, before: K.cards.has('w:' + n) ? { ...K.cards.get('w:' + n) } : null, grade, wasNew: prev.state === 'new', day: todayKey() };
+  lastRate = { acc: K.wordsAcc.slice(), id: 'w:' + n, before: K.cards.has('w:' + n) ? { ...K.cards.get('w:' + n) } : null, grade, wasNew: prev.state === 'new', day: todayKey() };
   const next = F.review(prev, grade, now, K.settings.retention);
-  next.src = prev.src || kind; if (prev.state === 'new') next.born = now;
+  next.src = prev.src === 'probe' && grade < 3 ? 'review' : (prev.src || kind); if (prev.state === 'new') next.born = now;
   await saveCard(next);
   bumpDaily('r'); if (prev.state === 'new') bumpDaily('n'); if (grade >= 3) bumpDaily('c');
   await store.set('daily', K.daily);
@@ -138,8 +139,9 @@ export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
 
 export function streak() {
   let s = 0; const d = new Date();
-  if (!((K.daily[todayKey(d)] || {}).r)) d.setDate(d.getDate() - 1);   // today not done yet doesn't break the streak
-  while ((K.daily[todayKey(d)] || {}).r) { s++; d.setDate(d.getDate() - 1); }
+  const did = (k) => { const x = K.daily[todayKey(k)] || {}; return x.r || x.pr || x.ppr; };      // any studying counts: words, parsing or principal parts
+  if (!did(d)) d.setDate(d.getDate() - 1);   // today not done yet doesn't break the streak
+  while (did(d)) { s++; d.setDate(d.getDate() - 1); }
   return s;
 }
 
@@ -223,9 +225,10 @@ export function verbProgress(n) {
   const c = K.cards.get('w:' + n), e = D.parts.get(n), slots = e ? [1, 2, 3, 4, 5].filter((i) => e.parts[i]) : [];
   const v = K.partsVerbs[n] || {}, cold = verbStage(n) === 'cold';
   const secure = cold ? slots.length : slots.filter((sl) => ((v.days || {})[sl] || []).length >= 2).length;
+  const coldDone = slots.filter((sl) => (v.coldOk || {})[sl]).length;
   const a = K.verbParse[n] || [], acc = a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
-  const meaning = !!c && c.state === 'review', parts = !slots.length || cold, parsing = a.length >= 8 && acc >= 0.95;
-  return { meaning, parts, parsing, done: meaning && parts && parsing, secure, total: slots.length, acc, answers: a.length };
+  const meaning = !!c && c.state === 'review', parts = !slots.length || (cold && coldDone === slots.length), parsing = a.length >= 8 && acc >= 0.95;
+  return { meaning, parts, parsing, cold, coldDone, done: meaning && parts && parsing, secure, total: slots.length, acc, answers: a.length };
 }
 /** Verbs being worked on: ones you began learning here, plus verbs you said you know whose turn has come. (Spot-checked words don't count.) */
 function verbLists() {
@@ -292,11 +295,13 @@ export const verbStage = (n) => (K.partsVerbs[n] && K.partsVerbs[n].stage) || 'l
 export async function noteVerbAnswer(n, slot, ok, cold, slots) {
   const v = (K.partsVerbs[n] ||= { stage: 'learn', days: {}, miss: 0 }), day = todayKey();
   if (cold) {
+    if (!v.coldSince) { v.coldSince = day; v.coldOk = v.coldOk || {}; }
+    if (ok && day > v.coldSince) (v.coldOk ||= {})[slot] = true;           // a part counts as known cold once you get it right on a later day than when the verb went cold
     v.miss = ok ? 0 : (v.miss || 0) + 1;
-    if (v.miss >= 2) { v.stage = 'learn'; v.days = {}; v.miss = 0; }
+    if (v.miss >= 2) { v.stage = 'learn'; v.days = {}; v.miss = 0; v.coldSince = null; v.coldOk = {}; }
   } else if (ok) {
     const d = (v.days[slot] ||= []); if (!d.includes(day)) d.push(day);
-    if (slots.every((sl) => (v.days[sl] || []).length >= 2)) { v.stage = 'cold'; v.miss = 0; }
+    if (slots.every((sl) => (v.days[sl] || []).length >= 2)) { v.stage = 'cold'; v.miss = 0; v.coldSince = day; v.coldOk = {}; }
   }
   await store.set('partsVerbs', K.partsVerbs);
 }
