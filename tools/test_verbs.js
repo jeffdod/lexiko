@@ -64,6 +64,11 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(vr.status && vr.learned && vr.notLearned && vr.started, 'learned needs every chosen form known and 90% of the last 10 answers', JSON.stringify(vr));
   ok(vr.braked && vr.free, 'the brake comes on under 75% right and is off when answers are good', JSON.stringify(vr));
   ok(vr.quota && vr.noneWhenBraked, 'about one new verb per four other words, none while braked', JSON.stringify(vr));
+  // ---- ἰδού and ἴδε are tagged as verbs but are interjections: vocabulary only
+  const idou = await p.evaluate(async () => { const st = await import('./js/stems.js'), pm = await import('./js/parse-model.js'), k = await import('./js/know.js'), { D } = await import('./js/data.js');
+    const rows = D.forms.filter((f) => f.an[0] && (f.an[0].s === 2400 || f.an[0].s === 2396));
+    return { rows: rows.length, stems: st.requiredStems(2400) === null && st.requiredStems(2396) === null, items: rows.every((f) => pm.buildItem(f) === null), word: !!D.lexByN.get(2400), other: !!pm.buildItem(D.forms.find((f) => f.an[0] && f.an[0].m.startsWith('V-PAI') && f.an[0].s !== 2400)) }; });
+  ok(idou.rows >= 4 && idou.stems && idou.items && idou.word && idou.other, 'ἰδού and ἴδε are never parsing items or verb stems, but stay vocabulary words', JSON.stringify(idou));
   // ---- old principal-part cards are purged on load
   await p.evaluate(async () => { const { store: s } = await import('./js/store.js'); await s.putCards([{ id: 'p:1:2', state: 'review', due: 1 }]); });
   await p.reload(); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });
