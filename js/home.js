@@ -23,7 +23,7 @@ function finishedCard(view) {
     if (choosing) return add(box, h('div.card.stack', h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: () => { choosing = false; draw(); } }, 'Cancel')),
       goalPicker({ initial: nxt || g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } })));
     add(box, h('div.card.stack', h('b', icon('target', 18), ' Goal finished'), h('div.goalnum', goalLabel(g)), h('div.bar', h('i.k', { style: { width: '100%' } })),
-      h('div.muted', 'All ' + fmt(gs.total) + ' words known · finished ' + date + (e.days ? ', after ' + e.days + (e.days === 1 ? ' day.' : ' days.') : '.')),
+      h('div.muted', 'All ' + fmt(gs.total) + ' goal words known · finished ' + date + (e.days ? ', after ' + e.days + (e.days === 1 ? ' day.' : ' days.') : '.')),
       g.kind === 'freq' ? h('div.muted', 'You now recognise ' + pct(ntShareKnown()) + ' of the words in the New Testament.') : h('div.row.wrap', h('a.btn.primary.sm', { href: readHref(g.book, g.c1) }, 'Read it'))),
       nxt ? h('div.card.stack.gnext', h('div.muted.small', h('b', 'NEXT GOAL, SUGGESTED')), h('b', goalLabel(nxt)), h('div.muted.small', previewLine(nxt) + (nxt.kind === 'freq' ? ' · reaches ' + pct(freqCoverage(nxt.min)) + ' of the NT' : ''))) : h('div.card', 'You know every word that occurs twice or more. Choose any passage or section as your next goal.'),
       nxt ? h('button.btn.primary.block', { onclick: async () => { await setGoal(nxt); renderHome(view); } }, 'Start this goal') : null,
@@ -95,7 +95,7 @@ export function renderHome(view) {
     let pacing = false; const wp = wordsPace(), pace = (on) => { pacing = on; pick(false); };
     const box = h('div.card.stack'), pick = (open) => { clear(box); if (open) return add(box, h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: () => pick(false) }, 'Cancel')), goalPicker({ initial: g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } })); add(box, 
       h('div.row.between', h('b', icon('target', 18), ' ' + goalLabel(g)), h('button.btn.ghost.sm', { onclick: () => pick(true) }, 'Change ›')),
-      h('div.goalnum', fmt(gs.known) + ' of ' + fmt(gs.total) + ' words known · ' + pct(gs.pct)),
+      h('div.goalnum', fmt(gs.known) + ' of ' + fmt(gs.total) + ' goal words known · ' + pct(gs.pct)),
       h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })),
       h('div.muted', under), h('div.finrow', h('div.muted.small', finish + (ps && !ps.ready && gs.left ? ' ' + waitNote(ps) : '') + (wp.slow || wp.paused ? ' ' + wp.why : '')), gs.left ? h('button.btn.ghost.sm', { 'aria-expanded': String(pacing), onclick: () => pace(!pacing) }, pacing ? 'Close ⌃' : 'Adjust ⌄') : null),
       pacing ? paceControl(gs.left, per, () => pace(false), async (n) => { await setSetting('newPerDay', n); renderHome(view); }) : null,

@@ -14,7 +14,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.waitForSelector('.hero');
   ok(await page.locator('.hero .start').count() === 1, 'home leads with one main button');
   ok(await page.locator('.kpis').count() === 0, 'home has no row of number boxes');
-  ok(/words known/.test(await page.textContent('#view')), 'home shows the goal card');
+  ok(/goal words known/.test(await page.textContent('#view')), 'home shows the goal card');
 
   // flashcard keyboard: Space shows the answer, 3 rates Good, session moves on
   await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcard');
