@@ -327,9 +327,9 @@ function verbsFold() {
   const rows = [...eligible().values()].filter((e) => partsVerbStarted(e.n)).map((e) => {
     const slots = cardParts(e), v = K.partsVerbs[e.n] || {}, cold = verbStage(e.n) === 'cold';
     const secure = slots.filter((sl) => ((v.days || {})[sl] || []).length >= 2).length;
-    return { e, cold, secure, total: slots.length, w: lexeme(e.n).freq };
+    return { e, cold, secure, total: slots.length, done: slots.filter((sl) => (v.coldOk || {})[sl]).length, w: lexeme(e.n).freq };
   }).sort((a, b) => b.w - a.w);
   return fold('Your verbs (' + rows.length + ')', rows.length ? h('div.stack', rows.slice(0, 60).map((r) => h('div.row.between', h('span', h('b', { lang: 'grc' }, r.e.lemma), ' ', h('span.muted.small', lexeme(r.e.n).short || lexeme(r.e.n).brief)),
-    h('span.chip' + (r.cold ? '' : '.accent'), r.cold ? 'Cold' : 'Learning · ' + r.secure + ' of ' + r.total + ' parts'))), rows.length > 60 ? h('div.muted.small', '…and ' + (rows.length - 60) + ' more.') : null,
+    h('span.chip' + (r.cold ? '' : '.accent'), r.cold ? 'Cold · ' + r.done + ' of ' + r.total + ' recalled' : 'Learning · ' + r.secure + ' of ' + r.total + ' parts'))), rows.length > 60 ? h('div.muted.small', '…and ' + (rows.length - 60) + ' more.') : null,
     h('div.muted.small', 'A verb goes cold after every part is right in multiple choice on two different days. Two cold misses in a row send it back to multiple choice.')) : h('p.muted.small', 'Verbs you start will appear here.'));
 }

@@ -19,14 +19,24 @@ export function retrievability(c, now = Date.now()) {
 /** Days until retrievability decays to `r`. */
 export const intervalDays = (s, r = 0.9) => Math.max(1, Math.round((s / FACTOR) * (Math.pow(r, 1 / DECAY) - 1)));
 
-/** Returns the updated card (does not mutate). */
-export function review(card, g, now = Date.now(), retention = 0.9) {
+/** Spread long intervals a little so cards learned together don't all come due together (about ±15% under a week, ±10% under 3 weeks, ±5% beyond). */
+const fuzzDays = (d) => d < 3 ? d : Math.max(1, Math.round(d * (1 + (Math.random() * 2 - 1) * (d < 7 ? 0.15 : d < 20 ? 0.1 : 0.05))));
+/** A card due in `days` days comes due when that study day starts (4 am), not at the same clock time, so an evening learner sees it that evening. */
+export function dueAfterDays(days, now) {
+  const x = new Date(now + days * DAY);
+  if (x.getHours() < 4) x.setDate(x.getDate() - 1);
+  x.setHours(4, 0, 0, 0);
+  return Math.max(x.getTime(), now + 6 * 60 * MIN);
+}
+/** Returns the updated card (does not mutate). fuzz: false gives the exact interval (for button labels). */
+export function review(card, g, now = Date.now(), retention = 0.9, fuzz = true) {
+  const days = (s) => dueAfterDays(fuzz ? fuzzDays(intervalDays(s, retention)) : intervalDays(s, retention), now);
   const c = { ...card };
   if (c.state === 'new') {
     c.stability = initS(g); c.difficulty = initD(g); c.reps = 1; c.last = now;
     if (g === 1) { c.state = 'learning'; c.due = now + MIN; }
     else if (g === 2) { c.state = 'learning'; c.due = now + 6 * MIN; }
-    else { c.state = 'review'; c.due = now + intervalDays(c.stability, retention) * DAY; }
+    else { c.state = 'review'; c.due = days(c.stability); }
     return c;
   }
   const r = retrievability(c, now) || 1;
@@ -42,7 +52,7 @@ export function review(card, g, now = Date.now(), retention = 0.9) {
     c.stability = recallS(c.difficulty, c.stability, r, g);
     c.difficulty = nextD(c.difficulty, g);
     if (!wasReview && g === 2) { c.due = now + 6 * MIN; }
-    else { c.state = 'review'; c.due = now + intervalDays(c.stability, retention) * DAY; }
+    else { c.state = 'review'; c.due = days(c.stability); }
   }
   c.last = now;
   return c;
@@ -51,6 +61,6 @@ export function review(card, g, now = Date.now(), retention = 0.9) {
 /** ms until due for each grade, for button labels. */
 export function preview(card, now = Date.now(), retention = 0.9) {
   const out = {};
-  for (const g of [1, 2, 3, 4]) out[g] = review(card, g, now, retention).due - now;
+  for (const g of [1, 2, 3, 4]) out[g] = review(card, g, now, retention, false).due - now;
   return out;
 }
