@@ -185,7 +185,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         optsEl.querySelectorAll('button').forEach((b) => { b.disabled = true; const right = +b.dataset.n === L.n; b.classList.toggle('right', right); if (+b.dataset.n === pickedN && !right) b.classList.add('wrong'); const m = b.querySelector('.mark'); m.textContent = right ? '✓' : (+b.dataset.n === pickedN ? '✗' : ''); });
         const ok = pickedN === L.n;
         const r = reveal(); card.append(...r.answer.filter(Boolean));
-        const g = item.rescue ? (ok ? 2 : 1) : ok ? (item.type === 'probe' && !item.seen ? 4 : 3) : 1;      // a rescue answered right counts as Hard: it was only recognised with help
+        const g = item.rescue ? (ok ? 2 : 1) : ok ? (item.type === 'probe' && !item.seen ? 4 : 3) : 1;      // a rescue answered right counts as Hard: it was only recognized with help
         const next = h('button.btn.primary.block', { onclick: () => grade(item, g) }, ok || item.rescue ? 'Continue' : 'Continue (I’ll see this again)');
         if (item.rescue) card.append(h('div.rescue-note', 'That’s enough for now. It will come back when it is due.'));
         clear(ctl).append(next);

@@ -107,12 +107,12 @@ export const fold = (title, ...kids) => h('details.fold', h('summary', title), h
 /** The one big button of a page: what to do next, with a line saying what it will give you. */
 export const startButton = (s) => h('a.btn.primary.block.start', { href: s.href }, h('b', s.label), s.sub ? h('small', s.sub) : null);
 
-/** "You missed N" list for a finished session, with a button that practises just those. rows: [{ word, sub, why, greek }] */
-export function missedBlock(rows, onPractise) {
+/** "You missed N" list for a finished session, with a button that practices just those. rows: [{ word, sub, why, greek }] */
+export function missedBlock(rows, onPractice) {
   if (!rows.length) return null;
   return h('div.missed', h('h3', 'You missed ' + rows.length),
     rows.map((r) => h('div.miss', h('span' + (r.greek ? '.g' : '.w'), r.greek ? { lang: 'grc' } : {}, r.word), r.sub ? h('small', r.sub) : null, r.why ? h('small.wrong', r.why) : null)),
-    h('div.row.wrap', h('button.btn.primary', { onclick: onPractise }, 'Practise these ' + rows.length)));
+    h('div.row.wrap', h('button.btn.primary', { onclick: onPractice }, 'Practice these ' + rows.length)));
 }
 
 /* ---------- "Back to …" after a quiz: offer the place the quiz was started from ---------- */

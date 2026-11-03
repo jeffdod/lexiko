@@ -17,6 +17,7 @@ export async function initKnow() {
   K.settings = { ...DEFAULTS, ...s };
   K.cards = new Map((await store.allCards()).map((c) => [c.id, c]));
   for (const id of [...K.cards.keys()]) if (id.startsWith('p:')) { K.cards.delete(id); await store.deleteCard(id); }      // principal parts are no longer scheduled: drop their old cards and stage data
+  for (const id of [...K.cards.keys()]) if (id.startsWith('f:') && NOT_PARSED.has(+id.split(':').pop())) { K.cards.delete(id); await store.deleteCard(id); }      // forms of words that are no longer parsed (ἰδού, ἴδε) leave the schedule
   for (const k of ['partsVerbs', 'partsAcc', 'partsStats']) if ((await store.get(k)) !== undefined) await store.set(k, undefined);
   K.daily = (await store.get('daily')) || {};
   K.read = (await store.get('read')) || {};
@@ -63,7 +64,7 @@ export function goalStats(g) {
   return { total: ws.length, known, left: ws.length - known, pct: ws.length ? known / ws.length : 1 };
 }
 /** Share of the New Testament's running words that the words occurring `min` or more times make up. */
-/** How much of the New Testament's running text you recognise today (words you know, weighted by how often they occur). */
+/** How much of the New Testament's running text you recognize today (words you know, weighted by how often they occur). */
 export function ntShareKnown() {
   let all = 0, part = 0;
   for (const L of D.lex) { all += L.freq; if (status(L.n) === 'known') part += L.freq; }
@@ -362,6 +363,10 @@ export function recentWords(days = 3, now = clockNow()) {
 }
 /* ---------- parsing practice: form-level cards ('f:<form>:<strongs>') ---------- */
 export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;
+/** Parsing forms due now, counted the way a session serves them (one per form, only forms that are still quizzed). parse.js registers the real counter. */
+let dueCounter = null;
+export const setParseDueCounter = (fn) => { dueCounter = fn; };
+export const parseDueCount = (now = clockNow()) => dueCounter ? dueCounter(now) : parseCardsDue(now).length;
 export const parseCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && c.state !== 'new' && c.due <= now);
 export const parseNewToday = () => (K.daily[todayKey()] || {}).pn || 0;
 export async function rateParse(id, grade, ms = 0, meta = {}) {
@@ -383,11 +388,11 @@ export const saveParseStats = (st) => store.set('parseStats', st);
 
 /* ---------- how many new items to start today (vocabulary and parsing): automatic pace ---------- */
 export const OVERLOAD = 40;                                   // reviews due across both topics before no new items start anywhere
-export const dueTotal = (now = clockNow()) => dueCards(now).length + parseCardsDue(now).length;
+export const dueTotal = (now = clockNow()) => dueCards(now).length + parseDueCount(now);
 const meanOf = (a) => (a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null);
 function itemPace(topic, now = clockNow()) {
   const words = topic === 'words', noun = words ? 'words' : 'forms', pre = topic;
-  const max = Math.max(0, setting(words ? 'newPerDay' : 'parseNewPerDay')), today = words ? newToday() : parseNewToday(), due = words ? dueCards(now).length : parseCardsDue(now).length;
+  const max = Math.max(0, setting(words ? 'newPerDay' : 'parseNewPerDay')), today = words ? newToday() : parseNewToday(), due = words ? dueCards(now).length : parseDueCount(now);
   const out = (n, why, extra = {}) => ({ n, left: Math.max(0, n - today), due, why, auto: setting(pre + 'Pace') !== 'fixed', ...extra });
   if (setting(pre + 'Pause')) return out(0, 'New ' + noun + ' are paused.', { paused: true });
   if (setting(pre + 'Pace') === 'fixed') return out(max, '');

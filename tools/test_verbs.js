@@ -38,10 +38,10 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     k.K.wordsAcc = Array(20).fill(0).map((_, i) => i % 2); o.weak = k.wordsPace().n; k.K.wordsAcc = [];
     const mk = (pre, i) => { const c = f.review(f.newCard(pre + i), 3, Date.now() - 864e6, 0.9); c.due = 1; k.K.cards.set(c.id, c); };
     for (let i = 0; i < 30; i++) mk('w:9', 100 + i); o.due30 = k.wordsPace().n;                        // more than a session due
-    for (let i = 0; i < 20; i++) mk('f:x', i); o.overload = [k.wordsPace().n, k.parsePace().n, !!k.wordsPace().overload];
+    { const { D } = await import('./js/data.js'); await import('./js/parse.js'); D.forms.filter((x) => x.an[0] && /^N-[NGDA][SP][MFN]$/.test(x.an[0].m) && x.count > 20).slice(0, 25).forEach((x) => mk(k.parseId(x), '')); } o.overload = [k.wordsPace().n, k.parsePace().n, !!k.wordsPace().overload];
     S.wordsPace = 'fixed'; o.fixed = k.wordsPace().n; S.wordsPace = 'auto'; S.wordsPause = true; o.paused = k.wordsPace().n;
     k.K.cards.clear(); for (const [id, c] of kc) k.K.cards.set(id, c); Object.assign(S, keep); return o; });
-  ok(np.base[0] === 10 && np.base[1] === 10 && np.weak < 10 && np.weak >= 1 && np.due30 <= 1 && np.overload[0] === 0 && np.overload[1] === 0 && np.overload[2] && np.fixed === 10 && np.paused === 0, 'new words and forms slow when reviews pile up or accuracy slips, stop at overload, and honour Fixed and Pause', JSON.stringify(np));
+  ok(np.base[0] === 10 && np.base[1] === 10 && np.weak < 10 && np.weak >= 1 && np.due30 <= 1 && np.overload[0] === 0 && np.overload[1] === 0 && np.overload[2] && np.fixed === 10 && np.paused === 0, 'new words and forms slow when reviews pile up or accuracy slips, stop at overload, and honor Fixed and Pause', JSON.stringify(np));
   // ---- review what I just learned: words started in the last few days, not older ones
   const rw = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const saved = new Map(k.K.cards);
     const mk = (n, born) => { const c = f.review(f.newCard('w:' + n), 3, Date.now(), 0.9); c.src = 'new'; c.born = born; k.K.cards.set('w:' + n, c); };
@@ -79,10 +79,10 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   const n0 = await p.evaluate(async () => { const k = await import('./js/know.js'); const { D } = await import('./js/data.js'); const L = D.lex.filter((x) => x.pos === 'V' && k.verbStatus(x.n))[0]; await k.rate(L.n, 3, 'new'); return L.n; });
   await p.goto(URL + '#/learn/verbs'); await p.reload(); await p.waitForSelector('.verbrow');
   await p.screenshot({ path: out + '/verbs.png', fullPage: true });
-  ok(/Practise these verbs/.test(await p.textContent('#view')) && /Nothing is scheduled/.test(await p.textContent('#view')), 'Verbs page offers both practice buttons');
+  ok(/Practice these verbs/.test(await p.textContent('#view')) && /Nothing is scheduled/.test(await p.textContent('#view')), 'Verbs page offers both practice buttons');
   await p.goto(URL + '#/learn/verb/' + n0); await p.reload(); await p.waitForSelector('.chip');
   await p.screenshot({ path: out + '/verb.png', fullPage: true });
-  const vt = await p.textContent('#view'); ok(/of its uses/.test(vt) && /Together these stems cover/.test(vt) && /Practise this verb/.test(vt) && /Practise these forms/.test(vt) && /Principal parts chart/.test(vt), 'verb page shows stems, coverage, buttons and chart');
+  const vt = await p.textContent('#view'); ok(/of its uses/.test(vt) && /Together these stems cover/.test(vt) && /Practice this verb/.test(vt) && /Practice these forms/.test(vt) && /Principal parts chart/.test(vt), 'verb page shows stems, coverage, buttons and chart');
   ok(await p.$$eval('#view .btn', (bs) => bs.every((b) => getComputedStyle(b).alignItems === 'center' && getComputedStyle(b).display.includes('flex'))), 'button text is vertically centred');
   // ---- exercise writes nothing, in both quiz styles
   for (const mode of ['choice', 'flash']) {
@@ -99,7 +99,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     ok(before === after, mode + ': the exercise changed no cards or counters');
   }
   await p.goto(URL + '#/parse/run/verbs'); await p.reload(); await p.waitForTimeout(800);
-  ok(!/(null|undefined)/.test(await p.textContent('#view')), 'practising verb forms opens without errors');
+  ok(!/(null|undefined)/.test(await p.textContent('#view')), 'practicing verb forms opens without errors');
   for (const u of ['#/learn', '#/learn/words', '#/parse', '#/home', '#/progress']) { await p.goto(URL + u); await p.reload(); await p.waitForSelector('#view *'); ok(!/(null|undefined)/.test(await p.textContent('#view')), u + ' has no stray null/undefined'); }
   ok(errs.length === 0, 'no console/page errors', errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);

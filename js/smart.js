@@ -1,7 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
 import { clockNow } from './clock.js';
-import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, verbBrake, setting, dueCards, newToday, parseCardsDue, parseNewToday, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, verbBrake, setting, dueCards, newToday, parseDueCount, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
 export const TOPICS = {
@@ -14,7 +14,7 @@ const ORDER = ['words', 'parse'];
 export function counts() {
   return {
     words: { due: dueCards().length, fresh: wordsPace().left, studied: studiedCount('w:') },
-    parse: { due: parseCardsDue().length, fresh: parsePace().left, studied: studiedCount('f:') },
+    parse: { due: parseDueCount(), fresh: parsePace().left, studied: studiedCount('f:') },
   };
 }
 
@@ -65,7 +65,7 @@ export function tileNext(u, k) {
 }
 
 /** What the big button says for a topic's normal session: names the activity instead of just "Start". */
-const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Learn new words') : 'Practise parsing';
+const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Learn new words') : 'Practice parsing';
 
 /** Everything a normal session will contain, so the button never promises less than it delivers. Vocabulary sessions also slip in a few check-ins on words you said you already know. */
 const work = (c, topic = 'words') => {

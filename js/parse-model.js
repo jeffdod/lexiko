@@ -73,7 +73,7 @@ export function groupForms(forms) {
   const by = new Map(), canon = new Array(forms.length), members = new Map();
   forms.forEach((f, i) => { const k = f.w.replace(/\u00ad/g, '') + '|' + (f.an[0] && f.an[0].s); (by.get(k) || by.set(k, []).get(k)).push(i); });
   // The same word often appears capitalised at the start of a sentence, or with a different accent (ἐστιν / ἔστιν / ἐστὶν).
-  // When those have the same lexeme and exactly the same readings they are one form to practise, so merge them.
+  // When those have the same lexeme and exactly the same readings they are one form to practice, so merge them.
   const bare = (w) => w.replace(/\u00ad/g, '').normalize('NFD').replace(/[\u0300\u0301\u0342]/g, '').normalize('NFC').toLowerCase();
   const groups = [];                                               // {ids, codes, bucket}: written forms that share lexeme and readings
   const sig = new Map();
