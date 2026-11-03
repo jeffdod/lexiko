@@ -369,3 +369,5 @@ button.btn.primary[disabled] { opacity: .5; cursor: default; }
 .vgrid { display: grid; gap: .5rem; width: 100%; }
 .vopt { text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: .1rem; padding-left: 1.5rem; }
 .vopt b { font-family: var(--greek); font-size: 1.2rem; } .vopt .vgl { color: var(--muted); font-size: .85rem; font-weight: 500; }
+
+.rescue-note { background: var(--gold-soft); color: var(--gold); border-radius: 12px; padding: .55rem .8rem; font-size: .88rem; margin: .4rem 0; }
