@@ -1,4 +1,5 @@
 // Home: where you are, what to do today, what to read next.
+import { clockNow } from './clock.js';
 import { D } from './data.js';
 import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, studiedCount, currentGoal, setGoal, setSetting, wordsPace, goalFinished, noteGoalDone, nextGoal, goalStats, ntShareKnown, freqCoverage } from './know.js';
 import { goalLabel } from './know.js';
@@ -45,7 +46,7 @@ function paceControl(left, per, cancel, save) {
     for (let i = 0; i < 400; i++) { d += delta; if (d < 1 || d > maxDays) return; const n = perFor(d); if (n !== cur) { cur = n; return; } }
   };
   const draw = () => {
-    const d = daysFor(cur), w = Math.floor(d / 7), r = d % 7, date = new Date(Date.now() + d * DAY).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const d = daysFor(cur), w = Math.floor(d / 7), r = d % 7, date = new Date(clockNow() + d * DAY).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
     const st = (n, unit, delta, key = unit) => h('div.pst', h('button.pacebtn', { 'aria-label': 'Fewer ' + key, disabled: cur >= MAX_PER_DAY || daysFor(cur) - delta < 1, onclick: () => { move(-delta); draw(); } }, '−'),
       h('div', h('b', String(n)), h('span.u', unit)), h('button.pacebtn', { 'aria-label': 'More ' + key, disabled: daysFor(cur) + delta > maxDays, onclick: () => { move(delta); draw(); } }, '+'));
     add(clear(box), h('b', 'Finish in'), h('div.pacesteps', st(w, w === 1 ? 'week' : 'weeks', 7, 'weeks'), st(r, r === 1 ? 'day' : 'days', 1, 'days')),
@@ -64,7 +65,7 @@ export function renderHome(view) {
   const studied = studiedCount('w:');
   const newLeft = Math.max(0, setting('newPerDay') - newToday());
   const lastBackup = K.settings.lastBackup;
-  const needsBackup = studied >= 15 && (!lastBackup || Date.now() - lastBackup > 14 * DAY);
+  const needsBackup = studied >= 15 && (!lastBackup || clockNow() - lastBackup > 14 * DAY);
 
   const stack = h('div.stack');
   stack.append(h('div.row.between', { style: { flexWrap: 'nowrap' } },

@@ -1,4 +1,5 @@
 // Small DOM + text helpers shared by all views.
+import { clockNow } from './clock.js';
 /** 1234567 -> "1,234,567" */
 export const fmt = (n) => n.toLocaleString('en-US');
 export const strip = (s) => s.replace(/­/g, '');
@@ -49,7 +50,7 @@ export function fmtInterval(ms) {
   return (d / 365).toFixed(1).replace(/\.0$/, '') + 'y';
 }
 
-export const todayKey = (t = Date.now()) => {
+export const todayKey = (t = clockNow()) => {
   const d = new Date(t);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 };

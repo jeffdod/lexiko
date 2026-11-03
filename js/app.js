@@ -13,6 +13,7 @@ import { renderSearch } from './search.js';
 import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { h, clear, icon, noteRoute } from './util.js';
+import { travelBar } from './timetravel.js';
 
 const view = document.getElementById('view');
 const navEl = document.getElementById('nav');
@@ -97,6 +98,7 @@ async function boot() {
   try { localStorage.setItem('lexiko-theme', K.settings.theme); } catch { /* ignore */ }
   buildNav();
   window.addEventListener('hashchange', route);
+  travelBar();
   route();
   // keep the brand screen up long enough to register, not a flash (skipped under test automation)
   bar.style.width = '100%';

@@ -1,8 +1,10 @@
 // Settings: theme, level, study options, data protection / backup / restore, install help, about & licenses.
+import { clockNow } from './clock.js';
 import { D } from './data.js';
 import { K, setting, setSetting, setLevel, studiedCount } from './know.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup, ENC_FORMAT, canLock, lockBackup, unlockBackup } from './store.js';
 import { h, clear, toast, icon, pct, fold, fmt } from './util.js';
+import { renderDev } from './timetravel.js';
 
 export const LEVELS = [null, 1000, 500, 250, 100, 50, 30, 20, 10, 5];
 
@@ -51,7 +53,8 @@ function download(blob, name) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 
-export function renderSettings(view) {
+export function renderSettings(view, params = []) {
+  if (params[0] === 'dev') return void renderDev(view);
   const persistLine = h('div.muted.small', 'Checking storage…');
   const refreshPersist = async (ask) => {
     const info = ask ? await requestPersistence() : await requestPersistence();
@@ -82,7 +85,7 @@ export function renderSettings(view) {
   });
   const passIn = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Optional passphrase', 'aria-label': 'Optional passphrase for the backup', style: { width: '100%' } });
   const markBackedUp = async () => {
-    await setSetting('lastBackup', Date.now());
+    await setSetting('lastBackup', clockNow());
     const el = document.querySelector('#bk-last'); if (el) el.textContent = 'Last backup: ' + new Date(K.settings.lastBackup).toLocaleString();
   };
   const doBackup = async () => {

@@ -371,3 +371,8 @@ button.btn.primary[disabled] { opacity: .5; cursor: default; }
 .vopt b { font-family: var(--greek); font-size: 1.2rem; } .vopt .vgl { color: var(--muted); font-size: .85rem; font-weight: 500; }
 
 .rescue-note { background: var(--gold-soft); color: var(--gold); border-radius: 12px; padding: .55rem .8rem; font-size: .88rem; margin: .4rem 0; }
+
+#ttbar { position: fixed; z-index: 85; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: calc(env(safe-area-inset-top) + .35rem) .8rem .35rem; background: var(--warn-soft); color: var(--warn); border-bottom: 1px solid var(--warn); font-size: .85rem; font-weight: 600; }
+#ttbar span { flex: 1 1 10rem; }
+body.tt #view { padding-top: calc(env(safe-area-inset-top) + 3.6rem); }
+@media (min-width: 700px) { #ttbar { left: var(--rail-w); } }
