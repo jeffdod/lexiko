@@ -158,7 +158,7 @@ function runSession(view, queue, { scope, restart, practice }) {
   async function grade(c, g) {
     const first = !c.retry;
     if (first) {
-      if (!practice) { await rateParts(partsId(c.n, c.slot), c.fmt !== 'flash' && g > 2 ? 2 : g, Date.now() - t0, { m: c.fmt, g });   // picking from choices is easier than recalling: a right choice schedules as Hard, never Good (the quiz still counts it as correct) await recordResult(st, g);
+      if (!practice) { await rateParts(partsId(c.n, c.slot), g, Date.now() - t0, { m: c.fmt }); await recordResult(st, g);
         await noteVerbAnswer(c.n, c.slot, g >= 3, c.fmt === 'flash', cardParts(eligible().get(c.n))); if (c.type === 'new') S.fresh++; }
       S.done++; if (g >= 3) S.good++;
     }
