@@ -1,6 +1,6 @@
 // Home: where you are, what to do today, what to read next.
 import { D, scopeLabel } from './data.js';
-import { K, setting, newToday, streak, scopeReadiness, readinessClass, readinessLabel, studiedCount } from './know.js';
+import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, readinessClass, readinessLabel, studiedCount } from './know.js';
 import { h, clear, pct, icon, startButton, fold } from './util.js';
 import { growthCard } from './growth.js';
 import { smartAll, counts, upcoming, nextLine } from './smart.js';
@@ -39,11 +39,11 @@ export function renderHome(view) {
   // 2. reading: your goal, or where you left off
   const book = D.bookByCode.get(K.settings.lastBook || 'JHN') || D.bookByCode.get('JHN'), ch = K.settings.lastCh || 1;
   if (goal) {
-    const rd = scopeReadiness(goal);
+    const rd = scopeReadiness(goal), ps = passageStudy(goal);
     stack.append(h('div.card.stack', h('div.row.between', h('b', icon('target', 18), ' ' + scopeLabel(goal)), h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' · ' + readinessLabel(rd.known))),
       h('div.bar', h('i.k', { style: { width: pct(rd.known) } }), h('i.l', { style: { width: pct(rd.learning) } })),
-      h('div.muted.small', rd.distinctUnknown ? rd.distinctUnknown + ' words still to learn before this reads comfortably.' : 'You know every word. Go read it!'),
-      h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, rd.distinctUnknown ? 'Learn the ' + rd.distinctUnknown + ' new words' : 'Study its words'), h('a.btn.sm', { href: readHref(goal.book, goal.c1) }, 'Read'))));
+      h('div.muted.small', rd.distinctUnknown ? rd.distinctUnknown + ' words still to learn before this reads comfortably.' + (!ps.ready ? ' ' + waitNote(ps) : '') : 'You know every word. Go read it!'),
+      h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, ps.fresh ? 'Learn the ' + ps.fresh + ' new word' + (ps.fresh === 1 ? '' : 's') : ps.due ? 'Review ' + ps.due + ' due word' + (ps.due === 1 ? '' : 's') : 'Study its words'), h('a.btn.sm', { href: readHref(goal.book, goal.c1) }, 'Read'))));
   } else {
     stack.append(h('div.card.stack', h('div.row.between', h('div', h('b', 'Keep reading'), h('div.muted.small', book.name + ' ' + ch)), h('a.btn.primary.sm', { href: readHref(book.code, ch) }, icon('read', 16), 'Read')),
       h('a.small', { href: '#/progress' }, 'Set a reading goal ›')));
