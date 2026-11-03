@@ -54,7 +54,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(50); await k.setGoal({ kind: 'freq', min: 30 }); });
   await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
   const hc = await p.locator('.goalnum').textContent();
-  ok(/^\d[\d,]* of \d[\d,]* words known · \d+%$/.test(hc), 'Home card headline', hc);
+  ok(/^\d[\d,]* of \d[\d,]* goal words known · \d+%$/.test(hc), 'Home card headline', hc);
   const ht = await p.locator('#view').textContent();
   ok(/recognise \d+% of the words in the New Testament/.test(ht) && /words? to go · about/.test(ht), 'Home card: reading share and finish estimate');
   await p.screenshot({ path: out + '/home-freq.png' });
@@ -101,7 +101,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   // progress card + picker
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setGoal(null); });
   await p.goto(URL + '#/progress'); await p.waitForSelector('text=Goal');
-  ok(await p.locator('text=words known').first().isVisible(), 'goal card shows words known');
+  ok(await p.locator('text=goal words known').first().isVisible(), 'goal card shows words known');
   await p.getByRole('button', { name: /Change/ }).click();
   ok(await p.locator('.goal-picker').isVisible(), 'picker opens');
   const rungs = await p.locator('.goal-picker .goal-opt').count();
@@ -121,7 +121,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(50); await k.setGoal({ kind: 'freq', min: 100 }); });
   await p.goto(URL + '#/'); await p.reload(); await p.waitForSelector('text=Goal finished');
   const ft = await p.locator('#view').innerText();
-  ok(/All \d[\d,]* words known/.test(ft) && /NEXT GOAL, SUGGESTED/.test(ft) && /30 or more times/.test(ft), 'finished goal card suggests the next goal', ft.split('\n').slice(0, 12).join(' | ').slice(0, 200));
+  ok(/All \d[\d,]* goal words known/.test(ft) && /NEXT GOAL, SUGGESTED/.test(ft) && /30 or more times/.test(ft), 'finished goal card suggests the next goal', ft.split('\n').slice(0, 12).join(' | ').slice(0, 200));
   await p.waitForSelector('#loading', { state: 'detached' }).catch(() => {}); await p.waitForTimeout(400); await p.screenshot({ path: out + '/home-finished.png' });
   await p.getByRole('button', { name: 'Start this goal' }).click(); await p.waitForSelector('.goalnum');
   const g5 = await p.evaluate(async () => { const k = await import('./js/know.js'); return { goal: k.K.goal, done: k.K.goalsDone }; });

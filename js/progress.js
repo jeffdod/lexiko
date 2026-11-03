@@ -75,7 +75,7 @@ export function renderProgress(view) {
     add(clear(goalCard), h('div.row.between', h('h2', icon('target', 20), ' Goal'), h('button.btn.ghost.sm', { onclick: () => drawGoal(!changing) }, changing ? 'Cancel' : 'Change ›')));
     if (changing) { add(goalCard, goalPicker({ initial: goal, onPick: async (g) => { await setGoal(g); renderProgress(view); } })); return; }
     add(goalCard, h('b', goalLabel(goal)), h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })),
-      h('div.row.between', h('b', fmt(gs.known) + ' of ' + fmt(gs.total) + ' words known'), h('b', pct(gs.pct))),
+      h('div.row.between', h('b', fmt(gs.known) + ' of ' + fmt(gs.total) + ' goal words known'), h('b', pct(gs.pct))),
       book ? h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [book.book, book.c1, book.v1 || 1, book.c2, book.v2 || 999].join('/') }, 'Study its words'), h('a.btn.sm', { href: readHref(book.book, book.c1) }, 'Read')) : null);
   };
   drawGoal();
@@ -99,7 +99,7 @@ export function renderProgress(view) {
     mile ? h('p.milestone', mile) : null,
     h('div.kpis',
       h('div.kpi', h('b', pct(kTok / tot)), h('span', 'of NT words you can read')),
-      h('div.kpi', h('b', fmt(wc.known)), h('span', 'of ' + fmt(wc.total) + ' words known')),
+      h('div.kpi', h('b', fmt(wc.known)), h('span', 'of ' + fmt(wc.total) + ' New Testament words known')),
       h('div.kpi', h('b', secReady + '/' + rows.length), h('span', 'sections ready (98%+)')),
       h('div.kpi', h('b', secRead), h('span', 'sections read')),
       h('div.kpi', h('b', streak()), h('span', 'day streak'))),
