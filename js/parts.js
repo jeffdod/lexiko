@@ -134,6 +134,6 @@ export function renderParts(view, params) {
   if (mode !== 'exercise') { location.replace('#/learn/verbs'); return; }
   const n = rest ? +rest : null, e = n ? eligible().get(n) : null, back = n ? { href: '#/learn/verb/' + n, label: 'Back to this verb' } : { href: '#/learn/verbs', label: 'Back to Verbs' };
   const queue = exerciseQueue(n ? [n] : null);
-  if (!queue.length) { clear(view).append(h('div.pagehead', h('h1', 'Principal parts')), h('div.card.stack', h('p', n ? 'This verb has no principal parts beyond its first form.' : 'There are no principal parts to practise yet.'), h('a.btn', { href: back.href }, 'Back'))); return; }
+  if (!queue.length) { clear(view).append(h('div.pagehead', h('h1', 'Principal parts')), h('div.card.stack', h('p', n ? 'This verb has no principal parts beyond its first form.' : 'There are no principal parts to practice yet.'), h('a.btn', { href: back.href }, 'Back'))); return; }
   return runSession(view, queue, { restart: () => renderParts(view, params), back });
 }

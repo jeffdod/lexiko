@@ -38,7 +38,7 @@ export function renderWelcome(view, done) {
     let goal = suggestGoal(level), choosing = false;
     const draw = () => {
       const card = h('div.card.stack.goal-pick', h('b', goalLabel(goal)), h('div.muted', previewLine(goal)),
-        goal.kind === 'freq' ? h('div.muted', 'When you finish you will recognise ' + Math.round(freqCoverage(goal.min) * 100) + '% of the New Testament.') : null);
+        goal.kind === 'freq' ? h('div.muted', 'When you finish you will recognize ' + Math.round(freqCoverage(goal.min) * 100) + '% of the New Testament.') : null);
       clear(view).append(h('div.welcome.stack',
         h('div.row.between', h('button.btn.ghost.sm', { onclick: step1 }, '‹ Back'), h('span.muted.small', 'Step 2 of 2')),
         h('h1', 'What do you want to work toward?'),

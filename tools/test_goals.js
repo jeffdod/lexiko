@@ -56,7 +56,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   const hc = await p.locator('.goalnum').textContent();
   ok(/^\d[\d,]* of \d[\d,]* goal words known · \d+%$/.test(hc), 'Home card headline', hc);
   const ht = await p.locator('#view').textContent();
-  ok(/recognise \d+% of the words in the New Testament/.test(ht) && /words? to go · about/.test(ht), 'Home card: reading share and finish estimate');
+  ok(/recognize \d+% of the words in the New Testament/.test(ht) && /words? to go · about/.test(ht), 'Home card: reading share and finish estimate');
   await p.screenshot({ path: out + '/home-freq.png' });
   await p.getByRole('button', { name: /Change/ }).click();
   ok(await p.locator('.goal-picker').isVisible() && p.url().endsWith('#/'), 'Change opens the picker on Home itself');

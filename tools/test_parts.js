@@ -99,7 +99,7 @@ process.on('unhandledRejection', () => {});
     for (let i = 0; i < 20; i++) mk('f:x', i); o.overload = [k.wordsPace().n, k.parsePace().n, k.partsPace().n, !!k.wordsPace().overload];
     S.wordsPace = 'fixed'; o.fixed = k.wordsPace().n; S.wordsPace = 'auto'; S.wordsPause = true; o.paused = k.wordsPace().n;
     k.K.cards.clear(); for (const [id, c] of kc) k.K.cards.set(id, c); Object.assign(S, keep); return o; });
-  ok(np.base[0] === 10 && np.base[1] === 10 && np.weak < 10 && np.weak >= 1 && np.due30 <= 1 && np.overload[0] === 0 && np.overload[1] === 0 && np.overload[2] === 0 && np.overload[3] && np.fixed === 10 && np.paused === 0, 'new words and forms slow when reviews pile up or accuracy slips, stop at overload, and honour Fixed and Pause', JSON.stringify(np));
+  ok(np.base[0] === 10 && np.base[1] === 10 && np.weak < 10 && np.weak >= 1 && np.due30 <= 1 && np.overload[0] === 0 && np.overload[1] === 0 && np.overload[2] === 0 && np.overload[3] && np.fixed === 10 && np.paused === 0, 'new words and forms slow when reviews pile up or accuracy slips, stop at overload, and honor Fixed and Pause', JSON.stringify(np));
   // ---- review what I just learned: words started in the last few days, not older ones
   const rw = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const saved = new Map(k.K.cards);
     const mk = (n, born) => { const c = f.review(f.newCard('w:' + n), 3, Date.now(), 0.9); c.src = 'new'; c.born = born; k.K.cards.set('w:' + n, c); };

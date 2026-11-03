@@ -25,7 +25,7 @@ function finishedCard(view) {
       goalPicker({ initial: nxt || g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } })));
     add(box, h('div.card.stack', h('b', icon('target', 18), ' Goal finished'), h('div.goalnum', goalLabel(g)), h('div.bar', h('i.k', { style: { width: '100%' } })),
       h('div.muted', 'All ' + fmt(gs.total) + ' goal words known · finished ' + date + (e.days ? ', after ' + e.days + (e.days === 1 ? ' day.' : ' days.') : '.')),
-      g.kind === 'freq' ? h('div.muted', 'You now recognise ' + pct(ntShareKnown()) + ' of the words in the New Testament.') : h('div.row.wrap', h('a.btn.primary.sm', { href: readHref(g.book, g.c1) }, 'Read it'))),
+      g.kind === 'freq' ? h('div.muted', 'You now recognize ' + pct(ntShareKnown()) + ' of the words in the New Testament.') : h('div.row.wrap', h('a.btn.primary.sm', { href: readHref(g.book, g.c1) }, 'Read it'))),
       nxt ? h('div.card.stack.gnext', h('div.muted.small', h('b', 'NEXT GOAL, SUGGESTED')), h('b', goalLabel(nxt)), h('div.muted.small', previewLine(nxt) + (nxt.kind === 'freq' ? ' · reaches ' + pct(freqCoverage(nxt.min)) + ' of the NT' : ''))) : h('div.card', 'You know every word that occurs twice or more. Choose any passage or section as your next goal.'),
       nxt ? h('button.btn.primary.block', { onclick: async () => { await setGoal(nxt); renderHome(view); } }, 'Start this goal') : null,
       h('button.btn.block', { onclick: () => { choosing = true; draw(); } }, 'Choose a different goal ›'));
@@ -90,7 +90,7 @@ export function renderHome(view) {
   } else if (K.goal) {
     const g = currentGoal(), gs = goalStats(g), per = Math.max(1, setting('newPerDay') || 10), days = Math.ceil(gs.left / per);
     const isFreq = g.kind === 'freq', rd = isFreq ? null : scopeReadiness(g), ps = isFreq ? null : passageStudy(g);
-    const under = isFreq ? 'You recognise ' + pct(ntShareKnown()) + ' of the words in the New Testament today.' : 'You can read ' + pct(rd.known) + ' of this passage today.';
+    const under = isFreq ? 'You recognize ' + pct(ntShareKnown()) + ' of the words in the New Testament today.' : 'You can read ' + pct(rd.known) + ' of this passage today.';
     const finish = gs.left ? gs.left + ' word' + (gs.left === 1 ? '' : 's') + ' to go · ' + (days <= 1 ? 'about a day' : 'about ' + days + ' days') + ' at ' + per + ' a day.' + (isFreq ? ' Finishing reaches ' + pct(freqCoverage(g.min)) + '.' : '') : 'You know every word in this goal.';
     const fresh = ps ? Math.min(ps.fresh, per) : 0;
     let pacing = false; const wp = wordsPace(), pace = (on) => { pacing = on; pick(false); };

@@ -18,7 +18,7 @@ export function renderHelp(view) {
       p('lexiko works fully offline once it has loaded, and it can live on your home screen like any app. On an iPhone or iPad, open it in Safari, tap the Share button, then “Add to Home Screen”. On Android, open the browser menu and choose “Install app” or “Add to Home screen”. On a computer, Chrome and Edge show an install icon in the address bar. Settings also has an Install button where your browser allows it.'),
       p('When a new version is available, a small “Update ready” bar appears; tap Reload to switch to it.')),
     fold('Strengthen weak spots and Look ahead',
-      p('Strengthen weak spots practises the cards you miss most. Look ahead shows a few new words without starting them. Neither changes your review schedule.')),
+      p('Strengthen weak spots practices the cards you miss most. Look ahead shows a few new words without starting them. Neither changes your review schedule.')),
     fold('Word forms, principal parts and charts',
       p('Parsing practice asks you to name the parts of a word form, such as tense, voice and mood for a verb, or case, number and gender for a noun. For verbs, lexiko picks the few forms worth learning (the ones that cover most of a verb’s uses) and teaches those; the Verbs page under Learn shows them. Principal parts is optional extra practice on the Verbs page: nothing in it is scheduled or counted. The Charts button in these quizzes opens the verb charts and a chart of noun and adjective endings counted from the text.')),
     fold('Search',

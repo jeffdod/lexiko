@@ -2,7 +2,7 @@
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
@@ -36,7 +36,7 @@ function ensureIndex() {
     if (a.length < 8 && !a.some((x) => x[2] === vs && x[1] === ch && x[0] === b.code)) a.push([b.code, ch, vs]);
   }
 }
-/** The card that holds this form's progress: the variant already practised the most (cards made before variants were merged), else the main one. */
+/** The card that holds this form's progress: the variant already practiced the most (cards made before variants were merged), else the main one. */
 const cardIdFor = (id) => {
   let best = parseId(D.forms[id]), bc = K.cards.get(best);
   for (const r of members.get(id) || []) { const k = parseId(D.forms[r]), c = K.cards.get(k); if (c && (!bc || c.reps > bc.reps)) { best = k; bc = c; } }
@@ -69,7 +69,7 @@ function formContext(id) {
   return el;
 }
 
-/* ---------- which forms to practise ---------- */
+/* ---------- which forms to practice ---------- */
 function candidatePool(scope, kinds) {
   const ok = new Set(kinds), out = [];
   if (scope) {
@@ -79,11 +79,20 @@ function candidatePool(scope, kinds) {
     return out;
   }
   const take = (pred) => { for (const id of members.keys()) { const it = itemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
-  const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]);        // a verb comes in through the forms it requires; its other forms are practised, never required
+  const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]);        // a verb comes in through the forms it requires; its other forms are practiced, never required
   take((f) => status(f.an[0].s) !== 'unknown' && mine(f));
   if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400 && mine(f)); }   // nothing known yet: start with the most common words
   return out;
 }
+
+/** How many forms are due, counted exactly as a session serves them: one per form, and only forms that are still quizzed. */
+export function parseDueCount(now = clockNow()) {
+  ensureIndex();
+  const seen = new Set();
+  for (const c of parseCardsDue(now)) { const id = keyMap.get(c.id); if (id != null && itemOf(id)) seen.add(id); }
+  return seen.size;
+}
+setParseDueCounter(parseDueCount);
 
 /** What a session would contain right now: the due forms, then new ones up to the daily allowance. */
 export function planParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
@@ -171,7 +180,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
         weakest && weakest[1] < 0.8 ? h('p.muted', 'Most slips this time: ' + SLOT_TITLE[weakest[0]].toLowerCase() + '. It will keep coming back until it sticks.') : null,
         missedBlock(S.missed.map((m) => { const it = itemOf(m.id), L = it && D.lexByN.get(it.strongs); return { greek: true, word: D.forms[m.id].plain, sub: L ? L.head + ' · ' + L.brief : '', why: m.wrong.length ? 'Missed: ' + m.wrong.map((k) => (SLOT_TITLE[k] || k).toLowerCase()).join(', ') : '' }; }),
           () => runSession(view, S.missed.map((m) => ({ id: m.id, type: 'practice' })), { title, scope, restart, practice: true })),
-        h('div.row.wrap', h('button.btn' + (S.missed.length ? '' : '.primary'), { onclick: restart }, 'Practise more'),
+        h('div.row.wrap', h('button.btn' + (S.missed.length ? '' : '.primary'), { onclick: restart }, 'Practice more'),
           ...backLinks('#/parse', 'Back to Parsing'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
@@ -376,7 +385,7 @@ export function renderParse(view, params) {
     let scope = null, kind = 'all';
     if (rest[0] === 'extra') {
       const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'recent' ? 'recent' : rest[1] === 'review' ? 'review' : 'trouble');
-      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practise yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practice yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'verbs') {                                    // the required forms of the verbs you are working on (or one verb)
@@ -385,7 +394,7 @@ export function renderParse(view, params) {
       const dueQ = ids.filter((id) => due.has(id) && !isFresh(id)).map((id) => ({ id, type: 'due' })), newQ = shuffle(ids.filter((id) => isFresh(id))).slice(0, Math.max(5, setting('sessionSize') - dueQ.length)).map((id) => ({ id, type: 'new' }));
       let q = shuffle([...dueQ, ...newQ]), practice = false;
       if (!q.length) { q = shuffle(ids.map((id) => ({ id, type: 'practice' }))); practice = true; }
-      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Verb forms')), h('div.card.stack', h('p', 'There are no forms to practise yet. Verbs come in with your vocabulary.'), ...backLinks('#/learn/verbs', 'Back to Verbs'))); return; }
+      if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Verb forms')), h('div.card.stack', h('p', 'There are no forms to practice yet. Verbs come in with your vocabulary.'), ...backLinks('#/learn/verbs', 'Back to Verbs'))); return; }
       return runSession(view, q, { title: 'Verb forms', practice, restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'passage') {
@@ -423,9 +432,9 @@ async function landing(view) {
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), chartsButton()),
       fold('Study a passage',
-        goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('div.row', h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practise'), h('a.btn.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/verb' }, 'Verbs only'))) : null,
+        goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('div.row', h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practice'), h('a.btn.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/verb' }, 'Verbs only'))) : null,
         passagePicker(view, goal, {
-          title: 'Parse a passage', blurb: 'Practise the forms that occur in the text you want to read, most frequent first.', label: 'Practise these forms',
+          title: 'Parse a passage', blurb: 'Practice the forms that occur in the text you want to read, most frequent first.', label: 'Practice these forms',
           href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/all',
           also: [{ label: 'Verbs only', href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/verb' }],
           info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(canon[t >> 4])) ids.add(canon[t >> 4]); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },

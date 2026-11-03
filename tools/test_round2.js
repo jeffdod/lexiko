@@ -43,7 +43,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
     ok(/\+ accusative/.test(await page.locator('#pop').innerText()), 'κατ’ ὄναρ shows the accusative sense'); await page.keyboard.press('Escape'); }
   // parsing a passage: one click for everything, one click for verbs only
   await page.goto(URL + '#/parse'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
-  { const all = await page.locator('details a:has-text("Practise these forms")').getAttribute('href'), vb = await page.locator('details a.btn:has-text("Verbs only")').first().getAttribute('href');
+  { const all = await page.locator('details a:has-text("Practice these forms")').getAttribute('href'), vb = await page.locator('details a.btn:has-text("Verbs only")').first().getAttribute('href');
     ok(/\/all$/.test(all) && /\/verb$/.test(vb) && all.replace(/all$/, '') === vb.replace(/verb$/, ''), 'passage parsing offers all forms and verbs only for the same text: ' + all + ' | ' + vb);
     await page.goto(URL + vb); await page.waitForSelector('.qcard'); await passVerb(page); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
   // parsing: when the answer is wrong, the right button is lit even for a voice that has no button of its own (middle or passive deponent)
@@ -107,7 +107,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.goto(URL + '#/parse/run/passage/MRK/1/1/1/8/verb'); await page.waitForSelector('.qcard');
   { for (let i = 0; i < 80 && !(await page.locator('.missed').count()); i++) { await page.click('button:has-text("I don’t know")').catch(() => {}); await page.waitForSelector('.fb,.missed').catch(() => {}); if (await page.locator('.fb').count()) await page.click('button.primary.block'); await page.waitForTimeout(120); }
     ok(await page.locator('.missed .miss').count() >= 1, 'session-complete lists the words you missed');
-    await page.click('button:has-text("Practise these")'); await page.waitForSelector('.qcard'); ok(await page.locator('.qcount').count() === 1, 'Practise these starts a session of the missed words'); }
+    await page.click('button:has-text("Practice these")'); await page.waitForSelector('.qcard'); ok(await page.locator('.qcount').count() === 1, 'Practice these starts a session of the missed words'); }
   { await page.evaluate(async () => { const kn = await import('./js/know.js'); for (const n of [3588, 846, 1510, 3004, 2316, 4771, 3056, 2962]) { await kn.rate(n, 1, 'new', 3000); await kn.rate(n, 1, 'review', 3000); } });
     const firsts = new Set(); for (let i = 0; i < 10; i++) { await page.goto(URL + '#/home'); await page.goto(URL + '#/learn/practice/trouble'); await page.waitForSelector('.qcard'); firsts.add(await page.textContent('.qcard')); }
     ok(firsts.size > 1, 'weak-spot practice does not always start with the same card (' + firsts.size + ' different starts in 10)'); }

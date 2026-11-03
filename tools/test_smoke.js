@@ -108,7 +108,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
 
   // learn: passage session
   await page.goto(URL + '#/learn'); await page.waitForSelector('.start');
-  ok(await page.locator('.topics .tile').count() === 2 && await page.locator('a.tile[href="#/learn/verbs"]').count() === 1 && /Review|Learn new|Practise|Strengthen|Look ahead/.test(await page.textContent('.start')), 'Learn shows one start button, two topics and a Verbs link');
+  ok(await page.locator('.topics .tile').count() === 2 && await page.locator('a.tile[href="#/learn/verbs"]').count() === 1 && /Review|Learn new|Practice|Strengthen|Look ahead/.test(await page.textContent('.start')), 'Learn shows one start button, two topics and a Verbs link');
   await page.screenshot({ path: out + '/05-learn.png' });
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
   await page.selectOption('select[aria-label=Book]', 'JHN'); await page.selectOption('select[aria-label=Section]', { index: 1 });
