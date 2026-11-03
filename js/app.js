@@ -3,6 +3,7 @@ import { loadData } from './data.js';
 import { initKnow, K } from './know.js';
 import { requestPersistence } from './store.js';
 import { renderHome } from './home.js';
+import { upcoming, whenText, counts, smartAll } from './smart.js';
 import { renderReader } from './reader.js';
 import { renderLearn } from './learn.js';
 import { renderProgress } from './progress.js';
@@ -35,6 +36,18 @@ function route() {
   catch (e) { console.error(e); clear(view).append(h('div.card', h('h2', 'Something went wrong'), h('p.muted', String(e && e.message || e)), h('a.btn', { href: '#/home' }, 'Home'))); }
   view.focus({ preventScroll: true });
 }
+
+/* Keep the "next review in…" text and the big button honest while a screen stays open: redraw when something changes. */
+const LIVE = new Set(['', '#/home', '#/learn', '#/learn/words', '#/parse', '#/parts']);
+let liveSig = '';
+const signature = () => { const u = upcoming(), c = counts(), a = smartAll(); return [u.all.due, whenText(u.all.next), c.words.due, c.parse.due, c.parts.due, a.label, a.sub].join('|'); };
+function refreshLive() {
+  if (document.visibilityState !== 'visible' || !LIVE.has(location.hash.replace(/\/$/, ''))) return;
+  try { const sig = signature(); if (liveSig && sig !== liveSig) { const y = window.scrollY; route(); window.scrollTo(0, y); } liveSig = sig; } catch (e) { console.error(e); }
+}
+document.addEventListener('visibilitychange', refreshLive);
+setInterval(refreshLive, 30 * 1000);
+window.addEventListener('hashchange', () => { liveSig = ''; setTimeout(() => { try { if (LIVE.has(location.hash)) liveSig = signature(); } catch (e) {} }, 0); });
 
 async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
