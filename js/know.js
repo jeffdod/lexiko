@@ -150,6 +150,27 @@ export function passageWords(scope) {
   return [...m.entries()].filter(([n]) => status(n) !== 'known')
     .sort((a, b) => b[1] - a[1] || D.lexByN.get(b[0]).freq - D.lexByN.get(a[0]).freq).map(([n, c]) => ({ n, c }));
 }
+/** Plain-words reason a passage has nothing to study right now. */
+export function waitNote(ps, now = Date.now()) {
+  const bits = [];
+  if (ps.held) bits.push(ps.held + (ps.held === 1 ? ' verb is' : ' verbs are') + ' waiting until you finish the verbs you’re on');
+  if (ps.started) bits.push(ps.started + (ps.started === 1 ? ' word you’ve started comes' : ' words you’ve started come') + ' back ' + (isFinite(ps.soonest) ? whenIn(ps.soonest, now) : 'on schedule'));
+  return bits.length ? 'Nothing to study right now: ' + bits.join('; ') + '.' : '';
+}
+const whenIn = (t, now) => { const m = Math.round((t - now) / 6e4); return m < 60 ? 'in ' + Math.max(1, m) + ' min' : m < 1440 ? 'in ' + Math.round(m / 60) + ' h' : 'in ' + Math.round(m / 1440) + ' days'; };
+/** What studying a passage can actually deliver right now, and why the rest can't be studied yet (read-only). */
+export function passageStudy(scope, now = Date.now()) {
+  const dueSet = new Set(dueCards().map((c) => +c.id.slice(2)));
+  let fresh = [], due = 0, started = 0, soonest = Infinity;
+  for (const { n } of passageWords(scope)) {
+    const c = K.cards.get('w:' + n);
+    if (!c || c.state === 'new') fresh.push(n);
+    else if (dueSet.has(n)) due++;
+    else { started++; if (c.due < soonest) soonest = c.due; }          // already begun; comes back on its own schedule
+  }
+  const open = admitVerbs(fresh);
+  return { fresh: open.length, held: fresh.length - open.length, due, started, soonest, ready: open.length + due };
+}
 /** Next most-frequent words the learner doesn't know yet (level builder). */
 export function nextByLevel(limit) {
   const out = []; let room = verbSlots();
