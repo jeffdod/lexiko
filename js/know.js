@@ -329,6 +329,7 @@ export async function rateParts(id, grade, ms = 0, meta = {}) {
   const now = Date.now();
   const prev = K.cards.get(id) || F.newCard(id);
   const next = F.review(prev, grade, now, K.settings.retention);
+  if (meta.m && meta.m !== 'flash' && grade >= 3) { next.stability = Math.min(next.stability, 1); next.due = Math.min(next.due, now + 864e5); }   // picking from choices is easier than recalling: due within a day, but it still graduates from learning
   const newVerb = prev.state === 'new' && !partsVerbStarted(id.split(':')[1]);
   await saveCard(next);
   const d = (K.daily[todayKey()] ||= {}); d.ppr = (d.ppr || 0) + 1; if (prev.state === 'new') d.ppn = (d.ppn || 0) + 1;
