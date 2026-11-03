@@ -1,10 +1,11 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
+import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, goalNext, currentGoal, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
 import { paceNote, paceOptions } from './pace.js';
-import { unfinishedVerbs, waitingVerbs, verbProgress, VERB_CAP } from './know.js';
+import { verbBrake } from './know.js';
+import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
 import { readHref } from './reader.js';
@@ -248,14 +249,15 @@ export function passagePicker(view, initial, o = {}) {
 
 /** A few words you haven't started: from your goal passage if you have one, else the most common you don't know yet. */
 function previewWords(goal) {
-  const fromGoal = goal ? passageWords(goal).filter((x) => status(x.n) === 'unknown').slice(0, 6).map((x) => x.n) : [];
+  const fromGoal = goalNext(currentGoal(), 6).map((x) => x.n);
   return fromGoal.length ? fromGoal : nextByLevel(6).map((x) => x.n);
 }
 
 export function renderLearn(view, params) {
   const [mode, ...rest] = params;
   if (mode === 'words') return void wordsPage(view);
-  if (mode === 'verbs') return void verbsPage(view);
+  if (mode === 'verbs') return void renderVerbsPage(view);
+  if (mode === 'verb') return void renderVerbPage(view, rest[0]);
   if (mode === 'daily') return void startFrom(view, 'daily', null, 'Today’s session');
   if (mode === 'review') return void startFrom(view, 'review', null, 'Review');
   if (mode === 'set') { const [lo, hi] = rest.map(Number); return void startFrom(view, 'daily', null, bandLabel([lo, hi]), new Set(D.lex.filter((L) => L.freq >= lo && L.freq <= hi).map((L) => L.n))); }
@@ -277,7 +279,7 @@ export function renderLearn(view, params) {
     return void runSession(view, items, { title: 'Strengthen weak spots', practice: true });
   }
   if (mode === 'level') {
-    const items = nextByLevel(setting('newPerDay')).map((x) => ({ n: x.n, type: 'new' }));
+    const items = (goalNext(currentGoal(), setting('newPerDay')).length ? goalNext(currentGoal(), setting('newPerDay')) : nextByLevel(setting('newPerDay'))).map((x) => ({ n: x.n, type: 'new' }));
     return void (items.length ? runSession(view, items, { title: 'New words' }) : startFrom(view, 'review', null));
   }
   if (mode === 'passage') {
@@ -291,7 +293,8 @@ export function renderLearn(view, params) {
     h('div.stack',
       startButton(next),
       nextLine(up, dueAll),
-      h('div.topics', ['words', 'parse', 'parts'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)), tileNext(up, k) ? h('p.small.tilenext', icon('clock', 13), ' ' + tileNext(up, k)) : null))),
+      h('div.topics', ['words', 'parse'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)), tileNext(up, k) ? h('p.small.tilenext', icon('clock', 13), ' ' + tileNext(up, k)) : null))),
+      verbsInProgress() ? h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Verbs ›'), h('p', verbsInProgress() + (verbsInProgress() === 1 ? ' verb' : ' verbs') + ' in progress')) : h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Verbs ›'), h('p', 'Verbs you are learning')),
       comingUp(up)));
 }
 
@@ -309,25 +312,10 @@ function bandsCard() {
   return h('div.list', rows);
 }
 
-/** The note shown while new verbs wait for the ones you've started to be fully learned. */
+/** Shown on the Vocabulary page when the verb brake is on. */
 function verbHold() {
-  const open = unfinishedVerbs();
-  if (open.length < VERB_CAP) return null;
-  return h('div.card.small', h('b', 'New verbs are on hold.'), ' You have ' + open.length + ' verbs you haven’t fully learned yet. Nouns, adjectives and other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See these ' + open.length + ' verbs →')));
-}
-
-/** Which verbs are still being learned, and what each one needs. */
-function verbsPage(view) {
-  const open = unfinishedVerbs().map((n) => ({ n, L: lexeme(n), p: verbProgress(n) })), waiting = waitingVerbs();
-  clear(view).append(backHead('Verbs to finish', '#/learn/words', 'Vocabulary'),
-    h('div.stack',
-      open.length ? h('div.card', open.map(({ L, p }) => h('div.row.between', { style: { padding: '.5rem 0' } },
-        h('div', h('b', { lang: 'grc' }, L.head), ' ', h('span.muted.small', L.brief),
-          h('div.muted.small', (p.meaning ? '✓ Meaning' : 'Meaning still settling'), ' · ', p.total ? (p.parts ? '✓ Principal parts' : p.cold ? p.coldDone + ' of ' + p.total + ' parts recalled cold' : p.secure + ' of ' + p.total + ' parts learned') : 'no principal parts', ' · ', p.parsing ? '✓ Parsing' : p.answers < 8 ? 'parsing: ' + p.answers + ' of 8 answers' : Math.round(p.acc * 100) + '% parsing')))))
-        : h('div.card', h('p', 'Every verb you’ve started is fully learned. 🎉')),
-      waiting.length ? h('div.card.stack', h('b', 'Up next'), h('p.muted.small', 'You said you know the meaning of these verbs. They’ll get their principal parts and parsing next, once there is room.'), h('div', waiting.slice(0, 12).map((n) => h('span.chip', { style: { margin: '.15rem .3rem .15rem 0' } }, h('span', { lang: 'grc' }, lexeme(n).head))))) : null,
-      h('p.muted.small', 'A verb is finished when its meaning is learned, every principal part has been recalled cold (right on a later day than when it went cold), and you parse it correctly 95% of the time or better over your last 20 answers (at least 8). A verb with no principal parts needs only the meaning and the parsing. New verbs wait while ' + VERB_CAP + ' or more are unfinished.'),
-      h('div.row.wrap', h('a.btn.primary', { href: '#/parts' }, 'Principal parts'), h('a.btn', { href: '#/parse' }, 'Parsing'), h('a.btn', { href: '#/learn/words' }, 'Back to Vocabulary'))));
+  const b = verbBrake(); if (!b.braked) return null;
+  return h('div.card.small', h('b', 'New verbs are paused.'), ' ' + b.why + ' Other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See your verbs →')));
 }
 
 function wordsPage(view) {

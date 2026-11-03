@@ -1,7 +1,7 @@
 // The reader: Greek text with tap/click word popups, optional glosses for unknown words, readiness per chapter.
 import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange } from './data.js';
 import { decode } from './morph.js';
-import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection } from './know.js';
+import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal } from './know.js';
 import { partsGrid } from './partforms.js';
 import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons } from './util.js';
 
@@ -152,10 +152,10 @@ export function renderReader(view, params) {
     body.innerHTML = html + (open ? '</p>' : '');
     // readiness
     const sc = { book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 }, rd = scopeReadiness(sc);
-    const ps = passageStudy({ book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 });
+    const cg = currentGoal(), isGoal = cg.kind === 'passage' && cg.book === book.code && cg.c1 === ch && cg.c2 === ch && (cg.v1 || 1) === 1 && cg.v2 >= (book.chapters.find((c) => c[0] === ch) || [0, 999])[1];
     clear(meta).append(
       h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' known · ' + readinessLabel(rd.known)),
-      h('span.row', rd.distinctUnknown ? (ps.fresh || ps.due ? h('a.btn.sm', { href: '#/learn/passage/' + [book.code, ch, 1, ch, 999].join('/') }, icon('learn', 16), ps.fresh ? 'Learn the ' + ps.fresh + ' new word' + (ps.fresh === 1 ? '' : 's') : 'Review ' + ps.due + ' due') : h('span.chip', { title: waitNote(ps) }, 'Nothing to study yet')) : h('span.chip.good', 'No new words'),
+      h('span.row', rd.distinctUnknown ? (isGoal ? h('span.chip.good', 'Your goal') : h('button.btn.sm', { onclick: async () => { await setGoal({ kind: 'passage', book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 }); toast('This chapter is now your goal'); draw(); } }, icon('target', 16), 'Make this my goal')) : h('span.chip.good', 'No new words'),
         h('button.btn.sm' + (setting('glossMode') ? '.primary' : ''), { 'aria-pressed': !!setting('glossMode'), onclick: async () => { await setSetting('glossMode', !setting('glossMode')); draw(); } }, 'Glosses')),
     );
     const read = !!K.read[book.code + ':' + ch];

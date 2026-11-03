@@ -2,7 +2,7 @@
 //  - every button, link and field has a name   - tap targets are at least 40px   - text contrast is at least 4.5:1 (3:1 for large text)
 const { chromium } = require('playwright');
 const URL = 'http://localhost:8123/lexiko/';
-const ROUTES = ['#/home', '#/read/JHN/1', '#/learn', '#/learn/words', '#/parse', '#/parts', '#/progress', '#/settings', '#/search', '#/help'];
+const ROUTES = ['#/home', '#/read/JHN/1', '#/learn', '#/learn/words', '#/learn/verbs', '#/parse', '#/progress', '#/settings', '#/search', '#/help'];
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails++; };
 
@@ -39,7 +39,7 @@ const AUDIT = () => {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme, isMobile: true, hasTouch: true });
     const page = await ctx.newPage();
     await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached' });
-    await page.click('.choice >> nth=2'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Skip for now")'); await page.waitForSelector('.hero');
+    await page.click('.choice >> nth=2'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")'); await page.waitForSelector('.hero');
     await page.evaluate(async () => { const m = await import('./js/know.js'); await m.markLearning(3056); });
     for (const r of ROUTES) {
       await page.goto(URL + r); await page.waitForTimeout(450);

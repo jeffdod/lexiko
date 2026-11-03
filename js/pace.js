@@ -1,4 +1,4 @@
-// Shared pieces for the automatic pace of new words and new forms (principal parts has its own copy of the same idea).
+// Shared pieces for the automatic pace of new words and new forms.
 import { setting, setSetting } from './know.js';
 import { h } from './util.js';
 

@@ -1,7 +1,8 @@
 // Progress: word knowledge, which parts of the NT are within reach, goals, recent activity.
 import { D, scopeLabel, periScope, periRange, periRef } from './data.js';
-import { K, sectionRead, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak } from './know.js';
-import { h, clear, pct, icon, todayKey, fmt } from './util.js';
+import { K, sectionRead, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak, currentGoal, goalStats, goalLabel, noteGoalDone } from './know.js';
+import { goalPicker } from './goals.js';
+import { h, clear, add, pct, icon, todayKey, fmt } from './util.js';
 import { readHref } from './reader.js';
 import { growthCard } from './growth.js';
 
@@ -67,23 +68,24 @@ export function renderProgress(view) {
     return d;
   });
 
-  // goal
-  const goal = K.goal && K.goal.book ? K.goal : null;
-  const goalCard = h('div.card.stack', h('h2', icon('target', 20), ' Goal'));
-  const bookSel = h('select', { 'aria-label': 'Book' }, D.books.map((b) => h('option', { value: b.code, selected: goal ? goal.book === b.code : b.code === 'JHN' }, b.name)));
-  const c1 = h('select', { 'aria-label': 'From chapter' }), c2 = h('select', { 'aria-label': 'To chapter' });
-  const fill = () => { const b = D.bookByCode.get(bookSel.value); [c1, c2].forEach((s, i) => { clear(s).append(...b.chapters.map(([c]) => h('option', { value: c, selected: goal && goal.book === b.code ? c === (i ? goal.c2 : goal.c1) : (i ? c === b.chapters[b.chapters.length - 1][0] : c === 1) }, c))); }); };
-  fill(); bookSel.addEventListener('change', () => { fill(); });
-  if (goal) {
-    const rd = chs.filter((c) => c.book.code === goal.book && c.ch >= goal.c1 && c.ch <= goal.c2);
-    const tk = rd.reduce((a, c) => a + c.tokens, 0), kn = rd.reduce((a, c) => a + c.known * c.tokens, 0);
-    const done = rd.filter((c) => c.read).length;
-    goalCard.append(h('div', h('div.row.between', h('b', 'Read ' + scopeLabel(goal)), h('span.rdy.' + readinessClass(kn / tk), pct(kn / tk) + ' known')),
-      h('div.bar', { style: { margin: '.5rem 0' } }, h('i.k', { style: { width: pct(kn / tk) } })), h('div.muted.small', done + ' of ' + rd.length + ' chapters read')),
-      h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, 1, goal.c2, 999].join('/') }, 'Study its words'), h('a.btn.sm', { href: readHref(goal.book, goal.c1) }, 'Read'),
-        h('button.btn.ghost.sm', { onclick: async () => { await setGoal(null); renderProgress(view); } }, 'Clear')));
-  } else goalCard.append(h('p.muted.small', 'Choose a passage you want to be able to read. Lexiko will steer your study towards it.'));
-  goalCard.append(h('div.row.wrap', bookSel, c1, h('span.muted', 'to'), c2, h('button.btn.sm', { onclick: async () => { const a = +c1.value, b = Math.max(a, +c2.value); await setGoal({ book: bookSel.value, c1: a, v1: 1, c2: b, v2: 999 }); renderProgress(view); } }, goal ? 'Change goal' : 'Set goal')));
+  // goal: one set of words you are working toward (frequency, passage or section)
+  const goal = currentGoal(), gs = goalStats(goal), book = goal.book ? goal : null;
+  const goalCard = h('div.card.stack');
+  const drawGoal = (changing = false) => {
+    add(clear(goalCard), h('div.row.between', h('h2', icon('target', 20), ' Goal'), h('button.btn.ghost.sm', { onclick: () => drawGoal(!changing) }, changing ? 'Cancel' : 'Change ›')));
+    if (changing) { add(goalCard, goalPicker({ initial: goal, onPick: async (g) => { await setGoal(g); renderProgress(view); } })); return; }
+    add(goalCard, h('b', goalLabel(goal)), h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })),
+      h('div.row.between', h('b', fmt(gs.known) + ' of ' + fmt(gs.total) + ' words known'), h('b', pct(gs.pct))),
+      book ? h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [book.book, book.c1, book.v1 || 1, book.c2, book.v2 || 999].join('/') }, 'Study its words'), h('a.btn.sm', { href: readHref(book.book, book.c1) }, 'Read')) : null);
+  };
+  drawGoal();
+
+  // goals completed: a plain record, nothing graded
+  noteGoalDone();
+  const when = (t) => new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const doneCard = K.goalsDone.length ? h('div.card.stack', h('h2', 'Goals completed'),
+    h('div.list', [...K.goalsDone].reverse().map((e) => h('div.li', h('div.grow', h('div.t', goalLabel(e.goal)), h('div.s', fmt(e.words) + ' words')), h('span.muted.small', when(e.finished) + (e.days ? ' · ' + e.days + (e.days === 1 ? ' day' : ' days') : ''))))),
+    h('p.muted.small', 'A record of what you have finished. Nothing here is graded or timed.')) : null;
 
   // activity
   const days = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push({ k: todayKey(d), d, r: (K.daily[todayKey(d)] || {}).r || 0 }); }
@@ -105,6 +107,7 @@ export function renderProgress(view) {
       h('div.legend', { style: { marginTop: '.5rem' } }, h('span', h('i', { style: { background: 'var(--good)' } }), 'known'), h('span', h('i', { style: { background: 'var(--warn)' } }), 'learning'), h('span', h('i', { style: { background: 'var(--bad)', opacity: .55 } }), 'new to you'))),
     growthCard(),
     goalCard,
+    doneCard,
     sug.length ? h('div.card.stack', h('h2', 'Good next reads'), h('p.muted.small', 'Sections where you already know most of the words — the sweet spot for reading with a few lookups.'), h('div.list', sug.map((r) => suggestionItem(r)))) : null,
     h('div.card', h('h2', 'Passages within reach'), legend, h('div', { style: { marginTop: '.4rem' } }, books)),
     h('div.card', h('h2', 'Recent practice'), act, h('div.muted.small', { style: { marginTop: '.4rem' } }, 'Reviews per day, last 14 days.')),

@@ -4,7 +4,7 @@
 // Everything else: case → number → gender (personal/reflexive/possessive pronouns add person first).
 import { decode, CASE, NUM, GEN, TENSE, MOOD } from './morph.js';
 
-export const SLOT_TITLE = { tense: 'Tense', voice: 'Voice', mood: 'Mood', person: 'Person', number: 'Number', case: 'Case', gender: 'Gender', possessorNumber: 'Possessor number' };
+export const SLOT_TITLE = { verb: 'Verb', tense: 'Tense', voice: 'Voice', mood: 'Mood', person: 'Person', number: 'Number', case: 'Case', gender: 'Gender', possessorNumber: 'Possessor number' };
 
 const VOICE_OPTS = { A: 'Active', M: 'Middle', P: 'Passive', E: 'Middle or passive', D: 'Middle deponent', O: 'Passive deponent' };
 const PERSON_OPTS = { 1: '1st', 2: '2nd', 3: '3rd' };

@@ -20,7 +20,7 @@ export function renderHelp(view) {
     fold('Strengthen weak spots and Look ahead',
       p('Strengthen weak spots practises the cards you miss most. Look ahead shows a few new words without starting them. Neither changes your review schedule.')),
     fold('Word forms, principal parts and charts',
-      p('Parsing practice asks you to name the parts of a word form, such as tense, voice and mood for a verb, or case, number and gender for a noun. Principal parts practice drills the six forms each verb comes in. The Charts button in these quizzes opens the verb charts and a chart of noun and adjective endings counted from the text.')),
+      p('Parsing practice asks you to name the parts of a word form, such as tense, voice and mood for a verb, or case, number and gender for a noun. For verbs, lexiko picks the few forms worth learning (the ones that cover most of a verb’s uses) and teaches those; the Verbs page under Learn shows them. Principal parts is optional extra practice on the Verbs page: nothing in it is scheduled or counted. The Charts button in these quizzes opens the verb charts and a chart of noun and adjective endings counted from the text.')),
     fold('Search',
       p('The magnifier on Home finds a word by its Greek form, with or without accents, or by Beta Code (a way of entering Greek without a Greek keyboard), by its English meaning, or by its Strong’s number. Without accents it finds every accented form; with accents it finds only those.')),
     fold('Your progress and backups',

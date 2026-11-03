@@ -1,7 +1,9 @@
 // Home: where you are, what to do today, what to read next.
-import { D, scopeLabel } from './data.js';
-import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, readinessClass, readinessLabel, studiedCount } from './know.js';
-import { h, clear, pct, icon, startButton, fold } from './util.js';
+import { D } from './data.js';
+import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, studiedCount, currentGoal, setGoal, setSetting, wordsPace, goalFinished, noteGoalDone, nextGoal, goalStats, ntShareKnown, freqCoverage } from './know.js';
+import { goalLabel } from './know.js';
+import { goalPicker, previewLine } from './goals.js';
+import { h, clear, add, pct, fmt, icon, startButton, fold } from './util.js';
 import { growthCard } from './growth.js';
 import { smartAll, counts, upcoming, nextLine } from './smart.js';
 import { renderWelcome } from './welcome.js';
@@ -9,14 +11,58 @@ import { suggestions, suggestionItem } from './progress.js';
 import { readHref } from './reader.js';
 
 const DAY = 86400000;
+export const MAX_PER_DAY = 40;
+
+/** A finished goal: what you did, and the next goal already chosen for you (you can pick another). */
+function finishedCard(view) {
+  const g = currentGoal(), gs = goalStats(g), e = noteGoalDone(K.goal), nxt = nextGoal(g), box = h('div.stack');
+  const date = new Date(e.finished).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  let choosing = false;
+  const draw = () => {
+    clear(box);
+    if (choosing) return add(box, h('div.card.stack', h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: () => { choosing = false; draw(); } }, 'Cancel')),
+      goalPicker({ initial: nxt || g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } })));
+    add(box, h('div.card.stack', h('b', icon('target', 18), ' Goal finished'), h('div.goalnum', goalLabel(g)), h('div.bar', h('i.k', { style: { width: '100%' } })),
+      h('div.muted', 'All ' + fmt(gs.total) + ' words known · finished ' + date + (e.days ? ', after ' + e.days + (e.days === 1 ? ' day.' : ' days.') : '.')),
+      g.kind === 'freq' ? h('div.muted', 'You now recognise ' + pct(ntShareKnown()) + ' of the words in the New Testament.') : h('div.row.wrap', h('a.btn.primary.sm', { href: readHref(g.book, g.c1) }, 'Read it'))),
+      nxt ? h('div.card.stack.gnext', h('div.muted.small', h('b', 'NEXT GOAL, SUGGESTED')), h('b', goalLabel(nxt)), h('div.muted.small', previewLine(nxt) + (nxt.kind === 'freq' ? ' · reaches ' + pct(freqCoverage(nxt.min)) + ' of the NT' : ''))) : h('div.card', 'You know every word that occurs twice or more. Choose any passage or section as your next goal.'),
+      nxt ? h('button.btn.primary.block', { onclick: async () => { await setGoal(nxt); renderHome(view); } }, 'Start this goal') : null,
+      h('button.btn.block', { onclick: () => { choosing = true; draw(); } }, 'Choose a different goal ›'));
+  };
+  draw(); return box;
+}
+
+/** The finish-by control: move the finish time up or down by weeks and days; the daily new words follow (words left ÷ days, rounded up, at most 40). */
+function paceControl(left, per, cancel, save) {
+  const perFor = (d) => Math.max(1, Math.min(MAX_PER_DAY, Math.ceil(left / d)));
+  const maxDays = Math.min(left, 365);
+  const daysFor = (n) => Math.ceil(left / n);
+  let cur = Math.max(1, Math.min(MAX_PER_DAY, per));
+  const box = h('div.pacectl');
+  const move = (delta) => {                                       // keep stepping until the daily number actually changes
+    if (delta < 0 && cur >= MAX_PER_DAY) return;
+    let d = daysFor(cur);
+    for (let i = 0; i < 400; i++) { d += delta; if (d < 1 || d > maxDays) return; const n = perFor(d); if (n !== cur) { cur = n; return; } }
+  };
+  const draw = () => {
+    const d = daysFor(cur), w = Math.floor(d / 7), r = d % 7, date = new Date(Date.now() + d * DAY).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const st = (n, unit, delta, key = unit) => h('div.pst', h('button.pacebtn', { 'aria-label': 'Fewer ' + key, disabled: cur >= MAX_PER_DAY || daysFor(cur) - delta < 1, onclick: () => { move(-delta); draw(); } }, '−'),
+      h('div', h('b', String(n)), h('span.u', unit)), h('button.pacebtn', { 'aria-label': 'More ' + key, disabled: daysFor(cur) + delta > maxDays, onclick: () => { move(delta); draw(); } }, '+'));
+    add(clear(box), h('b', 'Finish in'), h('div.pacesteps', st(w, w === 1 ? 'week' : 'weeks', 7, 'weeks'), st(r, r === 1 ? 'day' : 'days', 1, 'days')),
+      h('div.paceres', h('div', d + (d === 1 ? ' day' : ' days') + ' · around ' + date), h('div.perday', cur + ' new word' + (cur === 1 ? '' : 's') + ' a day')),
+      cur >= MAX_PER_DAY ? h('div.pacewarn', MAX_PER_DAY + ' a day is the most lexiko will set. For a quicker finish, choose a smaller goal.') : null,
+      h('div.muted.small', 'Words you’ve just learned still come back for review. If reviews pile up, new words slow down on their own.'),
+      h('div.row.wrap', h('button.btn.primary.sm', { onclick: () => save(cur) }, 'Use this pace'), h('button.btn.sm', { onclick: cancel }, 'Cancel')));
+  };
+  draw(); return box;
+}
 
 export function renderHome(view) {
   const lvl = setting('level');
   if (lvl == null && !K.settings.levelAsked && !studiedCount('w:')) return renderWelcome(view, (href) => { if (href) location.hash = href; else renderHome(view); });
-  const cnt = counts(), due = cnt.words.due + cnt.parse.due + cnt.parts.due;
+  const cnt = counts(), due = cnt.words.due + cnt.parse.due;
   const studied = studiedCount('w:');
   const newLeft = Math.max(0, setting('newPerDay') - newToday());
-  const goal = K.goal && K.goal.book ? K.goal : null;
   const lastBackup = K.settings.lastBackup;
   const needsBackup = studied >= 15 && (!lastBackup || Date.now() - lastBackup > 14 * DAY);
 
@@ -38,15 +84,26 @@ export function renderHome(view) {
 
   // 2. reading: your goal, or where you left off
   const book = D.bookByCode.get(K.settings.lastBook || 'JHN') || D.bookByCode.get('JHN'), ch = K.settings.lastCh || 1;
-  if (goal) {
-    const rd = scopeReadiness(goal), ps = passageStudy(goal);
-    stack.append(h('div.card.stack', h('div.row.between', h('b', icon('target', 18), ' ' + scopeLabel(goal)), h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' · ' + readinessLabel(rd.known))),
-      h('div.bar', h('i.k', { style: { width: pct(rd.known) } }), h('i.l', { style: { width: pct(rd.learning) } })),
-      h('div.muted.small', rd.distinctUnknown ? rd.distinctUnknown + ' words still to learn before this reads comfortably.' + (!ps.ready ? ' ' + waitNote(ps) : '') : 'You know every word. Go read it!'),
-      h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, ps.fresh ? 'Learn the ' + ps.fresh + ' new word' + (ps.fresh === 1 ? '' : 's') : ps.due ? 'Review ' + ps.due + ' due word' + (ps.due === 1 ? '' : 's') : 'Study its words'), h('a.btn.sm', { href: readHref(goal.book, goal.c1) }, 'Read'))));
+  if (K.goal && goalFinished(currentGoal())) {
+    stack.append(finishedCard(view));
+  } else if (K.goal) {
+    const g = currentGoal(), gs = goalStats(g), per = Math.max(1, setting('newPerDay') || 10), days = Math.ceil(gs.left / per);
+    const isFreq = g.kind === 'freq', rd = isFreq ? null : scopeReadiness(g), ps = isFreq ? null : passageStudy(g);
+    const under = isFreq ? 'You recognise ' + pct(ntShareKnown()) + ' of the words in the New Testament today.' : 'You can read ' + pct(rd.known) + ' of this passage today.';
+    const finish = gs.left ? gs.left + ' word' + (gs.left === 1 ? '' : 's') + ' to go · ' + (days <= 1 ? 'about a day' : 'about ' + days + ' days') + ' at ' + per + ' a day.' + (isFreq ? ' Finishing reaches ' + pct(freqCoverage(g.min)) + '.' : '') : 'You know every word in this goal.';
+    const fresh = ps ? Math.min(ps.fresh, per) : 0;
+    let pacing = false; const wp = wordsPace(), pace = (on) => { pacing = on; pick(false); };
+    const box = h('div.card.stack'), pick = (open) => { clear(box); if (open) return add(box, h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: () => pick(false) }, 'Cancel')), goalPicker({ initial: g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } })); add(box, 
+      h('div.row.between', h('b', icon('target', 18), ' ' + goalLabel(g)), h('button.btn.ghost.sm', { onclick: () => pick(true) }, 'Change ›')),
+      h('div.goalnum', fmt(gs.known) + ' of ' + fmt(gs.total) + ' words known · ' + pct(gs.pct)),
+      h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })),
+      h('div.muted', under), h('div.finrow', h('div.muted.small', finish + (ps && !ps.ready && gs.left ? ' ' + waitNote(ps) : '') + (wp.slow || wp.paused ? ' ' + wp.why : '')), gs.left ? h('button.btn.ghost.sm', { 'aria-expanded': String(pacing), onclick: () => pace(!pacing) }, pacing ? 'Close ⌃' : 'Adjust ⌄') : null),
+      pacing ? paceControl(gs.left, per, () => pace(false), async (n) => { await setSetting('newPerDay', n); renderHome(view); }) : null,
+      isFreq ? null : h('div.row.wrap', h('a.btn.primary.sm', { href: '#/learn/passage/' + [g.book, g.c1, g.v1 || 1, g.c2, g.v2 || 999].join('/') }, fresh ? 'Learn its ' + fresh + ' next word' + (fresh === 1 ? '' : 's') : ps.due ? 'Review ' + ps.due + ' due word' + (ps.due === 1 ? '' : 's') : 'Study its words'), h('a.btn.sm', { href: readHref(g.book, g.c1) }, 'Read'))); };
+    pick(false); stack.append(box);
   } else {
-    stack.append(h('div.card.stack', h('div.row.between', h('div', h('b', 'Keep reading'), h('div.muted.small', book.name + ' ' + ch)), h('a.btn.primary.sm', { href: readHref(book.code, ch) }, icon('read', 16), 'Read')),
-      h('a.small', { href: '#/progress' }, 'Set a reading goal ›')));
+    const box = h('div.card.stack'), g = currentGoal(), draw = (open) => { clear(box); if (open) return add(box, h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: () => draw(false) }, 'Cancel')), goalPicker({ initial: g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } })); add(box, h('div.row.between', h('div', h('b', 'Keep reading'), h('div.muted.small', book.name + ' ' + ch)), h('a.btn.primary.sm', { href: readHref(book.code, ch) }, icon('read', 16), 'Read')), h('button.btn.ghost.sm', { onclick: () => draw(true) }, 'Choose a goal ›')); };
+    draw(false); stack.append(box);
   }
 
   // 3. how you're growing

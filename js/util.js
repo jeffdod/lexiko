@@ -33,6 +33,8 @@ export function h(spec, attrs, ...kids) {
   return el;
 }
 
+/** Append children, skipping null and false (DOM append() would print them as text). */
+export function add(el, ...kids) { el.append(...kids.filter((k) => k != null && k !== false)); return el; }
 export function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 
 export function fmtInterval(ms) {
@@ -114,7 +116,7 @@ export function missedBlock(rows, onPractise) {
 
 /* ---------- "Back to …" after a quiz: offer the place the quiz was started from ---------- */
 export const origin = { href: null, prev: null };
-const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage)|parse\/run|parts\/run)/;
+const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage)|parse\/run|parts\/exercise)/;
 /** Called on every route change: remembers where a quiz was launched from (not from another quiz). */
 export function noteRoute(hash) {
   const cur = hash || '#/';
@@ -122,7 +124,7 @@ export function noteRoute(hash) {
   origin.prev = cur;
 }
 const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/progress/, 'Back to Progress'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Learn'],
-  [/^#\/parse$/, 'Back to Parsing'], [/^#\/parts$/, 'Back to Principal parts'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to search']];
+  [/^#\/parse$/, 'Back to Parsing'], [/^#\/learn\/verbs$/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to search']];
 /** The usual "Back to <topic page>" button, preceded by one to wherever the quiz was started from when that is somewhere else. */
 export function backLinks(defaultHref, defaultLabel, primary = false) {
   const o = origin.href, hit = o && o !== defaultHref && ORIGIN_LABEL.find(([re]) => re.test(o));
@@ -134,7 +136,7 @@ export function backLinks(defaultHref, defaultLabel, primary = false) {
 export function knowButtons(L, markKnown, after) {
   const go = (full, msg) => async () => { await markKnown(L.n, full); toast(msg); after && after(); };
   if (L.pos !== 'V') return [h('button.btn.sm', { onclick: go(false, 'Marked as known') }, '✓ I know this')];
-  return [h('button.btn.sm', { onclick: go(false, 'Marked: you know the meaning. Its principal parts and parsing are still to learn.') }, '✓ I know the meaning'),
+  return [h('button.btn.sm', { onclick: go(false, 'Marked: you know the meaning. Its forms are still to learn.') }, '✓ I know the meaning'),
     h('button.btn.sm', { onclick: go(true, 'Marked as known, meaning and parsing') }, '✓ I know the meaning and parsing')];
 }
 

@@ -3,17 +3,18 @@ const { chromium } = require('playwright');
 const URL = 'http://localhost:8123/lexiko/';
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails++; };
+const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return false; const a = await g.getAttribute('data-answer'); await pg.click('.vopt[data-n="' + a + '"]'); await pg.waitForSelector('.pslot.cur, .srow'); return true; };
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1000, height: 800 } });   // wide + mouse: keyboard hints show
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached' });
-  await page.click('.choice:has-text("I know the basics")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Skip for now")');
+  await page.click('.choice:has-text("I know the basics")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")');
   await page.waitForSelector('.hero');
   ok(await page.locator('.hero .start').count() === 1, 'home leads with one main button');
   ok(await page.locator('.kpis').count() === 0, 'home has no row of number boxes');
-  ok(/Keep reading/.test(await page.textContent('#view')), 'home offers to keep reading');
+  ok(/words known/.test(await page.textContent('#view')), 'home shows the goal card');
 
   // flashcard keyboard: Space shows the answer, 3 rates Good, session moves on
   await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcard');
@@ -44,7 +45,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   await page.goto(URL + '#/parse'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
   { const all = await page.locator('details a:has-text("Practise these forms")').getAttribute('href'), vb = await page.locator('details a.btn:has-text("Verbs only")').first().getAttribute('href');
     ok(/\/all$/.test(all) && /\/verb$/.test(vb) && all.replace(/all$/, '') === vb.replace(/verb$/, ''), 'passage parsing offers all forms and verbs only for the same text: ' + all + ' | ' + vb);
-    await page.goto(URL + vb); await page.waitForSelector('.qcard'); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
+    await page.goto(URL + vb); await page.waitForSelector('.qcard'); await passVerb(page); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
   // parsing: when the answer is wrong, the right button is lit even for a voice that has no button of its own (middle or passive deponent)
   { const tgt = await page.evaluate(async () => { const { D } = await import('./js/data.js'); const { decode } = await import('./js/morph.js'); const k = await import('./js/know.js'); await k.setSetting('parseMode', 'guided');
       for (const bk of D.books) for (const [ch, vs] of D.text[bk.code]) for (const [v, toks] of vs) for (const t of toks) { const f = D.forms[t >> 4]; if (f.an.length !== 1) continue; const d = decode(f.an[0].m);
@@ -58,6 +59,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
         if (!(await page.locator('.qcard').count())) break;
         const word = (await page.textContent('.qgreek')).replace(/\u00ad/g, ''); seen.push(word);
         if (word !== tgt.w) { await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(250); continue; }
+        await passVerb(page);
         await page.click('.popt[data-code="' + tgt.tense + '"]'); await page.waitForSelector('.popt[data-code="E"]:not([disabled])'); await page.waitForTimeout(100);
         await page.click('.popt[data-code="A"]'); await page.waitForSelector('.popt.right');
         lit = (await page.locator('.popt.right').first().innerText()).replace(/\d/g, '').trim();
@@ -94,7 +96,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   ok(/κεναι/.test(await page.textContent('dialog .cbody')), 'infinitive chart shows');
   await page.keyboard.press('Escape');
   { const r = await page.evaluate(async () => { const { D } = await import('./js/data.js'); const pa = await import('./js/parse.js'); let worst = 0;
-      for (let t = 0; t < 20; t++) { const c = {}; pa.buildParseSession({ scope: { book: 'JHN', c1: 1, v1: 1, c2: 1, v2: 999 }, kind: 'verb', size: 25, newLimit: 25 }).forEach((x) => { const s = D.forms[x.id].an[0].s; c[s] = (c[s] || 0) + 1; }); worst = Math.max(worst, ...Object.values(c)); }
+      for (let t = 0; t < 20; t++) { const c = {}; pa.buildParseSession({ scope: { book: 'JHN', c1: 1, v1: 1, c2: 21, v2: 999 }, kind: 'verb', size: 25, newLimit: 25 }).forEach((x) => { const s = D.forms[x.id].an[0].s; c[s] = (c[s] || 0) + 1; }); worst = Math.max(worst, ...Object.values(c)); }
       return worst; });
     ok(r <= 3, 'no word fills a parsing session (most forms of one word: ' + r + ')'); }
   await page.goto(URL + '#/parse/run/passage/JHN/1/1/1/6/verb'); await page.waitForSelector('.qcard');
@@ -176,7 +178,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : ' FAIL ') + m); if (!c) fails
   // phone width: the reader (with its Previous / Mark as read / Next footer) must not stretch the page
   { const pctx = await b.newContext({ viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true }); const pp = await pctx.newPage();
     await pp.goto(URL); await pp.waitForSelector('#loading', { state: 'detached' });
-    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Skip for now")'); await pp.waitForSelector('.hero');
+    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Start with this goal")'); await pp.waitForSelector('.hero');
     await pp.goto(URL + '#/read/JHN/1'); await pp.waitForSelector('[data-t]');
     const o = await pp.evaluate(() => ({ cw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth }));
     ok(o.sw <= o.cw + 1, 'reader fits a 320px phone without sideways scrolling ' + JSON.stringify(o)); await pctx.close(); }
