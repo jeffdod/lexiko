@@ -2,8 +2,9 @@
 // connecting vowel, endings) and every personal ending is a small scheduled card. Questions are multiple choice, in your chart's own words.
 import { clockNow } from './clock.js';
 import { D } from './data.js';
-import { K, formLevel, rateChart, chartNewToday, chartCardsDue } from './know.js';
+import { K, formLevel, rateChart, chartCardsDue } from './know.js';
 import { CHART_ATTRS, levelName } from './families.js';
+import { exampleForm, paradigm } from './paradigms.js';
 import { MASTER, PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, openCharts } from './charts.js';
 import { h, clear, icon, pct, shuffle, toast, missedBlock, backHead, backLinks } from './util.js';
 
@@ -50,45 +51,24 @@ function question(it) {
 export const summary = (r) => say(r.name).replace(/^./, (c) => c.toUpperCase()) + ': ' + (r.aug ? 'augment ' + r.aug : 'no augment') + ', ' + say(r.stem) + ' stem, ' + (r.form ? 'formative ' + r.form : 'no formative') + ', ' + (r.vowel ? 'connecting vowel ' + r.vowel : 'no connecting vowel') + ', ' + say(r.ends) + ' endings.';
 
 /* ---------- a real example from the text ---------- */
-const TAG = /^V-([12]?)([PIFARL])([AMPEDONQX]?)([IMSONP])(?:-([123])([SP]))?/;
-const rowOfTag = (m) => {
-  const x = TAG.exec(m || ''); if (!x || x[4] !== 'I') return null;
-  const [, sec, t, v0] = x, v = v0 || 'X', act = 'AQX'.includes(v), s = sec === '2';
-  switch (t) {
-    case 'P': return act ? 'pres-act' : 'pres-mp';
-    case 'I': return act ? 'impf-act' : 'impf-mp';
-    case 'F': return 'PO'.includes(v) ? (s ? 'fut-pas2' : 'fut-pas1') : act ? 'fut-act' : 'fut-mid';
-    case 'A': return 'PO'.includes(v) ? (s ? 'aor2-pas' : 'aor1-pas') : act ? (s ? 'aor2-act' : 'aor1-act') : (s ? 'aor2-mid' : 'aor1-mid');
-    case 'R': return act ? (s ? 'perf2-act' : 'perf1-act') : 'perf-mp';
-    default: return null;
-  }
-};
-let examples = null;
-/** The most frequent form of a chart row in the text (null for the liquid rows, which the morphology tags do not separate). */
-export function exampleFor(key) {
-  if (!examples) {
-    examples = new Map();
-    for (const f of D.forms) { const a = f.an[0]; const k = a && rowOfTag(a.m); if (!k) continue; const cur = examples.get(k); if (!cur || f.count > cur.count) examples.set(k, { w: f.w.replace(/­/g, ''), count: f.count }); }
-  }
-  const e = examples.get(key); return e ? e.w : null;
-}
+export const exampleFor = exampleForm;
 
 /* ---------- what to practice now ---------- */
-export const NEW_PER_DAY = 8, SESSION = 20;
+export const SESSION = 20;
+/** What a round holds: squares that are due first, then new ones to fill it. No daily limit and no pacing: practice as much as you like. */
 export function plan(now = clockNow()) {
   const due = chartCardsDue(now).filter((c) => byId.has(c.id)).sort((a, b) => a.due - b.due).map((c) => byId.get(c.id)).slice(0, SESSION);
   const fresh = ITEMS.filter((i) => stateOf(i.id) === 'new' && !K.cards.has(i.id));
-  const left = K.cards.size && chartCardsDue(now).length > SESSION ? 0 : Math.max(0, NEW_PER_DAY - chartNewToday());
-  const nw = fresh.slice(0, Math.min(left, Math.max(0, SESSION - due.length)));
-  return { due, nw, fresh: fresh.length };
+  return { due, nw: fresh.slice(0, Math.max(0, SESSION - due.length)), fresh: fresh.length };
 }
 export const counts = () => { let known = 0, started = 0; for (const i of ITEMS) { const s = stateOf(i.id); if (s === 'known') known++; if (s !== 'new') started++; } return { known, started, total: ITEMS.length, due: chartCardsDue().filter((c) => byId.has(c.id)).length }; };
 
 /* ---------- the session ---------- */
 let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
-export function runDrill(view) {
-  const { due, nw } = plan(), queue = shuffle([...due, ...nw].map((it) => ({ it, tries: 0 })));
+export function runDrill(view, rowKey = null) {
+  const { due, nw } = plan(), picks = rowKey ? ITEMS.filter((i) => i.kind === 'square' && i.row.key === rowKey) : [...due, ...nw];      // one row: all five of its squares
+  const queue = shuffle(picks.map((it) => ({ it, tries: 0 })));
   if (!queue.length) return renderChartsPage(view);
   const total = queue.length, S = { shown: 0, done: 0, good: 0, missed: [] };
   const finish = () => {
@@ -96,7 +76,7 @@ export function runDrill(view) {
     clear(view).append(h('div.pagehead', h('h1', 'Chart practice complete')),
       h('div.card.stack', h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'squares done')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((it) => { const q = question(it); return { word: q.main + ' ' + q.sub.replace('?', ''), greek: false, sub: it.kind === 'square' ? ATTR_LABEL[it.attr] : 'ending', why: null }; }), () => { const again = S.missed.map((it) => ({ it, tries: 1 })); S.missed = []; runList(again); }),
-        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts' }, 'Back to Charts'), ...backLinks('#/learn', 'Back to Learn'))));
+        h('div.row.wrap', h('a.btn.primary', { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'), ...backLinks('#/learn', 'Back to Learn'))));
   };
   const runList = (list) => { queue.length = 0; queue.push(...list); S.shown = 0; next(); };
   const next = () => { stop(); const c = queue.shift(); if (!c) return finish(); S.shown++; show(c); };
@@ -128,22 +108,37 @@ export function runDrill(view) {
   return stop;
 }
 
+/* ---------- a paradigm for one row ---------- */
+export function renderParadigm(view, key) {
+  const r = ROWS.find((x) => x.key === key); if (!r) { location.hash = '#/learn/charts'; return; }
+  const P = paradigm(key);
+  const lines = P ? P.cells.map((c) => h('div.pline', h('span.plab', c.label),
+    c.have ? h('span.pword', { lang: 'grc' }, h('span.pst', c.stem), h('b.pend', c.ending))
+      : c.word ? h('span.pword.gap', { lang: 'grc' }, c.word, h('small', { lang: 'en' }, ' from ', h('span', { lang: 'grc' }, c.from))) : h('span.pword.gap', h('small', 'not in the text')))) : [];
+  clear(view).append(backHead('Paradigm', '#/learn/charts', 'Charts'), h('div.stack',
+    h('div.row.wrap', h('span.chip.accent', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative')),
+    P ? h('div.card.stack', ...lines) : h('div.card', h('p', 'The text has no clear example of this row.')),
+    P ? h('p.muted.small', h('b', 'Verb: '), h('span', { lang: 'grc' }, P.head), ' · ' + P.brief + '. ' + (P.attested === 6 ? 'All six forms are in the text.' : P.attested + ' of 6 forms are in the text for this verb. The others are real forms of other regular verbs, named, so you can see the pattern.')) : null,
+    h('p.small', summary(r)),
+    h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run/' + key }, 'Practice this row'), h('button.btn', { onclick: () => openCharts({ highlight: key }) }, icon('table', 18), ' See it in the chart'))));
+}
+
 /* ---------- the page ---------- */
 const square = (id, label) => h('i.sq.' + stateOf(id), { title: label });
 export function renderChartsPage(view) {
   const c = counts(), p = plan();
-  const sub = p.due.length || p.nw.length ? [p.due.length ? p.due.length + ' due' : null, p.nw.length ? p.nw.length + ' new' : null].filter(Boolean).join(' + ') : p.fresh ? 'Done for today' : 'All caught up';
+  const sub = p.due.length || p.nw.length ? [p.due.length ? p.due.length + ' due' : null, p.nw.length ? p.nw.length + ' new' : null].filter(Boolean).join(' + ') : 'All caught up';
   const start = p.due.length || p.nw.length ? h('a.btn.primary.block.start', { href: '#/learn/charts/run' }, h('b', 'Practice the verb chart'), h('small', sub)) : h('div.btn.block.start.done', h('b', 'Practice the verb chart'), h('small', sub));
   const head = h('div.sqrow.head', h('span'), CHART_ATTRS.map((a) => h('span', ATTR_LABEL[a])));
   const rows = [];
-  for (const r of ROWS) rows.push(h('button.sqrow.rowbtn', { onclick: () => openCharts({ highlight: r.key }), 'aria-label': r.name + ': open the chart' }, h('span.rn', r.name), CHART_ATTRS.map((a) => square(squareId(r.key, a), r.name + ', ' + ATTR_LABEL[a]))));
+  for (const r of ROWS) rows.push(h('a.sqrow.rowbtn', { href: '#/learn/charts/paradigm/' + r.key, 'aria-label': r.name + ': see an example' }, h('span.rn', r.name), CHART_ATTRS.map((a) => square(squareId(r.key, a), r.name + ', ' + ATTR_LABEL[a]))));
   const ends = ENDSETS.map(([set, title, table]) => h('div.sqrow.e', h('span.rn', title.replace('middle/passive', 'mid/pas')), table.map((pp) => square(endingId(set, pp[0]), title + ', ' + pp[0]))));
   const gaps = [4, 10, 17]; gaps.reverse().forEach((i) => rows.splice(i, 0, h('div', { style: { height: '.35rem' } })));
   clear(view).append(backHead('Charts', '#/learn', 'Learn'), h('div.stack',
     start,
     h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts() }, icon('table', 18), ' Look at the chart'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
     h('div.card.stack', h('div.row.between', h('h2', 'Master verb chart'), h('span.chip', c.known + ' of ' + c.total + ' known')),
-      h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row to see the chart.'), head, ...rows,
+      h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row to see a real example from the text.'), head, ...rows,
       h('div.legend', h('span', h('i.sq.known', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'known'), h('span', h('i.sq.shaky', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'shaky'), h('span', h('i.sq.new', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'new'))),
     h('div.card.stack', h('h2', 'Personal endings'), h('p.muted.small', 'One square for each person, in each set of endings.'),
       h('div.sqrow.head.e', h('span'), ['1s', '2s', '3s', '1p', '2p', '3p'].map((t) => h('span', t))), ...ends),
