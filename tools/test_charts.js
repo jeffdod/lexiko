@@ -105,6 +105,8 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     ok(await p.evaluate(() => window.scrollY) === y0, 'popup: scrolling to its end does not move the page behind');
     await p.keyboard.press('Escape'); await p.waitForTimeout(100);
     ok(await p.evaluate(() => getComputedStyle(document.documentElement).overflow) !== 'hidden', 'popup closed: the page scrolls again'); }
+  { const r = await p.evaluate(async () => { const C = await import('./js/charts.js'); return C.MASTER.filter((x) => x && /^perf/.test(x[0])).map((x) => [x[0], x[2], x[7]]); });
+    ok(r.every(([, red, ex]) => red[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '') === ex[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '') && red[1] === 'ε'), 'the chart\'s reduplication starts with the first letter of that row\'s own verb', JSON.stringify(r)); }
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();

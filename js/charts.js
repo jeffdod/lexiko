@@ -25,7 +25,7 @@ export const MASTER = [
   ['aor2-pas', '2nd aorist pas', 'ε', 'aor pas', 'η', '', 'sec act', 'ἐγράφην'],
   null,
   ['perf1-act', '1st perfect act', 'λε', 'perf act', 'κα', '', 'prim act', 'λέλυκα'],
-  ['perf2-act', '2nd perfect act', 'λε', 'perf act', 'α', '', 'prim act', 'γέγονα'],
+  ['perf2-act', '2nd perfect act', 'γε', 'perf act', 'α', '', 'prim act', 'γέγονα'],
   ['perf-mp', 'Perfect mid/pas', 'λε', 'perf pas', '', '', 'prim mid/pas', 'λέλυμαι'],
 ];
 const MASTER_HEAD = ['Tense', 'Aug / redup', 'Tense stem', 'Tense form.', 'Conn. vowel', 'Personal endings', '1st sing paradigm'];
