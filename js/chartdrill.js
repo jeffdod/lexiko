@@ -17,12 +17,14 @@ const ATTR_LABEL = { aug: 'Aug.', stem: 'Stem', form: 'Form.', vowel: 'Vowel', e
 const SAY = { pres: 'present', fut: 'future', aor: 'aorist', perf: 'perfect', impf: 'imperfect', act: 'active', pas: 'passive', 'mid/pas': 'middle/passive', mid: 'middle', prim: 'primary', sec: 'secondary' };
 export const say = (t) => t.replace(/\b(mid\/pas|pres|fut|aor|perf|impf|act|pas|mid|prim|sec)\b/g, (m) => SAY[m]);
 const nice = (name) => { const t = say(name); return /^\d/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1); };
+/** The chart writes the reduplication for its model verb (λε- for λύω); in a real verb it is the verb's own first consonant + ε. */
+const augLabel = (v) => (v === 'λε' ? 'first consonant + ε (reduplication)' : v);
 const none = (v, word = 'none') => (v === '' || v === '–' ? word : v);      // 'nothing' answers "what goes on the front"
 
 /* ---------- the items ---------- */
 export const squareId = (row, attr) => 'c:' + row + ':' + attr;
 export const endingId = (set, person) => 'e:' + set + ':' + person.replace(' ', '');
-const POOL = Object.fromEntries(CHART_ATTRS.map((a) => [a, [...new Set(ROWS.map((r) => r[a]))].map((v) => ({ v, label: a === 'ends' || a === 'stem' ? say(v) : none(v, a === 'aug' ? 'nothing' : 'none') }))]));
+const POOL = Object.fromEntries(CHART_ATTRS.map((a) => [a, [...new Set(ROWS.map((r) => r[a]))].map((v) => ({ v, label: a === 'ends' || a === 'stem' ? say(v) : none(a === 'aug' ? augLabel(v) : v, a === 'aug' ? 'nothing' : 'none') }))]));
 const ALL_ENDINGS = [...new Set(ENDSETS.flatMap(([, , t]) => t.map((r) => r[3])))];
 /** Every item in the order they are introduced: a chart row at a time, then the personal endings. */
 export const ITEMS = [
@@ -48,7 +50,7 @@ function question(it) {
     explain: summary(r) };
 }
 /** One line saying everything the chart says about a row. */
-export const summary = (r) => say(r.name).replace(/^./, (c) => c.toUpperCase()) + ': ' + (r.aug ? 'augment ' + r.aug : 'no augment') + ', ' + say(r.stem) + ' stem, ' + (r.form ? 'formative ' + r.form : 'no formative') + ', ' + (r.vowel ? 'connecting vowel ' + r.vowel : 'no connecting vowel') + ', ' + say(r.ends) + ' endings.';
+export const summary = (r) => say(r.name).replace(/^./, (c) => c.toUpperCase()) + ': ' + (r.aug === 'λε' ? 'reduplication: ' + augLabel(r.aug) : r.aug ? 'augment ' + r.aug : 'no augment') + ', ' + say(r.stem) + ' stem, ' + (r.form ? 'formative ' + r.form : 'no formative') + ', ' + (r.vowel ? 'connecting vowel ' + r.vowel : 'no connecting vowel') + ', ' + say(r.ends) + ' endings.';
 
 /* ---------- a real example from the text ---------- */
 export const exampleFor = exampleForm;
