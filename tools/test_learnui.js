@@ -42,6 +42,12 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(await p.locator('#view details.fold:not([open]) > summary:has-text("By book")').count() === 1 && await p.locator('#view details.fold:not([open]) > summary:has-text("Recent practice")').count() === 1, 'Progress: By book and Recent practice start collapsed');
   ok(!/Your learning curve/.test(await p.textContent('#view')), 'Progress: no empty learning-curve card');
   for (const h of ['#/learn', '#/learn/words', '#/parse', '#/settings', '#/progress']) { await go(h); ok(!/(null|undefined)/.test(await p.textContent('#view')), h + ' has no stray null/undefined'); }
+  { const ctx3 = await b.newContext({ viewport: { width: 420, height: 900 } }); const q = await ctx3.newPage(); await q.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+    await q.goto(URL + '#/settings'); await q.waitForSelector('#view h2');
+    const vp = await q.getAttribute('meta[name=viewport]', 'content'), ta = await q.evaluate(() => getComputedStyle(document.documentElement).touchAction);
+    ok(!/user-scalable=no|maximum-scale/.test(vp), 'Zoom allowed in the installed app', vp); ok(/manipulation/.test(ta), 'Double-tap zoom stays off', ta);
+    const small = await q.evaluate(() => [...document.querySelectorAll('input:not([type=file]), select, textarea')].filter((e) => parseFloat(getComputedStyle(e).fontSize) < 16).length);
+    ok(small === 0, 'Form fields are 16px or larger, so phones do not zoom in on focus'); await ctx3.close(); }
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();
