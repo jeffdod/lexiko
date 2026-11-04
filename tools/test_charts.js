@@ -63,20 +63,20 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   // paradigms
   const pg = await p.evaluate(async () => { const P = await import('./js/paradigms.js'), C = await import('./js/chartdrill.js'), D = (await import('./js/data.js')).D; const out = { rows: 0, none: [], fullRows: 0, bad: [] }; const all = new Set(D.forms.map((f) => f.w.replace(/\u00ad/g, '')));
     for (const r of C.ROWS) { const x = P.paradigm(r.key); if (!x) { out.none.push(r.key); continue; } out.rows++; if (x.attested === 6) out.fullRows++;
-      for (const c of x.cells) { if (c.have && !all.has(c.stem + c.ending)) out.bad.push(r.key + ':' + c.stem + c.ending); if (c.have && c.word !== c.stem + c.ending) out.bad.push('split ' + r.key + ':' + c.word); if (!c.have && c.stem) out.bad.push('stem shown for gap ' + r.key); } }
+      for (const c of x.cells) { if (c.word !== c.stem + c.ending) out.bad.push('split ' + r.key + ':' + c.word); if (c.inText && !all.has(c.word)) out.bad.push('claims text ' + r.key + ':' + c.word); } }
     return out; });
   ok(pg.rows === 20 && pg.none.length === 0, 'every chart row has a paradigm', JSON.stringify(pg.none));
-  ok(pg.bad.length === 0, 'every form in every paradigm is a form written in the text', pg.bad.join(' '));
+  ok(pg.bad.length === 0, 'every form marked in-the-text really is in the text', pg.bad.join(' '));
   ok(pg.rows === 20, 'the chart-named verbs give a paradigm for every row');
   await go('#/learn/charts'); await p.click('a.rowbtn >> nth=0'); await p.waitForSelector('.pline');
   ok(await p.locator('.pline').count() === 6 && await p.locator('.pend').count() >= 3 && /Present active indicative/.test(await p.textContent('.chip')), 'paradigm page: six lines for the present active row');
-  { const m = await p.evaluate(() => { const w = document.querySelector('.pword:not(.gap)'), a = w.querySelector('.pstem'), b = w.querySelector('.pend'), cs = getComputedStyle(a), r1 = a.getBoundingClientRect(), r2 = b.getBoundingClientRect(); return { border: cs.borderTopWidth, disp: cs.display, sameLine: Math.abs(r1.top - r2.top) < 6 && r2.left >= r1.right - 1, text: w.textContent }; });
+  { const m = await p.evaluate(() => { const w = document.querySelector('.pword'), a = w.querySelector('.pstem'), b = w.querySelector('.pend'), cs = getComputedStyle(a), r1 = a.getBoundingClientRect(), r2 = b.getBoundingClientRect(); return { border: cs.borderTopWidth, disp: cs.display, sameLine: Math.abs(r1.top - r2.top) < 6 && r2.left >= r1.right - 1, text: w.textContent }; });
     ok(m.border === '0px' && m.disp === 'inline' && m.sameLine, 'paradigm: the whole word on one line, no box around the stem', JSON.stringify(m)); }
   ok(/Verb:/.test(await p.textContent('#view')) && !/(null|undefined)/.test(await p.textContent('#view')), 'paradigm page: names the verb, no stray null/undefined');
   await p.click('a.btn.primary:text-is("Practice this row")'); await p.waitForSelector('.qcard');
   ok(await p.locator('.qtop .qcount').textContent() === '1 / 5', 'practice this row: the five squares of that row');
   await p.goto(URL + '#/learn/charts/paradigm/aor1-pas'); await p.reload(); await ready(); await p.waitForSelector('.pline');
-  ok(await p.locator('.pword.gap').count() >= 1 && /not in the text/.test(await p.textContent('.pword.gap')), 'a form the text lacks shows only its ending, marked not in the text');
+  ok(await p.locator('.pword').count() === 6 && /occur in the text/.test(await p.textContent('#view')), 'a row shows all six forms and says how many occur in the text');
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();
