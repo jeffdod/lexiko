@@ -26,17 +26,18 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   // a drill: answer everything right except the first question, then check cards
   await p.click('a.start'); await p.waitForSelector('.qcard');
   ok(await p.locator('.opt').count() >= 2 && /Master verb chart|Personal endings/.test(await p.textContent('.qmeta')), 'drill: a multiple-choice question');
-  let n = 0, firstWrong = true, overCount = false;
+  let n = 0, firstWrong = true, overCount = false, sawRetry = false;
   for (let i = 0; i < 40; i++) {
     if (!(await p.locator('.qcard').count())) break;
     const right = await p.evaluate(async () => { return null; });
     // find the right option by asking the page what the answer is: click each option until one is marked right is not possible; use the question text
     const info = await p.evaluate(() => ({ ask: document.querySelector('.qask').textContent, main: document.querySelectorAll('.qask,.qgreek')[1] && document.querySelector('.qgreek').textContent }));
     // pick the first option (may be wrong); the test only checks mechanics
-    { const [a, b] = (await p.textContent('.qcount')).split('/').map((x) => +x); if (a > b) overCount = true; }
+    { const t = await p.textContent('.qcount'), [a, b] = t.replace('↻', '').split('/').map((x) => +x); if (a > b) overCount = true; if (t.includes('↻')) sawRetry = true; }
     await p.locator('.opt').first().click(); await p.waitForSelector('.fb'); n++;
     await p.click('button:text-is("Continue")'); await p.waitForTimeout(80);
   }
+  ok(sawRetry, 'drill: missed squares come back in a retry round with the ↻ counter');
   ok(!overCount, 'drill: the counter never goes past the total (retries are not new cards)');
   ok(n >= 20, 'drill: runs through its questions', 'answered ' + n);
   await p.waitForSelector('h1:text-is("Chart practice complete")'); ok(/squares done/.test(await p.textContent('#view')), 'drill: finish screen');
