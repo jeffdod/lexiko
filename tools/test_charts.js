@@ -85,6 +85,18 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     ok(seen && seen.includes('nothing') && !seen.includes('none'), 'augment question: the empty answer reads "nothing"', JSON.stringify(seen)); }
   { const r = await p.evaluate(async () => { const C = await import('./js/chartdrill.js'); return { s: C.summary(C.ROWS.find((x) => x.key === 'perf-mp')), t: C.summary(C.ROWS.find((x) => x.key === 'aor1-pas')) }; });
     ok(/first consonant \+ ε/.test(r.s) && !/λε/.test(r.s) && /augment ε/.test(r.t), 'the reduplication is described for any verb (first consonant + ε), not as the model verb\'s λε', r.s); }
+  { await go('#/learn/charts/run/aor1-pas'); await p.waitForSelector('.qcard');
+    ok(await p.locator('.hintlink').count() === 1 && !/Chart verb/.test(await p.textContent('.qcard')), 'hint: closed to begin with');
+    await p.click('.hintlink'); ok(/Chart verb: λύω/.test(await p.textContent('.hintbox')) && !/1st sing/.test(await p.textContent('.hintbox')), 'hint 1: the chart verb only');
+    await p.click('.hintlink:has-text("Show the form")'); ok(/1st sing\.: ἐλύθην/.test(await p.textContent('.hintbox')) && /count as missed/.test(await p.textContent('.hintbox')), 'hint 2: the first-person form, with the warning');
+    const id = await p.evaluate(() => null);
+    await p.locator('.opt').first().click(); await p.waitForSelector('.fb');
+    ok(await p.locator('.hintbox .hintlink').count() === 0, 'hint: gone once you answer');
+    await p.click('button:text-is("Continue")'); await p.waitForTimeout(150); await p.waitForSelector('.qcard');
+    ok(await p.locator('.hintlink').count() === 1 && !/Chart verb/.test(await p.textContent('.qcard')), 'hint: closed again on the next question');
+    // peeking then answering right still counts as missed
+    const r = await p.evaluate(async () => { const K = await import('./js/know.js'); return [...K.K.cards.values()].filter((c) => c.id.startsWith('c:aor1-pas:')).map((c) => [c.id, c.lapses, c.state]); });
+    ok(r.length >= 1 && r.some((x) => x[1] > 0 || x[2] === 'relearning' || x[2] === 'learning'), 'hint 2 then answering is recorded as a miss', JSON.stringify(r)); }
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();

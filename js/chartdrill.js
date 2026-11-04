@@ -4,7 +4,7 @@ import { clockNow } from './clock.js';
 import { D } from './data.js';
 import { K, formLevel, rateChart, chartCardsDue } from './know.js';
 import { CHART_ATTRS, levelName } from './families.js';
-import { exampleForm, paradigm } from './paradigms.js';
+import { exampleForm, paradigm, chartVerb } from './paradigms.js';
 import { MASTER, PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, openCharts } from './charts.js';
 import { h, clear, icon, pct, shuffle, toast, missedBlock, backHead, backLinks } from './util.js';
 
@@ -88,7 +88,8 @@ export function runDrill(view, rowKey = null) {
     if (S.round) S.rk++; else S.shown++;
     show(c);
   };
-  const after = async (c, ok) => {
+  const after = async (c, right) => {
+    const ok = right && !c.peek;                                      // opening the second hint (the form itself) counts as a miss
     if (c.tries === 0) {                                              // only the first try is recorded
       const lv = formLevel(); await rateChart(c.it.id, ok ? 3 : 1); S.done++; if (ok) S.good++; else S.missed.push(c.it);
       if (formLevel() > lv) toast('New kind of verb form open: ' + levelName(formLevel()) + '. Learning the chart opened it.', 10000);
@@ -99,11 +100,22 @@ export function runDrill(view, rowKey = null) {
   function show(c) {
     const q = question(c.it), opts = h('div.opts'), tail = h('div');
     const card = h('div.qcard', h('div.qmeta', c.tries ? 'Try again' : (c.it.kind === 'square' ? 'Master verb chart' : 'Personal endings')), h('div.qask', q.ask), h('div.qgreek', { style: { fontSize: '1.5rem' } }, q.main), h('div.qask', q.sub));
+    const hint = h('div.hintbox');
+    const drawHint = () => {
+      clear(hint); if (c.it.kind !== 'square' || tail.childElementCount) return;
+      const lvl = c.peek ? 2 : c.hint1 ? 1 : 0, verb = chartVerb(c.it.row.key);
+      if (!lvl) { hint.append(h('button.hintlink', { onclick: () => { c.hint1 = true; drawHint(); } }, 'Hint ▾')); return; }
+      hint.append(h('button.hintlink', { onclick: () => { c.hint1 = false; drawHint(); }, 'aria-expanded': 'true' }, 'Hint ▴'),
+        h('div.small.muted', 'Chart verb: ', h('span.hintgrc', { lang: 'grc' }, verb)),
+        c.peek ? h('div.small.muted', '1st sing.: ', h('span.hintgrc.big', { lang: 'grc' }, c.it.row.para), h('div.small.warnline', 'This one will count as missed.'))
+          : h('button.hintlink', { onclick: () => { c.peek = true; drawHint(); } }, 'Show the form (counts as a miss)'));
+    };
     q.options.forEach((o) => opts.append(h('button.opt', { onclick: (ev) => {
+      clear(hint);
       const right = o.v === q.right; [...opts.children].forEach((b, i) => { b.disabled = true; const isR = q.options[i].v === q.right; b.classList.toggle('right', isR); if (b === ev.currentTarget && !isR) b.classList.add('wrong'); b.querySelector('.mark').textContent = isR ? '✓' : (b === ev.currentTarget ? '✗' : ''); });
       const ex = c.it.kind === 'square' ? exampleFor(c.it.row.key) : null;
       const btn = h('button.btn.primary.block', { onclick: () => after(c, right) }, 'Continue');
-      tail.append(h('div.fb.' + (right ? 'ok' : 'bad'), h('b', right ? 'Right.' : 'Not quite.'), ' ' + q.explain, ex ? h('div.small', { style: { marginTop: '.4rem' } }, 'Example from your text: ', h('span', { lang: 'grc' }, ex)) : null), btn);
+      tail.append(h('div.fb.' + (right ? 'ok' : 'bad'), h('b', right ? 'Right.' : 'Not quite.'), ' ' + (right && c.peek ? 'You looked at the form, so this counts as missed. ' : '') + q.explain, ex ? h('div.small', { style: { marginTop: '.4rem' } }, 'Example from your text: ', h('span', { lang: 'grc' }, ex)) : null), btn);
       keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } }; document.removeEventListener('keydown', keyHandler); document.addEventListener('keydown', keyHandler);
       tail.scrollIntoView({ block: 'nearest' });
     } }, h('span', q.greek ? { lang: 'grc' } : {}, o.label), h('span.mark', ''))));
@@ -111,6 +123,7 @@ export function runDrill(view, rowKey = null) {
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End practice', onclick: finish }, icon('close', 20)), h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? S.rk / S.R : S.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Card ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total)),
       card, opts, tail));
+    card.append(hint); drawHint();
   }
   next();
   return stop;
