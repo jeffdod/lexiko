@@ -65,6 +65,8 @@ const PARADIGMS = {
   'perf2-act': ['γίνομαι', ['γέγονα', 'γέγονας', 'γέγονε(ν)', 'γεγόναμεν', 'γεγόνατε', 'γεγόνασι(ν)']],
   'perf-mp': ['λύω', ['λέλυμαι', 'λέλυσαι', 'λέλυται', 'λελύμεθα', 'λέλυσθε', 'λέλυνται']],
 };
+/** The verb the chart names for a row (λύω, μένω, ...). */
+export const chartVerb = (row) => (PARADIGMS[row] || [null])[0];
 export const PARADIGM_ROWS = Object.keys(PARADIGMS);
 /** Longest shared start of several words, ignoring accents; the number of letters. */
 const lcp = (ws) => { const s = ws.map(skel); let k = 0; while (s.every((x) => x.length > k && x[k] === s[0][k])) k++; return k; };

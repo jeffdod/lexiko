@@ -393,3 +393,9 @@ button.rowbtn { background: none; border: 0; padding: 0; font: inherit; color: i
 .pline { align-items: center; padding: .65rem 0; } .plab { width: 5.2rem; flex: none; color: var(--muted); font-size: .85rem; } .pword { font: 1.6rem/1.25 var(--greek); white-space: nowrap; } .pword small { font: .78rem var(--ui); color: var(--muted); white-space: normal; }
 .pstem { color: inherit; } .pend { color: var(--accent); font-weight: 700; } .pword.gap { color: var(--ink-2); white-space: normal; }
 a.rowlink { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+.hintbox { margin-top: .9rem; display: flex; flex-direction: column; align-items: center; gap: .4rem; min-height: 2rem; }
+.hintlink { background: none; border: 0; padding: .3rem .5rem; min-height: 2.2rem; display: inline-flex; align-items: center; font: inherit; font-size: .85rem; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.hintlink[aria-expanded] { text-decoration: none; }
+.hintgrc { color: var(--ink); font-size: 1.05rem; } .hintgrc.big { font-size: 1.2rem; }
+.warnline { color: var(--warn, #e0a040); margin-top: .2rem; text-align: center; }
