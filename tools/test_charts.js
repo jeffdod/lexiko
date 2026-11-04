@@ -70,6 +70,8 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(pg.fullRows >= 5, 'at least five rows have a regular verb with all six forms in the text', String(pg.fullRows));
   await go('#/learn/charts'); await p.click('a.rowbtn >> nth=0'); await p.waitForSelector('.pline');
   ok(await p.locator('.pline').count() === 6 && await p.locator('.pend').count() >= 3 && /Present active indicative/.test(await p.textContent('.chip')), 'paradigm page: six lines for the present active row');
+  { const m = await p.evaluate(() => { const w = document.querySelector('.pword'), a = w.querySelector('.pstem'), b = w.querySelector('.pend'), cs = getComputedStyle(a), r1 = a.getBoundingClientRect(), r2 = b.getBoundingClientRect(); return { border: cs.borderTopWidth, disp: cs.display, sameLine: Math.abs(r1.top - r2.top) < 6 && r2.left >= r1.right - 1, text: w.textContent }; });
+    ok(m.border === '0px' && m.disp === 'inline' && m.sameLine, 'paradigm: the whole word on one line, no box around the stem', JSON.stringify(m)); }
   ok(/Verb:/.test(await p.textContent('#view')) && !/(null|undefined)/.test(await p.textContent('#view')), 'paradigm page: names the verb, no stray null/undefined');
   await p.click('a.btn.primary:text-is("Practice this row")'); await p.waitForSelector('.qcard');
   ok(await p.locator('.qtop .qcount').textContent() === '1 / 5', 'practice this row: the five squares of that row');
