@@ -3,7 +3,7 @@ import { clockNow } from './clock.js';
 import { D, scopeLabel, periScope, periRange, periRef } from './data.js';
 import { K, sectionRead, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak, currentGoal, goalStats, goalLabel, noteGoalDone } from './know.js';
 import { goalPicker } from './goals.js';
-import { h, clear, add, pct, icon, todayKey, fmt } from './util.js';
+import { h, clear, add, pct, icon, todayKey, fmt, fold } from './util.js';
 import { readHref } from './reader.js';
 import { growthCard } from './growth.js';
 
@@ -101,16 +101,15 @@ export function renderProgress(view) {
     h('div.kpis',
       h('div.kpi', h('b', pct(kTok / tot)), h('span', 'of NT words you can read')),
       h('div.kpi', h('b', fmt(wc.known)), h('span', 'of ' + fmt(wc.total) + ' New Testament words known')),
-      h('div.kpi', h('b', secReady + '/' + rows.length), h('span', 'sections ready (98%+)')),
-      h('div.kpi', h('b', secRead), h('span', 'sections read')),
       h('div.kpi', h('b', streak()), h('span', 'day streak'))),
     h('div.card', h('div.bar', h('i.k', { style: { width: pct(kTok / tot) } }), h('i.l', { style: { width: pct(lTok / tot) } })),
       h('div.legend', { style: { marginTop: '.5rem' } }, h('span', h('i', { style: { background: 'var(--good)' } }), 'known'), h('span', h('i', { style: { background: 'var(--warn)' } }), 'learning'), h('span', h('i', { style: { background: 'var(--bad)', opacity: .55 } }), 'new to you'))),
-    growthCard(),
+    growthCard({ hideEmpty: true }),
     goalCard,
     doneCard,
     sug.length ? h('div.card.stack', h('h2', 'Good next reads'), h('p.muted.small', 'Sections where you already know most of the words — the sweet spot for reading with a few lookups.'), h('div.list', sug.map((r) => suggestionItem(r)))) : null,
-    h('div.card', h('h2', 'Passages within reach'), legend, h('div', { style: { marginTop: '.4rem' } }, books)),
-    h('div.card', h('h2', 'Recent practice'), act, h('div.muted.small', { style: { marginTop: '.4rem' } }, 'Reviews per day, last 14 days.')),
+    h('div.card', h('h2', 'Passages within reach'), h('p.muted.small', 'Sections you could read now, closest first. Open “By book” below to see every chapter.')),
+    fold('By book · ' + secReady + ' of ' + rows.length + ' sections ready · ' + secRead + ' read', legend, h('div', books)),
+    fold('Recent practice', act, h('div.muted.small', 'Reviews per day, last 14 days.')),
   ));
 }

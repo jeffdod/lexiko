@@ -93,7 +93,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
 
   // the font license opens inside the app (a link to the .txt would strand the installed app)
-  await page.goto(URL + '#/settings'); await page.waitForSelector('h2:has-text("About")');
+  await page.goto(URL + '#/settings'); await page.waitForSelector('summary:has-text("About lexiko")'); await page.click('summary:has-text("About lexiko")');
   ok(await page.locator('a[href$="OFL.txt"]').count() === 0, 'no plain link to the license file');
   await page.click('button:has-text("Font license")'); await page.waitForFunction(() => /OPEN FONT LICENSE/i.test(document.querySelector('pre.license')?.textContent || ''));
   await page.click('dialog button:has-text("Close")'); await page.waitForTimeout(150);
@@ -121,7 +121,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   ok(cardsAfter >= 5, 'cards persisted in IndexedDB: ' + cardsAfter);
 
   // progress + settings
-  await page.goto(URL + '#/progress'); await page.waitForSelector('.kpis'); ok(/sections ready/.test(await page.textContent('.kpis')) && (await page.locator('a.li').count()) >= 3, 'progress shows section stats and suggestions'); await page.screenshot({ path: out + '/08-progress.png', fullPage: true });
+  await page.goto(URL + '#/progress'); await page.waitForSelector('.kpis'); ok(/sections ready/.test(await page.textContent('#view')) && (await page.locator('.kpi').count()) === 3 && (await page.locator('a.li').count()) >= 3, 'progress shows section stats and suggestions'); await page.screenshot({ path: out + '/08-progress.png', fullPage: true });
   await page.goto(URL + '#/settings'); await page.waitForSelector('.card'); await page.screenshot({ path: out + '/09-settings.png', fullPage: true });
 
   // backup roundtrip

@@ -117,11 +117,11 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
       const ids = kn.troubleCards('w:', 500).map((c) => c.id); kn.K.cards.delete('w:9001'); kn.K.cards.delete('w:9002'); return [ids.indexOf('w:9001'), ids.indexOf('w:9002')]; });
     ok(order[1] >= 0 && (order[0] < 0 || order[1] < order[0]), 'a card you missed ranks above one that is only overdue or hard (' + order.join(' vs ') + ')'); }
   { const before = await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, false); return Object.keys(kn.K.read).length; });
-    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('.kpi:has-text("sections read")');
-    const n0 = +(await page.locator('.kpi', { has: page.locator('span', { hasText: /^sections read$/ }) }).locator('b').textContent());
+    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('summary:has-text("sections ready")');
+    const n0 = +/(\d+) read/.exec(await page.locator('summary:has-text("sections ready")').textContent())[1];
     await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, true); });
-    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('.kpi:has-text("sections read")');
-    const n1 = +(await page.locator('.kpi', { has: page.locator('span', { hasText: /^sections read$/ }) }).locator('b').textContent());
+    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('summary:has-text("sections ready")');
+    const n1 = +/(\d+) read/.exec(await page.locator('summary:has-text("sections ready")').textContent())[1];
     await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, false); });
     ok(n1 > n0, 'marking a chapter read counts its sections as read (' + n0 + ' -> ' + n1 + ')'); }
   { const r = await page.evaluate(async () => { const kn = await import('./js/know.js'); const sm = await import('./js/smart.js'); const F = await import('./js/fsrs.js'); const ids = [1510, 3004, 2316].map((n) => 'w:' + n);
@@ -137,7 +137,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
 
   // growth chart: appears after two days of study data
   await page.goto(URL + '#/progress'); await page.waitForSelector('h1');
-  ok(/learning curve|words started/.test(await page.textContent('#view')), 'progress shows the learning curve card');
+  ok(!/learning curve|words started/.test(await page.textContent('#view')), 'progress hides the learning-curve card until there is data');
   await page.evaluate(async () => { const m = await import('./js/know.js'); const d = new Date(); for (let i = 0; i < 5; i++) { const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); m.K.daily[k] = { ...(m.K.daily[k] || {}), n: 4 }; d.setDate(d.getDate() - 1); } });
   await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('svg[role=img]');
   ok(await page.locator('svg[role=img]').count() === 1, 'learning-curve chart is drawn');

@@ -26,7 +26,22 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(/Quiz style/.test(sv) && /New words per day/.test(sv) && /Pause new words/.test(sv) && /Parsing/.test(sv) && /Guided/.test(sv) && /New forms per day/.test(sv) && /Pause new forms/.test(sv), 'Settings holds pace, quiz style and Parsing style');
   await p.click('#view button:text-is("Quick")'); await p.waitForTimeout(200);
   ok(await p.evaluate(async () => (await import('./js/know.js')).setting('parseMode')) === 'quick', 'changing Parsing style in Settings is saved');
-  for (const h of ['#/learn', '#/learn/words', '#/parse', '#/settings']) { await go(h); ok(!/(null|undefined)/.test(await p.textContent('#view')), h + ' has no stray null/undefined'); }
+  // Settings / Progress simplification
+  await go('#/settings');
+  { const heads = await p.locator('#view h2, #view summary').allTextContents(); const ix = (t) => heads.findIndex((x) => x.includes(t));
+    ok(ix('Your data') >= 0 && ix('Your data') < ix('Appearance') && ix('Appearance') < ix('Your level'), 'Settings: backup sits near the top', heads.join('|'));
+    ok(ix('About lexiko') > ix('Install') && !(await p.locator('#view .levels').count()), 'Settings: About is a fold and the level picker starts closed'); }
+  ok(/I know words used|Just starting/.test(await p.textContent('#lvl-line')), 'Settings: level shown as one line');
+  await p.click('#view button:has-text("Change")'); ok(await p.locator('#view .lvl').count() > 5, 'Settings: Change opens the level picker');
+  await p.evaluate(() => [...document.querySelectorAll('#view .lvl')].find((b) => b.firstChild.textContent === '100+').click()); await p.waitForTimeout(300); ok(/100\+ times/.test(await p.textContent('#lvl-line')), 'Settings: summary follows the new level', await p.textContent('#lvl-line'));
+  ok(await p.locator('#view h2:text-is("Install")').count() === 1, 'Settings: Install card shown in a browser');
+  { const ctx2 = await b.newContext({ viewport: { width: 420, height: 900 } }); const q = await ctx2.newPage(); await q.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+    await q.goto(URL + '#/settings'); await q.waitForSelector('#view h2'); ok(await q.locator('#view h2:text-is("Install")').count() === 0, 'Settings: Install card hidden in the installed app'); await ctx2.close(); }
+  await go('#/progress');
+  ok(await p.locator('.kpi').count() === 3, 'Progress: three stat tiles');
+  ok(await p.locator('#view details.fold:not([open]) > summary:has-text("By book")').count() === 1 && await p.locator('#view details.fold:not([open]) > summary:has-text("Recent practice")').count() === 1, 'Progress: By book and Recent practice start collapsed');
+  ok(!/Your learning curve/.test(await p.textContent('#view')), 'Progress: no empty learning-curve card');
+  for (const h of ['#/learn', '#/learn/words', '#/parse', '#/settings', '#/progress']) { await go(h); ok(!/(null|undefined)/.test(await p.textContent('#view')), h + ' has no stray null/undefined'); }
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();

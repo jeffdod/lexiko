@@ -17,10 +17,11 @@ export function growthSeries(days = 84) {
 }
 
 /** A small card: the number, the change this week, and a line over time. compact = a short chart for Home. */
-export function growthCard({ compact = false } = {}) {
+export function growthCard({ compact = false, hideEmpty = false } = {}) {
   const { pts, started, weekAgo, firstDay } = growthSeries();
   const gained = started - weekAgo;
   if (!firstDay || pts.filter((p) => p.total > 0).length < 2) {
+    if (hideEmpty) return null;
     return h('div.card.flat', h('b', 'Your learning curve'), h('div.muted.small', 'After a couple of days of study, a chart of the words you’ve started learning will appear here.'));
   }
   const W = 300, H = compact ? 64 : 110, pad = 4, max = Math.max(1, started);
