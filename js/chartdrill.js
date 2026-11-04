@@ -70,7 +70,7 @@ export function runDrill(view, rowKey = null) {
   const { due, nw } = plan(), picks = rowKey ? ITEMS.filter((i) => i.kind === 'square' && i.row.key === rowKey) : [...due, ...nw];      // one row: all five of its squares
   const queue = shuffle(picks.map((it) => ({ it, tries: 0 })));
   if (!queue.length) return renderChartsPage(view);
-  const total = queue.length, S = { shown: 0, done: 0, good: 0, missed: [] };
+  const total = queue.length, retryQ = [], S = { shown: 0, done: 0, good: 0, missed: [], round: 0, R: 0, rk: 0 };
   const finish = () => {
     stop();
     clear(view).append(h('div.pagehead', h('h1', 'Chart practice complete')),
@@ -78,14 +78,20 @@ export function runDrill(view, rowKey = null) {
         missedBlock(S.missed.map((it) => { const q = question(it); return { word: q.main + ' ' + q.sub.replace('?', ''), greek: false, sub: it.kind === 'square' ? ATTR_LABEL[it.attr] : 'ending', why: null }; }), () => { const again = S.missed.map((it) => ({ it, tries: 1 })); S.missed = []; runList(again); }),
         h('div.row.wrap', h('a.btn.primary', { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'), ...backLinks('#/learn', 'Back to Learn'))));
   };
-  const runList = (list) => { queue.length = 0; queue.push(...list); S.shown = 0; next(); };
-  const next = () => { stop(); const c = queue.shift(); if (!c) return finish(); if (!c.tries) S.shown++; show(c); };   // a retry is not a new card
+  const runList = (list) => { queue.length = 0; queue.push(...list); S.shown = 0; S.round = 0; next(); };
+  const next = () => {
+    stop(); let c = queue.shift();
+    if (!c && retryQ.length) { queue.push(...retryQ.splice(0)); S.round = 1; S.R = queue.length; S.rk = 0; c = queue.shift(); }   // missed squares come back in a retry round
+    if (!c) return finish();
+    if (S.round) S.rk++; else S.shown++;
+    show(c);
+  };
   const after = async (c, ok) => {
     if (c.tries === 0) {                                              // only the first try is recorded
       const lv = formLevel(); await rateChart(c.it.id, ok ? 3 : 1); S.done++; if (ok) S.good++; else S.missed.push(c.it);
       if (formLevel() > lv) toast('New kind of verb form open: ' + levelName(formLevel()) + '. Learning the chart opened it.', 10000);
     }
-    if (!ok && c.tries === 0) queue.push({ it: c.it, tries: 1 });       // a first miss gets one more try before the end
+    if (!ok && c.tries === 0) retryQ.push({ it: c.it, tries: 1 });       // a first miss gets one more try, in a retry round after the last card
     next();
   };
   function show(c) {
@@ -101,7 +107,7 @@ export function runDrill(view, rowKey = null) {
     } }, h('span', q.greek ? { lang: 'grc' } : {}, o.label), h('span.mark', ''))));
     keyHandler = (e) => { const n = +e.key; if (!n) return; const b = [...view.querySelectorAll('.opt')].filter((x) => !x.disabled)[n - 1]; if (b) b.click(); }; document.addEventListener('keydown', keyHandler);
     clear(view).append(h('div.qwrap',
-      h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End practice', onclick: finish }, icon('close', 20)), h('div.bar.accent.grow', h('i', { style: { width: (100 * S.shown / total) + '%' } })), h('span.qcount', S.shown + ' / ' + total)),
+      h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End practice', onclick: finish }, icon('close', 20)), h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? S.rk / S.R : S.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Card ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total)),
       card, opts, tail));
   }
   next();
