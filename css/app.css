@@ -376,3 +376,6 @@ button.btn.primary[disabled] { opacity: .5; cursor: default; }
 #ttbar span { flex: 1 1 10rem; }
 body.tt #view { padding-top: calc(env(safe-area-inset-top) + 3.6rem); }
 @media (min-width: 700px) { #ttbar { left: var(--rail-w); } }
+
+.links { gap: .1rem 1rem; }
+.links .btn.ghost { color: var(--accent); padding-left: .3rem; padding-right: .3rem; }
