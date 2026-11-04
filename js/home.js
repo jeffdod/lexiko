@@ -69,7 +69,7 @@ export function renderHome(view) {
 
   const stack = h('div.stack');
   stack.append(h('div.row.between', { style: { flexWrap: 'nowrap' } },
-    h('div', h('h1', { style: { fontSize: '2rem' } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'), h('div.muted', 'Build your Greek vocabulary. Read the Greek New Testament better.')),
+    h('div', h('h1', { style: { fontSize: '2rem' } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'), h('div.muted', 'Build your Greek vocabulary. Read the Greek New Testament with confidence.')),
     h('a.btn.icon', { href: '#/search', 'aria-label': 'Search words', style: { flex: 'none' } }, icon('search', 20))));
 
   if (needsBackup) { const last = K.settings.lastBackup, days = last ? Math.floor((clockNow() - last) / DAY) : 0;
