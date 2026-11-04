@@ -113,7 +113,7 @@ export function renderParadigm(view, key) {
   const r = ROWS.find((x) => x.key === key); if (!r) { location.hash = '#/learn/charts'; return; }
   const P = paradigm(key);
   const lines = P ? P.cells.map((c) => h('div.pline', h('span.plab', c.label),
-    c.have ? h('span.pword', { lang: 'grc' }, h('span.pst', c.stem), h('b.pend', c.ending))
+    c.have ? h('span.pword', { lang: 'grc' }, h('span.pstem', c.stem), h('b.pend', c.ending))
       : c.word ? h('span.pword.gap', { lang: 'grc' }, c.word, h('small', { lang: 'en' }, ' from ', h('span', { lang: 'grc' }, c.from))) : h('span.pword.gap', h('small', 'not in the text')))) : [];
   clear(view).append(backHead('Paradigm', '#/learn/charts', 'Charts'), h('div.stack',
     h('div.row.wrap', h('span.chip.accent', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative')),
