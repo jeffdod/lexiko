@@ -403,3 +403,7 @@ a.rowlink { color: var(--accent); font-weight: 600; text-decoration: none; }
 /* a popup keeps the scroll: nothing behind it moves, and reaching its end does not hand the scroll to the page */
 html:has(dialog[open]) { overflow: hidden; }
 dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
+
+.pmini { margin-top: .6rem; }
+.pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: .2rem .8rem; margin-top: .4rem; }
+.pcell { padding: .25rem 0; border-bottom: 1px solid var(--line); } .pcell .pword { font-size: 1.15rem; } .plabel { font-size: .7rem; }

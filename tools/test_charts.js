@@ -107,6 +107,14 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     ok(await p.evaluate(() => getComputedStyle(document.documentElement).overflow) !== 'hidden', 'popup closed: the page scrolls again'); }
   { const r = await p.evaluate(async () => { const C = await import('./js/charts.js'); return C.MASTER.filter((x) => x && /^perf/.test(x[0])).map((x) => [x[0], x[2], x[7]]); });
     ok(r.every(([, red, ex]) => red[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '') === ex[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '') && red[1] === 'ε'), 'the chart\'s reduplication starts with the first letter of that row\'s own verb', JSON.stringify(r)); }
+  { await go('#/learn/charts/run/aor1-pas'); await p.waitForSelector('.qcard'); let sawWrong = false, sawRight = false, wrongGrid = 0, rightGrid = 0;
+    for (let i = 0; i < 12 && !(sawWrong && sawRight); i++) { if (!(await p.locator('.qcard').count())) break;
+      const k = await p.locator('.opt').count(), pick = sawWrong ? 0 : i % k; await p.locator('.opt').nth(pick).click(); await p.waitForSelector('.fb');
+      const bad = await p.locator('.fb.bad').count() > 0, g = await p.locator('.fb .pgrid .pcell').count();
+      if (bad) { sawWrong = true; wrongGrid = g; } else { sawRight = true; rightGrid = g; }
+      await p.click('button:text-is("Continue")'); await p.waitForTimeout(150); }
+    ok(sawWrong && wrongGrid === 6, 'wrong answer: the row paradigm is shown (six forms)', String(wrongGrid));
+    ok(!sawRight || rightGrid === 0, 'right answer: no paradigm', String(rightGrid)); }
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();

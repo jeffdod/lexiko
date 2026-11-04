@@ -115,7 +115,7 @@ export function runDrill(view, rowKey = null) {
       const right = o.v === q.right; [...opts.children].forEach((b, i) => { b.disabled = true; const isR = q.options[i].v === q.right; b.classList.toggle('right', isR); if (b === ev.currentTarget && !isR) b.classList.add('wrong'); b.querySelector('.mark').textContent = isR ? '✓' : (b === ev.currentTarget ? '✗' : ''); });
       const ex = c.it.kind === 'square' ? exampleFor(c.it.row.key) : null;
       const btn = h('button.btn.primary.block', { onclick: () => after(c, right) }, 'Continue');
-      tail.append(h('div.fb.' + (right ? 'ok' : 'bad'), h('b', right ? 'Right.' : 'Not quite.'), ' ' + (right && c.peek ? 'You looked at the form, so this counts as missed. ' : '') + q.explain, ex ? h('div.small', { style: { marginTop: '.4rem' } }, 'Example from your text: ', h('span', { lang: 'grc' }, ex)) : null), btn);
+      tail.append(h('div.fb.' + (right ? 'ok' : 'bad'), h('b', right ? 'Right.' : 'Not quite.'), ' ' + (right && c.peek ? 'You looked at the form, so this counts as missed. ' : '') + q.explain, ex ? h('div.small', { style: { marginTop: '.4rem' } }, 'Example from your text: ', h('span', { lang: 'grc' }, ex)) : null, !right && c.it.kind === 'square' ? paradigmGrid(c.it.row.key) : null), btn);
       keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } }; document.removeEventListener('keydown', keyHandler); document.addEventListener('keydown', keyHandler);
       tail.scrollIntoView({ block: 'nearest' });
     } }, h('span', q.greek ? { lang: 'grc' } : {}, o.label), h('span.mark', ''))));
@@ -130,6 +130,13 @@ export function runDrill(view, rowKey = null) {
 }
 
 /* ---------- a paradigm for one row ---------- */
+/** The row's six forms in two columns, for the feedback after a wrong answer. */
+const paradigmGrid = (key) => {
+  const P = paradigm(key); if (!P) return null;
+  return h('div.pmini', h('div.small.muted', h('b', 'Paradigm'), ' · verb ', h('span', { lang: 'grc' }, P.head)),
+    h('div.pgrid', P.cells.map((c) => h('div.pcell', h('div.small.muted.plabel', c.label + (c.inText ? ' · in the text' : '')), h('span.pword', { lang: 'grc' }, h('span.pstem', c.stem), h('b.pend', c.ending))))));
+};
+
 export function renderParadigm(view, key) {
   const r = ROWS.find((x) => x.key === key); if (!r) { location.hash = '#/learn/charts'; return; }
   const P = paradigm(key);
