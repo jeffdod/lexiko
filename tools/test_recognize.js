@@ -15,7 +15,9 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(d.rules.join() === 'prefix,endings,formative,vowel' && d.steps.join() === 'prefix,endings,formative,vowel,name', 'four rules, five steps', JSON.stringify(d));
   // lessons
   await go('#/learn/charts/rules'); ok(await p.locator('a:has-text("Rule 1")').count() === 1 && /Locked/.test(await p.textContent('#view')), 'lessons page: four rules, Tier 2 locked');
-  await go('#/learn/charts/rules/prefix'); ok(/No prefix/.test(await p.textContent('#view')) && /no ι or αι/.test(await p.textContent('#view')) && !/short/i.test(await p.textContent('#view')), 'lesson 1: prefix rule, no "short" wording');
+  await go('#/learn/charts/rules/prefix'); ok(/No prefix/.test(await p.textContent('#view')) && !/short/i.test(await p.textContent('#view')) && await p.locator('.fb').count() === 0, 'lesson 1: prefix rule, no "short" wording, no boxed note');
+  await go('#/learn/charts/rules/endings'); { const t = await p.textContent('#view'); ok(/Primary/.test(t) && /Secondary/.test(t) && !/θ in the plural/.test(t) && await p.locator('.fb').count() === 0, 'lesson 2: primary and secondary only; it does not try to teach the endings themselves'); }
+  await go('#/learn/charts/rules/prefix');
   await p.click('a.btn.primary:text-is("Practice this rule")'); await p.waitForSelector('.qcard');
   ok(/Prefix/.test(await p.textContent('.qask')) && await p.locator('.opt').count() === 3, 'practice this rule: only the prefix question, three choices');
   // full drill: answer by reading the 'right' mark: click first option each time, record
