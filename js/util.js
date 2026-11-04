@@ -38,6 +38,9 @@ export function h(spec, attrs, ...kids) {
 export function add(el, ...kids) { el.append(...kids.filter((k) => k != null && k !== false)); return el; }
 export function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 
+/** "in a minute or so" / "in about 3d": for telling someone when a card will come back. */
+export const soonText = (ms) => ms < 120000 ? 'in a minute or so' : 'in about ' + fmtInterval(ms);
+
 export function fmtInterval(ms) {
   const m = ms / 60000;
   if (m < 1) return '<1m';

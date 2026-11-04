@@ -8,7 +8,7 @@ import { paceNote, paceOptions } from './pace.js';
 import { verbBrake } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { missOutcome, snap, restore } from './retry.js';
-import { h, clear, shuffle, fmtInterval, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
+import { h, clear, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
@@ -149,7 +149,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.round ? stats.rk / stats.R : stats.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': stats.round ? 'Retry ' + stats.rk + ' of ' + stats.R : 'Item ' + stats.shown + ' of ' + total }, stats.round ? '↻ ' + stats.rk + ' / ' + stats.R : stats.shown + ' / ' + total), chartsButton(),
         h('span.chip' + (item.rescue ? '.gold' : label[0] ? '.' + label[0] : ''), item.rescue ? 'One more try' : label[1])),
-      item.rescue ? h('div.rescue-note', 'You’ve missed this twice. Pick the meaning. It will come back when it is due.') : null,
+      item.rescue ? h('div.rescue-note', 'You’ve missed this twice. Pick the meaning.') : null,
       practice ? practiceBanner(item.type === 'preview', item.type === 'recent') : null, inner,
       undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));
   }
@@ -187,7 +187,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         const r = reveal(); card.append(...r.answer.filter(Boolean));
         const g = item.rescue ? (ok ? 2 : 1) : ok ? (item.type === 'probe' && !item.seen ? 4 : 3) : 1;      // a rescue answered right counts as Hard: it was only recognized with help
         const next = h('button.btn.primary.block', { onclick: () => grade(item, g) }, ok || item.rescue ? 'Continue' : 'Continue (I’ll see this again)');
-        if (item.rescue) card.append(h('div.rescue-note', 'That’s enough for now. It will come back when it is due.'));
+        if (item.rescue) card.append(h('div.rescue-note', 'That’s enough for now.' + (practice ? '' : ' You’ll see this word again ' + soonText(F.preview(getCard(item.n) || F.newCard('w:' + item.n), clockNow(), setting('retention'))[g]) + '.')));
         clear(ctl).append(next);
         keyAct = (e, go) => { if (go) { next.click(); return true; } return false; };
       };
