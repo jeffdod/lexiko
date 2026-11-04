@@ -1,5 +1,4 @@
-// One real paradigm for each row of the master verb chart, found in the Greek text itself: the regular verb whose six
-// person-and-number forms are best attested. A form that is not in the text for that verb is shown from another regular verb, named.
+// One paradigm for each row of the master verb chart, using the verb the chart names for that row. A form is shown whole only when it is written in the text; otherwise just its ending.
 import { D } from './data.js';
 
 const TAG = /^V-([12]?)([PIFARL])([AMPEDONQX]?)([IMSONP])(?:-([123])([SP]))?/;
@@ -26,63 +25,67 @@ export function rowOfAnalysis(a, w = '') {
 }
 
 let data = null;
-function build() {
+function build() {                                                   // row -> most frequent form (for a one-line example)
   if (data) return data;
-  const rows = new Map();                                            // row -> { verbs: Map(strongs -> Map(cell -> {w,count})), total: Map(strongs -> n), cells: Map(cell -> Map(verb -> forms[])) }
+  data = new Map();
   for (const f of D.forms) {
     const a = f.an[0]; if (!a) continue;
-    const row = rowOfAnalysis(a, f.w), x = TAG.exec(a.m || ''); if (!row || !x[5]) continue;
-    const cell = x[5] + x[6]; let R = rows.get(row); if (!R) rows.set(row, R = { verbs: new Map(), total: new Map(), cells: new Map() });
-    let V = R.verbs.get(a.s); if (!V) R.verbs.set(a.s, V = new Map());
-    const w = clean(f.w), low = w[0] === w[0].toLowerCase(), cur = V.get(cell);
-    if (!cur || (low && !cur.low) || (low === cur.low && f.count > cur.count)) V.set(cell, { w, count: f.count, low });       // a form written with a small first letter is preferred to one that opens a sentence
-    R.total.set(a.s, (R.total.get(a.s) || 0) + f.count);
+    const row = rowOfAnalysis(a, f.w); if (!row) continue;
+    const w = clean(f.w), low = w[0] === w[0].toLowerCase(), cur = data.get(row);
+    if (!cur || (low && !cur.low) || (low === cur.low && f.count > cur.count)) data.set(row, { w, count: f.count, low });
   }
-  for (const R of rows.values()) {                                    // the ending the verbs of each cell share: the longest ending that at least half of them have
-    R.end = new Map();
-    for (const cell of CELLS) {
-      const forms = [...R.verbs.values()].map((V) => V.get(cell)).filter(Boolean).map((c) => skel(c.w)); if (!forms.length) continue;
-      for (let L = 4; L >= 1; L--) {
-        const cnt = new Map(); for (const f of forms) if (f.length > L) { const e = f.slice(-L); cnt.set(e, (cnt.get(e) || 0) + 1); }
-        const best = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0];
-        if (best && best[1] / forms.length >= 0.5 && best[1] >= Math.min(3, forms.length)) { R.end.set(cell, best[0]); break; }
-      }
-    }
-  }
-  return (data = rows);
+  return data;
 }
+/** The most frequent form of a chart row in the text (for a one-line example), or null. */
+export function exampleForm(row) { const e = build().get(row); return e ? e.w : null; }
 
+/* ---------- the chart's own paradigms ----------
+   Each row of the master verb chart names a verb (its "1st sing paradigm" column). These are that verb's six forms for the row,
+   written out as in a grammar (authored, like the endings tables). The first form of every row is checked against the chart in the tests. */
+const VERBS = { λύω: 3089, μένω: 3306, πορεύομαι: 4198, ἀποστέλλω: 649, λαμβάνω: 2983, γίνομαι: 1096, γράφω: 1125 };
+const PARADIGMS = {
+  'pres-act': ['λύω', ['λύω', 'λύεις', 'λύει', 'λύομεν', 'λύετε', 'λύουσι(ν)']],
+  'pres-mp': ['λύω', ['λύομαι', 'λύῃ', 'λύεται', 'λυόμεθα', 'λύεσθε', 'λύονται']],
+  'impf-act': ['λύω', ['ἔλυον', 'ἔλυες', 'ἔλυε(ν)', 'ἐλύομεν', 'ἐλύετε', 'ἔλυον']],
+  'impf-mp': ['λύω', ['ἐλυόμην', 'ἐλύου', 'ἐλύετο', 'ἐλυόμεθα', 'ἐλύεσθε', 'ἐλύοντο']],
+  'fut-act': ['λύω', ['λύσω', 'λύσεις', 'λύσει', 'λύσομεν', 'λύσετε', 'λύσουσι(ν)']],
+  'fut-liq-act': ['μένω', ['μενῶ', 'μενεῖς', 'μενεῖ', 'μενοῦμεν', 'μενεῖτε', 'μενοῦσι(ν)']],
+  'fut-mid': ['πορεύομαι', ['πορεύσομαι', 'πορεύσῃ', 'πορεύσεται', 'πορευσόμεθα', 'πορεύσεσθε', 'πορεύσονται']],
+  'fut-liq-mid': ['μένω', ['μενοῦμαι', 'μενῇ', 'μενεῖται', 'μενούμεθα', 'μενεῖσθε', 'μενοῦνται']],
+  'fut-pas1': ['λύω', ['λυθήσομαι', 'λυθήσῃ', 'λυθήσεται', 'λυθησόμεθα', 'λυθήσεσθε', 'λυθήσονται']],
+  'fut-pas2': ['ἀποστέλλω', ['ἀποσταλήσομαι', 'ἀποσταλήσῃ', 'ἀποσταλήσεται', 'ἀποσταλησόμεθα', 'ἀποσταλήσεσθε', 'ἀποσταλήσονται']],
+  'aor1-act': ['λύω', ['ἔλυσα', 'ἔλυσας', 'ἔλυσε(ν)', 'ἐλύσαμεν', 'ἐλύσατε', 'ἔλυσαν']],
+  'aor-liq-act': ['μένω', ['ἔμεινα', 'ἔμεινας', 'ἔμεινε(ν)', 'ἐμείναμεν', 'ἐμείνατε', 'ἔμειναν']],
+  'aor2-act': ['λαμβάνω', ['ἔλαβον', 'ἔλαβες', 'ἔλαβε(ν)', 'ἐλάβομεν', 'ἐλάβετε', 'ἔλαβον']],
+  'aor1-mid': ['λύω', ['ἐλυσάμην', 'ἐλύσω', 'ἐλύσατο', 'ἐλυσάμεθα', 'ἐλύσασθε', 'ἐλύσαντο']],
+  'aor2-mid': ['γίνομαι', ['ἐγενόμην', 'ἐγένου', 'ἐγένετο', 'ἐγενόμεθα', 'ἐγένεσθε', 'ἐγένοντο']],
+  'aor1-pas': ['λύω', ['ἐλύθην', 'ἐλύθης', 'ἐλύθη', 'ἐλύθημεν', 'ἐλύθητε', 'ἐλύθησαν']],
+  'aor2-pas': ['γράφω', ['ἐγράφην', 'ἐγράφης', 'ἐγράφη', 'ἐγράφημεν', 'ἐγράφητε', 'ἐγράφησαν']],
+  'perf1-act': ['λύω', ['λέλυκα', 'λέλυκας', 'λέλυκε(ν)', 'λελύκαμεν', 'λελύκατε', 'λελύκασι(ν)']],
+  'perf2-act': ['γίνομαι', ['γέγονα', 'γέγονας', 'γέγονε(ν)', 'γεγόναμεν', 'γεγόνατε', 'γεγόνασι(ν)']],
+  'perf-mp': ['λύω', ['λέλυμαι', 'λέλυσαι', 'λέλυται', 'λελύμεθα', 'λέλυσθε', 'λέλυνται']],
+};
+export const PARADIGM_ROWS = Object.keys(PARADIGMS);
 /** Longest shared start of several words, ignoring accents; the number of letters. */
 const lcp = (ws) => { const s = ws.map(skel); let k = 0; while (s.every((x) => x.length > k && x[k] === s[0][k])) k++; return k; };
-
-/** { row, n, head, brief, cells: [{ cell, label, have, stem, ending, word, from }], attested } for a chart row, or null if the text has none. */
+let exact = null;
+const inTheText = (w) => (exact || (exact = new Set(D.forms.map((f) => chars(f.w).join(''))))).has(chars(w).join(''));
+/** { row, n, head, brief, cells: [{ cell, label, have, stem, ending, word }], attested } for a chart row.
+    A cell is `have` only when the verb's form is written in the text (shown whole). Otherwise only the ending is shown (an authored ending, not a text form). */
 const cache = new Map();
 export function paradigm(row) {
   if (cache.has(row)) return cache.get(row);
-  const R = build().get(row); let out = null;
-  if (R) {
-    const fits = (V, cell) => { const c = V.get(cell), e = R.end.get(cell); return !!c && !!e && skel(c.w).endsWith(e); };
-    const rank = [...R.verbs.entries()].filter(([n]) => regularVerb(n)).map(([n, V]) => ({ n, V, fit: CELLS.filter((c) => fits(V, c)).length, have: V.size, small: CELLS.filter((c) => fits(V, c) && V.get(c).low).length, total: R.total.get(n) || 0 }))
-      .sort((a, b) => b.small - a.small || b.fit - a.fit || b.have - a.have || b.total - a.total || a.n - b.n);
-    const best = rank[0];
-    if (best && best.fit) {
-      const have = CELLS.filter((c) => fits(best.V, c)), words = have.map((c) => best.V.get(c).w);
-      const k = words.length > 1 ? Math.min(lcp(words), Math.min(...words.map((w) => chars(w).length)) - 1) : 0;
-      const cells = CELLS.map((cell) => {
-        if (have.includes(cell)) { const w = chars(best.V.get(cell).w); return { cell, label: CELL_LABEL[cell], have: true, stem: w.slice(0, k).join(''), ending: w.slice(k).join(''), word: best.V.get(cell).w }; }
-        // not in the text for this verb: show the commonest real form of another regular verb in that place, named
-        const e = R.end.get(cell), others = [...R.verbs.entries()].filter(([n, V]) => n !== best.n && regularVerb(n) && fits(V, cell)).map(([n, V]) => ({ n, c: V.get(cell) })).sort((x, y) => (y.c.low - x.c.low) || y.c.count - x.c.count)[0];
-        return { cell, label: CELL_LABEL[cell], have: false, stem: '', ending: '', word: others ? others.c.w : null, from: others ? D.lexByN.get(others.n).head : null };
-      });
-      const L = D.lexByN.get(best.n);
-      out = { row, n: best.n, head: L.head, brief: L.brief, cells, attested: have.length };
-    }
+  const P = PARADIGMS[row]; let out = null;
+  if (P) {
+    const [verb, forms] = P, n = VERBS[verb], L = D.lexByN.get(n);
+    const k = Math.min(lcp(forms), Math.min(...forms.map((w) => chars(w).length)) - 1);
+    const cells = CELLS.map((cell, i) => {
+      const f = forms[i], vs = f.includes('(ν)') ? [f.replace('(ν)', ''), f.replace('(ν)', 'ν')] : [f];
+      const hit = vs.find(inTheText), w = chars(hit || vs[0]), split = (x) => ({ stem: x.slice(0, k).join(''), ending: x.slice(k).join('') });
+      return hit ? { cell, label: CELL_LABEL[cell], have: true, word: hit, ...split(w) }
+        : { cell, label: CELL_LABEL[cell], have: false, word: null, stem: '', ending: chars(f.replace('(ν)', '')).slice(k).join('') };
+    });
+    out = { row, n, head: L.head, brief: L.brief, cells, attested: cells.filter((c) => c.have).length };
   }
   cache.set(row, out); return out;
-}
-/** The most frequent form of a chart row in the text (for a one-line example), or null. */
-export function exampleForm(row) {
-  const R = build().get(row); if (!R) return null; let best = null;
-  for (const [n, V] of R.verbs) if (regularVerb(n)) for (const c of V.values()) if (c.low && (!best || c.count > best.count)) best = c;
-  return best ? best.w : null;
 }
