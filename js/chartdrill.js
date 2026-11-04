@@ -114,11 +114,11 @@ export function renderParadigm(view, key) {
   const P = paradigm(key);
   const lines = P ? P.cells.map((c) => h('div.pline', h('span.plab', c.label),
     c.have ? h('span.pword', { lang: 'grc' }, h('span.pstem', c.stem), h('b.pend', c.ending))
-      : c.word ? h('span.pword.gap', { lang: 'grc' }, c.word, h('small', { lang: 'en' }, ' from ', h('span', { lang: 'grc' }, c.from))) : h('span.pword.gap', h('small', 'not in the text')))) : [];
+      : h('span.pword.gap', h('span', { lang: 'grc' }, '– ', h('b.pend', c.ending)), h('small', ' not in the text')))) : [];
   clear(view).append(backHead('Paradigm', '#/learn/charts', 'Charts'), h('div.stack',
     h('div.row.wrap', h('span.chip.accent', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative')),
     P ? h('div.card.stack', ...lines) : h('div.card', h('p', 'The text has no clear example of this row.')),
-    P ? h('p.muted.small', h('b', 'Verb: '), h('span', { lang: 'grc' }, P.head), ' · ' + P.brief + '. ' + (P.attested === 6 ? 'All six forms are in the text.' : P.attested + ' of 6 forms are in the text for this verb. The others are real forms of other regular verbs, named, so you can see the pattern.')) : null,
+    P ? h('p.muted.small', h('b', 'Verb: '), h('span', { lang: 'grc' }, P.head), ' · ' + P.brief + '. ' + (P.attested === 6 ? 'All six forms are in the text.' : P.attested + ' of 6 forms are in the text for this verb. For the others only the ending is shown.')) : null,
     h('p.small', summary(r)),
     h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run/' + key }, 'Practice this row'), h('button.btn', { onclick: () => openCharts({ highlight: key }) }, icon('table', 18), ' See it in the chart'))));
 }
