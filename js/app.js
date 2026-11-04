@@ -14,6 +14,7 @@ import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { h, clear, icon, noteRoute } from './util.js';
 import { travelBar } from './timetravel.js';
+import { startAutoBackup } from './backup.js';
 
 const view = document.getElementById('view');
 const navEl = document.getElementById('nav');
@@ -96,7 +97,7 @@ async function boot() {
   }
   applyTheme(K.settings.theme);
   try { localStorage.setItem('lexiko-theme', K.settings.theme); } catch { /* ignore */ }
-  buildNav();
+  buildNav(); startAutoBackup();
   window.addEventListener('hashchange', route);
   travelBar();
   route();

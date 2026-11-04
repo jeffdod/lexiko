@@ -104,6 +104,7 @@ export const BACKUP_FORMAT = 'lexiko-backup';
 
 export async function makeBackup() {
   const [kv, cards, log] = await Promise.all([store.allKV(), store.allCards(), store.allLog()]);
+  delete kv.autoBackupDir;                                             // a folder handle belongs to this device only
   delete kv.ttBackup;                                                  // the time-travel snapshot is never part of a backup
   return { format: BACKUP_FORMAT, version: 1, exported: new Date().toISOString(), kv, cards, log };
 }
@@ -142,7 +143,9 @@ export function validateBackup(o) {
 export async function importBackup(o, mode = 'merge') {
   validateBackup(o);
   if (mode === 'replace') {
+    const dirH = await store.get('autoBackupDir');                         // keep this device's backup folder across a restore
     await store.clearAll();
+    if (dirH) { try { await store.set('autoBackupDir', dirH); } catch { /* ignore */ } }
     for (const [k, v] of Object.entries(o.kv)) await store.set(k, v);
     await store.putCards(o.cards);
     if (o.log.length) await store.addLog(o.log);
