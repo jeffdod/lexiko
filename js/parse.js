@@ -12,7 +12,9 @@ import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
-import { currentGoal, goalWords } from './know.js';
+import { currentGoal, goalWords, formLevel, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
+import { levelOfTag, NLEVELS, levelName } from './families.js';
+import { store } from './store.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
 /** Answer codes that have no button of their own, and the button that stands for them. */
@@ -43,7 +45,10 @@ const cardIdFor = (id) => {
   return best;
 };
 const isFresh = (id) => { const c = K.cards.get(cardIdFor(id)); return !c || c.state === 'new'; };
-const itemOf = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
+const rawItem = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
+const levelOfItem = (it) => levelOfTag(it.valid[0].code);
+/** A verb form whose level is not open yet is treated as if it were not there: not due, not new, not counted. */
+const itemOf = (id) => { const it = rawItem(id); return it && it.group === 'V' && levelOfItem(it) > formLevel() ? null : it; };
 /** The forms a verb requires (its chosen forms in each required stem), as form ids; cached per verb. */
 const reqCache = new Map();
 const requiredFormIds = (n) => {
@@ -53,6 +58,17 @@ const requiredFormIds = (n) => {
 };
 const isVerbForm = (id) => { const it = itemOf(id); return !!it && it.group === 'V'; };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
+
+/** Once: fill the per-level accuracy from the review log, so someone who already answers a level well starts past it. */
+export async function bootFamilies() {
+  if (await store.get('famInit')) return;
+  ensureIndex();
+  const log = (await store.allLog()).filter((e) => e.k === 'parse' && typeof e.id === 'string').sort((a, b) => a.t - b.t);
+  const acc = {};
+  for (const e of log) { const id = keyMap.get(e.id); if (id == null) continue; const it = rawItem(id); if (!it || it.group !== 'V') continue; const l = levelOfItem(it); (acc[l] ||= []).push(e.g >= 3 ? 1 : 0); }
+  for (const l of Object.keys(acc)) K.famAcc[l] = acc[l].slice(-40);
+  await store.set('famAcc', K.famAcc); await advanceLevels(); await store.set('famInit', true);
+}
 
 /* ---------- context sentence with the form highlighted ---------- */
 function formContext(id) {
@@ -118,9 +134,11 @@ export function buildParseSession(opts) {
   const cap = size > 20 ? 3 : 2, per = new Map(), lex = (id) => D.forms[id].an[0].s, picked = [], rest = [];
   let verbRoom = Math.round(want * 0.4), otherRoom = want - verbRoom;
   const nVerbs = ranked.filter((o) => isVerbForm(o.x.id)).length; if (nVerbs < verbRoom) { otherRoom += verbRoom - nVerbs; verbRoom = nVerbs; }
+  // forms of the newest open level are rationed to about one in four of the new verb forms, until you know them
+  const newest = formLevel(), ration = !setting('formsAll') && newest > 1 ? Math.max(1, Math.ceil(verbRoom * 0.25)) : 1e9; let fromNewest = 0;
   for (const o of ranked) {
-    const k = lex(o.x.id), n = per.get(k) || 0, v = isVerbForm(o.x.id);
-    if (picked.length < want && n < cap && (v ? verbRoom : otherRoom) > 0) { picked.push(o); per.set(k, n + 1); if (v) verbRoom--; else otherRoom--; } else rest.push(o);
+    const k = lex(o.x.id), n = per.get(k) || 0, v = isVerbForm(o.x.id), isNew = v && levelOfItem(itemOf(o.x.id)) === newest;
+    if (picked.length < want && n < cap && (v ? verbRoom : otherRoom) > 0 && !(isNew && fromNewest >= ration)) { picked.push(o); per.set(k, n + 1); if (v) verbRoom--; else otherRoom--; if (isNew) fromNewest++; } else rest.push(o);
   }
   const rest2 = [];
   for (const o of rest) { const k = lex(o.x.id), n = per.get(k) || 0; if (picked.length < want && n < cap) { picked.push(o); per.set(k, n + 1); } else rest2.push(o); }      // a share that nobody fills goes to whoever is left, still a few per word
@@ -149,6 +167,7 @@ const effectiveMode = (group, st) => { const pref = setting('parseMode'); return
 
 async function recordResult(st, it, res) {
   const g = groupOfItem(it);
+  if (it.group === 'V') { const opened = await noteFamily(levelOfItem(it), res.full); if (opened) toast('New kind of verb form open: ' + levelName(opened) + '. It will appear in verb questions now and then.', 10000); }
   for (const [k, v] of Object.entries(res.perSlot)) { const s = (st.slots[k] ||= [0, 0]); s[1]++; if (v.ok) s[0]++; }
   const rec = (st.recent[g] ||= []); rec.push(res.full ? 1 : 0); if (rec.length > 40) rec.shift();
   st.total = (st.total || 0) + 1;
@@ -451,6 +470,21 @@ export function renderParse(view, params) {
   landing(view);
 }
 
+/** Which kinds of verb form are open, what is next, and how close you are. */
+function levelsCard(redraw) {
+  const lv = formLevel(), all = !!setting('formsAll'), box = h('div.card.stack');
+  box.append(h('h2', 'Forms you are working on'));
+  if (all) { box.append(h('p.muted.small', 'Every kind of form is open, because Show all forms is on in Settings.')); return box; }
+  box.append(h('p.muted.small', 'Only these kinds of verb form appear in questions for now.'),
+    h('div.row.wrap', { style: { gap: '.4rem' } }, Array.from({ length: lv }, (_, i) => h('span.chip.accent', levelName(i + 1)))));
+  if (lv < NLEVELS) {
+    const st = famStats(lv), pc = (x) => Math.round(x * 100) + '%';
+    const how = st.n < FAM_MIN ? 'Answer ' + (FAM_MIN - st.n) + ' more questions on the newest kind above and lexiko will check whether to open the next one.' : 'Opens at ' + pc(FAM_ACC) + ' over your last ' + FAM_WINDOW + ' answers (you: ' + pc(st.acc) + ').';
+    box.append(h('p.small', h('b', 'Next: '), levelName(lv + 1) + '. ' + how),
+      h('div.row.wrap', h('button.btn.sm', { onclick: async () => { await openNextLevel(); redraw(); } }, 'Open it now')));
+  } else box.append(h('p.muted.small', 'Every kind of form is open.'));
+  return box;
+}
 async function landing(view) {
   ensureIndex();
   const st = await getParseStats();
@@ -463,5 +497,6 @@ async function landing(view) {
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots'), chartsButton()),
       miniGoalCard(() => landing(view)),
+      levelsCard(() => landing(view)),
       Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
 }

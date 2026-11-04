@@ -5,12 +5,13 @@ import { D, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBoo
 import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
+import { levelOfTag, NLEVELS } from './families.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -27,6 +28,7 @@ export async function initKnow() {
   K.wordsAcc = (await store.get('wordsAcc')) || [];
   K.parseAcc = (await store.get('parseAcc')) || [];
   K.verbParse = (await store.get('verbParse')) || {};
+  K.famAcc = (await store.get('famAcc')) || {};
   K.ready = true;
 }
 
@@ -318,7 +320,8 @@ const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 /** Where one verb stands: its required stems and chosen forms (known or not), and whether its forms are learned. Null for a word with no verb forms. */
 export function verbStatus(n) {
   const rs = requiredStems(n); if (!rs) return null;
-  const stems = rs.stems.map((s) => { const forms = s.forms.map((f) => ({ w: f.w, count: f.count, rows: f.rows, known: formKnown(f.rows) })); return { slot: s.slot, name: s.name, share: s.share, forms, known: forms.filter((f) => f.known).length, total: forms.length }; });
+  const lv = formLevel(), inPlay = (f) => levelOfTag(D.forms[f.rows[0]].an[0].m) <= lv;       // forms of levels you have not opened yet are not required
+  const stems = rs.stems.map((s) => { const forms = s.forms.filter(inPlay).map((f) => ({ w: f.w, count: f.count, rows: f.rows, known: formKnown(f.rows) })); return { slot: s.slot, name: s.name, share: s.share, forms, known: forms.filter((f) => f.known).length, total: forms.length }; }).filter((s) => s.total > 0);
   const total = stems.reduce((x, s) => x + s.total, 0), known = stems.reduce((x, s) => x + s.known, 0);
   const a = (K.verbParse[n] || []).slice(-LEARNED_WINDOW), acc = a.length ? mean(a) : null;
   return { n, uses: rs.total, share: rs.share, stems, total, known, acc, answers: a.length, learned: total > 0 && known === total && acc != null && acc >= LEARNED_ACC };
@@ -382,6 +385,24 @@ export async function rateParse(id, grade, ms = 0, meta = {}) {
   await store.addLog([{ t: now, id, g: grade, k: 'parse', ms, ...meta }]);
   return next;
 }
+/* ---------- verb-form levels: which kinds of form are open in Parsing ---------- */
+export const FAM_WINDOW = 20, FAM_MIN = 15, FAM_ACC = 0.85;
+/** The highest open level (all of them with "Show all forms"). */
+export const formLevel = () => (K.settings.formsAll ? NLEVELS : Math.max(1, Math.min(NLEVELS, K.settings.formLevel || 1)));
+export function famStats(l) { const a = (K.famAcc[l] || []).slice(-FAM_WINDOW); return { n: a.length, acc: a.length ? mean(a) : null }; }
+export const famGate = (l) => { const s = famStats(l); return s.n >= FAM_MIN && s.acc >= FAM_ACC; };
+/** Open the next level while the newest open one is answered well enough. Returns the new level if any opened. */
+export async function advanceLevels() {
+  let moved = false;
+  while ((K.settings.formLevel || 1) < NLEVELS && famGate(K.settings.formLevel || 1)) { await setSetting('formLevel', (K.settings.formLevel || 1) + 1); moved = true; }
+  return moved ? K.settings.formLevel : 0;
+}
+/** Record one answer to a verb form of this level; returns the new level if that opened one. */
+export async function noteFamily(l, ok) {
+  const a = (K.famAcc[l] ||= []); a.push(ok ? 1 : 0); if (a.length > FAM_WINDOW * 2) a.shift();
+  await store.set('famAcc', K.famAcc); return advanceLevels();
+}
+export async function openNextLevel() { if ((K.settings.formLevel || 1) < NLEVELS) await setSetting('formLevel', (K.settings.formLevel || 1) + 1); }
 export const PARSE_DEFAULT = { slots: {}, recent: { verb: [], other: [] }, mode: { verb: 'guided', other: 'guided' }, total: 0 };
 export async function getParseStats() { return { ...PARSE_DEFAULT, ...((await store.get('parseStats')) || {}) }; }
 export const saveParseStats = (st) => store.set('parseStats', st);
