@@ -57,8 +57,8 @@ const OPT = {
 };
 const WHY = {
   prefix: { none: 'No prefix: a present or a future.', aug: 'An ε augment: a past tense, imperfect or aorist.', red: 'A reduplication (consonant + ε): a perfect.' },
-  endings: { 'prim-act': 'Primary endings carry an ι or αι. These are active (-ω, -εις, -ει, -ουσι).', 'prim-mp': 'Primary endings carry an ι or αι. These are middle/passive (-μαι, -σαι, -ται, -νται).',
-    'sec-act': 'Secondary endings have no ι or αι. These are active (-ν, -ς, nothing, -μεν, -τε).', 'sec-mp': 'Secondary endings have no ι or αι. These are middle/passive (-μην, -σο, -το, -ντο).' },
+  endings: { 'prim-act': 'Primary active: the endings of the present, future and perfect.', 'prim-mp': 'Primary middle/passive: the endings of the present, future and perfect.',
+    'sec-act': 'Secondary active: the endings of the imperfect and aorist.', 'sec-mp': 'Secondary middle/passive: the endings of the imperfect and aorist.' },
   formative: { none: 'Nothing sits between the stem and the ending but a connecting vowel.', s: 'σ marks a future (with no augment).', a: 'σα (or α) marks an aorist active or middle, with an augment in front.',
     th: 'θη (or η) marks an aorist passive, with an augment in front.', ths: 'θησ (or ησ) marks a future passive, with no augment.', k: 'κα (or α) marks a perfect active, with a reduplication in front.' },
   vowel: { 'ο': 'ο before μ or ν.', 'ε': 'ε everywhere else.', none: 'No connecting vowel: the formative stands in its place (or the form has none).', contr: 'The connecting vowel merged with the last vowel of the stem (see Contractions).' },
@@ -81,28 +81,23 @@ const label = (st, ans) => st.id === 'name' ? ans : (OPT[st.id].find((o) => o[0]
 const lg = (t) => h('span', { lang: 'grc' }, t);
 export const RULES = [
   { id: 'prefix', title: 'The prefix', lead: 'Look before the stem. The prefix tells you the time of the action.',
-    rows: [['No prefix', 'present or future'], ['ε (augment)', 'past: imperfect or aorist'], ['Consonant + ε (reduplication)', 'perfect']], ex: [['λύω', 'present'], ['ἔλυον', 'imperfect'], ['λέλυκα', 'perfect']],
-    link: 'An augment goes with secondary endings, which have no ι or αι. The perfect is the exception: it has a prefix but takes primary endings.' },
-  { id: 'endings', title: 'The personal endings', lead: 'Primary endings carry an ι or αι. Secondary endings do not.',
-    rows: [['Primary', 'present, future, perfect: -ω, -εις, -ει · -μαι, -σαι, -ται'], ['Secondary', 'imperfect, aorist: -ν, -ς, nothing · -μην, -σο, -το']], ex: [['λύεις', 'primary active'], ['ἔλυες', 'secondary active'], ['λύεται', 'primary middle/passive'], ['ἐλύετο', 'secondary middle/passive']],
-    link: 'Active or middle/passive? In the plural, a θ marks the middle/passive (-μεθα, -σθε), where the active has -μεν and -τε. In the singular and the 3rd plural, the middle/passive endings are -μαι/-μην, -σαι/-σο, -ται/-το, -νται/-ντο.' },
+    rows: [['No prefix', 'present or future'], ['ε (augment)', 'past: imperfect or aorist'], ['Consonant + ε (reduplication)', 'perfect']], ex: [['λύω', 'present'], ['ἔλυον', 'imperfect'], ['λέλυκα', 'perfect']] },
+  { id: 'endings', title: 'The personal endings', lead: 'Primary endings go with the present, future and perfect. Secondary endings go with the imperfect and aorist.',
+    rows: [['Primary', 'present, future, perfect'], ['Secondary', 'imperfect, aorist']], ex: [['λύεις', 'primary active'], ['ἔλυες', 'secondary active'], ['λύεται', 'primary middle/passive'], ['ἐλύετο', 'secondary middle/passive']] },
   { id: 'formative', title: 'The tense formative', lead: 'Look between the stem and the ending. The formative names the tense and voice.',
     rows: [['σ', 'future (no augment)'], ['σα or α', 'aorist active/middle (with an augment)'], ['θη or η', 'aorist passive (with an augment)'], ['θησ or ησ', 'future passive (no augment)'], ['κα or α', 'perfect active (with a reduplication)'], ['nothing', 'present, imperfect, 2nd aorist, perfect middle/passive']],
-    ex: [['λύσω', 'future'], ['ἔλυσα', 'aorist'], ['ἐλύθην', 'aorist passive'], ['λυθήσομαι', 'future passive'], ['λέλυκα', 'perfect']],
-    link: 'The prefix and the formative together name nearly every tense and voice.' },
+    ex: [['λύσω', 'future'], ['ἔλυσα', 'aorist'], ['ἐλύθην', 'aorist passive'], ['λυθήσομαι', 'future passive'], ['λέλυκα', 'perfect']] },
   { id: 'vowel', title: 'The connecting vowel', lead: 'Where there is one, it is ο before μ or ν, and ε everywhere else.',
-    rows: [['Present, imperfect, future, 2nd aorist', 'have a connecting vowel'], ['1st aorist', 'α in the formative takes its place'], ['Passive aorists and the perfect', 'have none']], ex: [['λύομεν', 'ο before μ'], ['λύετε', 'ε elsewhere'], ['λύουσι', 'ο before ν']],
-    link: 'This rule confirms the others. It matters most for the present, imperfect, future and 2nd aorist.' },
+    rows: [['Present, imperfect, future, 2nd aorist', 'have a connecting vowel'], ['1st aorist', 'α in the formative takes its place'], ['Passive aorists and the perfect', 'have none']], ex: [['λύομεν', 'ο before μ'], ['λύετε', 'ε elsewhere'], ['λύουσι', 'ο before ν']] },
 ];
 export const TIER2_RULE = { id: 'disguise', title: 'Disguised forms', lead: 'The same rules apply, but a piece can be hidden.',
   rows: [['A preposition before the augment', 'the augment sits between the preposition and the stem (ἀπο- + ε + stem), and the preposition’s final vowel may drop'], ['A vowel-initial stem', 'the augment lengthens the first vowel (α becomes η, ε becomes η, ο becomes ω)'], ['Contraction', 'the connecting vowel merges with the last vowel of the stem in contract verbs, and in the liquid future']],
-  ex: [['ἀπέλυσα', 'augment after a preposition'], ['ἤκουσα', 'lengthened augment'], ['ποιοῦμεν', 'contracted']], link: 'The Contractions tab in the charts shows what merges with what.' };
+  ex: [['ἀπέλυσα', 'augment after a preposition'], ['ἤκουσα', 'lengthened augment'], ['ποιοῦμεν', 'contracted']] };
 
 const lessonCard = (r) => h('div.card.stack',
   h('p', { style: { fontSize: '1.05rem' } }, h('b', r.lead.split('. ')[0] + '. '), r.lead.split('. ').slice(1).join('. ')),
   h('div.stack', { style: { gap: '.5rem' } }, ...r.rows.map(([a, b]) => h('div.row', { style: { justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start' } }, h('span', h('b', { lang: /[α-ω]/.test(a) ? 'grc' : 'en' }, a)), h('span.muted', { style: { textAlign: 'right' } }, b)))),
-  r.ex ? h('div.small.muted', 'Examples: ', ...r.ex.flatMap(([w, d], i) => [i ? ' · ' : '', lg(w), ' (' + d + ')'])) : null,
-  h('div.fb', { style: { borderColor: 'var(--accent)' } }, h('b', r.id === 'disguise' ? 'Tip' : 'Link to the next rule'), h('div.small', r.link)));
+  r.ex ? h('div.small.muted', 'Examples: ', ...r.ex.flatMap(([w, d], i) => [i ? ' · ' : '', lg(w), ' (' + d + ')'])) : null);
 
 /** The list of lessons, or one lesson. */
 export function renderRules(view, which = null) {
