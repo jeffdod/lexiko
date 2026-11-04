@@ -387,3 +387,9 @@ button.rowbtn { background: none; border: 0; padding: 0; font: inherit; color: i
 .sq { display: block; height: 1.05rem; border-radius: 5px; border: 1px solid var(--line); background: var(--surface-2); }
 .sq.known { background: var(--good-soft); border-color: var(--good); } .sq.shaky { background: var(--warn-soft); border-color: var(--warn); }
 .start.done { opacity: .75; }
+
+/* paradigm of a chart row */
+.pline { display: flex; align-items: baseline; gap: .8rem; padding: .5rem 0; border-bottom: 1px solid var(--line); } .pline:last-child { border-bottom: 0; }
+.plab { width: 4.8rem; flex: none; color: var(--muted); font-size: .85rem; } .pword { font: 1.3rem/1.35 var(--greek); } .pword small { font: .78rem var(--ui); color: var(--muted); }
+.pst { color: var(--muted); } .pend { color: var(--accent); } .pword.gap { color: var(--ink-2); }
+a.sqrow.rowbtn { text-decoration: none; }

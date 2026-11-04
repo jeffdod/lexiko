@@ -410,13 +410,12 @@ export async function rateChart(id, grade) {
   const now = clockNow(), prev = K.cards.get(id) || F.newCard(id);
   const next = F.review(prev, grade, now, K.settings.retention);
   await saveCard(next);
-  const d = (K.daily[todayKey()] ||= {}); d.cr = (d.cr || 0) + 1; if (prev.state === 'new') d.cn = (d.cn || 0) + 1;
+  const d = (K.daily[todayKey()] ||= {}); d.cr = (d.cr || 0) + 1;
   await store.set('daily', K.daily);
   await store.addLog([{ t: now, id, g: grade, k: 'chart' }]);
   await advanceLevels();
   return next;
 }
-export const chartNewToday = () => (K.daily[todayKey()] || {}).cn || 0;
 export const chartCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => (c.id.startsWith('c:') || c.id.startsWith('e:')) && c.state !== 'new' && c.due <= now);
 export const PARSE_DEFAULT = { slots: {}, recent: { verb: [], other: [] }, mode: { verb: 'guided', other: 'guided' }, total: 0 };
 export async function getParseStats() { return { ...PARSE_DEFAULT, ...((await store.get('parseStats')) || {}) }; }
