@@ -79,6 +79,9 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(await p.locator('.qtop .qcount').textContent() === '1 / 5', 'practice this row: the five squares of that row');
   await p.goto(URL + '#/learn/charts/paradigm/aor1-pas'); await p.reload(); await ready(); await p.waitForSelector('.pline');
   ok(await p.locator('.pword').count() === 6 && /occur in the text/.test(await p.textContent('#view')), 'a row shows all six forms and says how many occur in the text');
+  { await go('#/learn/charts/run/pres-act'); let seen = null;
+    for (let i = 0; i < 6 && !seen; i++) { await p.waitForSelector('.qcard'); const ask = await p.textContent('.qask'); if (/front/.test(ask)) seen = await p.$$eval('.opt', (o) => o.map((x) => x.textContent.replace(/[✓✗]/g, '').trim())); else { await p.locator('.opt').first().click(); await p.waitForSelector('.fb'); await p.click('button:text-is("Continue")'); await p.waitForTimeout(150); } }
+    ok(seen && seen.includes('nothing') && !seen.includes('none'), 'augment question: the empty answer reads "nothing"', JSON.stringify(seen)); }
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();
