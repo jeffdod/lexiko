@@ -379,3 +379,11 @@ body.tt #view { padding-top: calc(env(safe-area-inset-top) + 3.6rem); }
 
 .links { gap: .1rem 1rem; }
 .links .btn.ghost { color: var(--accent); padding-left: .3rem; padding-right: .3rem; }
+
+/* master verb chart map */
+.sqrow { display: grid; grid-template-columns: 8.2rem repeat(5, 1fr); gap: .3rem; align-items: center; font-size: .78rem; color: var(--ink-2); margin: 0 0 .22rem; }
+.sqrow.e { grid-template-columns: 8.2rem repeat(6, 1fr); } .sqrow.head { font-weight: 700; color: var(--muted); }
+button.rowbtn { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; } button.rowbtn:hover .rn { color: var(--accent); }
+.sq { display: block; height: 1.05rem; border-radius: 5px; border: 1px solid var(--line); background: var(--surface-2); }
+.sq.known { background: var(--good-soft); border-color: var(--good); } .sq.shaky { background: var(--warn-soft); border-color: var(--warn); }
+.start.done { opacity: .75; }

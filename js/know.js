@@ -5,7 +5,7 @@ import { D, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBoo
 import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
-import { levelOfTag, NLEVELS } from './families.js';
+import { levelOfTag, NLEVELS, CHART_ATTRS, ROW_LEVEL } from './families.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
@@ -220,7 +220,7 @@ export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
 
 export function streak() {
   let s = 0; const d = new Date(clockNow());
-  const did = (k) => { const x = K.daily[todayKey(k)] || {}; return x.r || x.pr; };      // any studying counts: words or parsing
+  const did = (k) => { const x = K.daily[todayKey(k)] || {}; return x.r || x.pr || x.cr; };      // any studying counts: words or parsing
   if (!did(d)) d.setDate(d.getDate() - 1);   // today not done yet doesn't break the streak
   while (did(d)) { s++; d.setDate(d.getDate() - 1); }
   return s;
@@ -390,7 +390,9 @@ export const FAM_WINDOW = 20, FAM_MIN = 15, FAM_ACC = 0.85;
 /** The highest open level (all of them with "Show all forms"). */
 export const formLevel = () => (K.settings.formsAll ? NLEVELS : Math.max(1, Math.min(NLEVELS, K.settings.formLevel || 1)));
 export function famStats(l) { const a = (K.famAcc[l] || []).slice(-FAM_WINDOW); return { n: a.length, acc: a.length ? mean(a) : null }; }
-export const famGate = (l) => { const s = famStats(l); return s.n >= FAM_MIN && s.acc >= FAM_ACC; };
+/** Has every square of the master-chart rows of this level been learned? (Learning the chart opens the matching verb forms too.) */
+export const chartKnown = (l) => { const rows = Object.keys(ROW_LEVEL).filter((r) => ROW_LEVEL[r] === l); return rows.length > 0 && rows.every((r) => CHART_ATTRS.every((a) => cardKnown(K.cards.get('c:' + r + ':' + a)))); };
+export const famGate = (l) => { const s = famStats(l); return (s.n >= FAM_MIN && s.acc >= FAM_ACC) || chartKnown(l); };
 /** Open the next level while the newest open one is answered well enough. Returns the new level if any opened. */
 export async function advanceLevels() {
   let moved = false;
@@ -403,6 +405,19 @@ export async function noteFamily(l, ok) {
   await store.set('famAcc', K.famAcc); return advanceLevels();
 }
 export async function openNextLevel() { if ((K.settings.formLevel || 1) < NLEVELS) await setSetting('formLevel', (K.settings.formLevel || 1) + 1); }
+/** A square of the master verb chart (c:row:part) or a personal ending (e:set:person): scheduled like any card, never mixed into word or form sessions. */
+export async function rateChart(id, grade) {
+  const now = clockNow(), prev = K.cards.get(id) || F.newCard(id);
+  const next = F.review(prev, grade, now, K.settings.retention);
+  await saveCard(next);
+  const d = (K.daily[todayKey()] ||= {}); d.cr = (d.cr || 0) + 1; if (prev.state === 'new') d.cn = (d.cn || 0) + 1;
+  await store.set('daily', K.daily);
+  await store.addLog([{ t: now, id, g: grade, k: 'chart' }]);
+  await advanceLevels();
+  return next;
+}
+export const chartNewToday = () => (K.daily[todayKey()] || {}).cn || 0;
+export const chartCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => (c.id.startsWith('c:') || c.id.startsWith('e:')) && c.state !== 'new' && c.due <= now);
 export const PARSE_DEFAULT = { slots: {}, recent: { verb: [], other: [] }, mode: { verb: 'guided', other: 'guided' }, total: 0 };
 export async function getParseStats() { return { ...PARSE_DEFAULT, ...((await store.get('parseStats')) || {}) }; }
 export const saveParseStats = (st) => store.set('parseStats', st);
