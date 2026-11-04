@@ -1,7 +1,8 @@
 // Settings: theme, level, study options, data protection / backup / restore, install help, about & licenses.
 import { clockNow } from './clock.js';
 import { D } from './data.js';
-import { K, setting, setSetting, setLevel, studiedCount } from './know.js';
+import { K, setting, setSetting, setLevel, studiedCount, getParseStats } from './know.js';
+import { paceOptions } from './pace.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup, ENC_FORMAT, canLock, lockBackup, unlockBackup } from './store.js';
 import { h, clear, toast, icon, pct, fold, fmt } from './util.js';
 import { renderDev } from './timetravel.js';
@@ -104,6 +105,9 @@ export function renderSettings(view, params = []) {
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+  const parseNoteEl = h('div.muted.small');
+  const parseNote = async () => { const st = await getParseStats(); parseNoteEl.textContent = setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : ''; };
+  parseNote();
   clear(view).append(h('div.pagehead', h('h1', 'Settings')), h('div.stack',
     h('a.card.flat.row.between', { href: '#/help', style: { textDecoration: 'none', color: 'inherit' } }, h('b', 'How lexiko works'), h('span.muted', '›')),
     h('div.card', h('h2', 'Appearance'), seg([['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']], setting('theme'), async (v) => { await setSetting('theme', v); applyTheme(v); })),
@@ -111,7 +115,13 @@ export function renderSettings(view, params = []) {
       levelPicker()),
     h('div.card.stack', h('h2', 'Studying'),
       h('div.row.between', h('b', 'Quiz style'), seg([['flash', 'Flashcards'], ['choice', 'Multiple choice']], setting('mode'), (v) => setSetting('mode', v))),
-      h('div.row.between', h('b', 'New words per day'), h('input', { type: 'number', min: 0, max: 40, 'aria-label': 'New words per day', value: setting('newPerDay'), style: { width: '5rem' }, onchange: (e) => setSetting('newPerDay', Math.max(0, Math.min(40, +e.target.value || 0))) }))),
+      h('div.row.between', h('b', 'New words per day'), h('input', { type: 'number', min: 0, max: 40, 'aria-label': 'New words per day', value: setting('newPerDay'), style: { width: '5rem' }, onchange: (e) => setSetting('newPerDay', Math.max(0, Math.min(40, +e.target.value || 0))) })),
+      ...paceOptions('words', 'words', () => renderSettings(view))),
+    h('div.card.stack', h('h2', 'Parsing'),
+      h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Guided asks one part at a time. Quick shows all parts at once. Auto moves up when you’re reliable.')),
+        seg([['auto', 'Auto'], ['guided', 'Guided'], ['quick', 'Quick']], setting('parseMode'), async (v) => { await setSetting('parseMode', v); parseNote(); })), parseNoteEl,
+      h('div.row.between', h('b', 'New forms per day'), h('select', { 'aria-label': 'New forms per day', onchange: (e) => setSetting('parseNewPerDay', +e.target.value) }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)))),
+      ...paceOptions('parse', 'forms', () => renderSettings(view))),
     fold('Advanced',
       h('div.row.between', h('div', h('b', 'Spot-checks'), h('div.muted.small', 'How often words you’ve said you know are mixed into sessions to check them.')),
         seg([[0, 'Off'], [0.06, 'Light'], [0.12, 'Normal'], [0.2, 'More']], setting('probeRate'), (v) => setSetting('probeRate', v))),

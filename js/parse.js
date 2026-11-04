@@ -7,8 +7,8 @@ import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, O
 import { h, clear, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
-import { passagePicker } from './learn.js';
-import { paceNote, paceOptions } from './pace.js';
+import { miniGoalCard } from './goals.js';
+import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
@@ -454,13 +454,6 @@ export function renderParse(view, params) {
 async function landing(view) {
   ensureIndex();
   const st = await getParseStats();
-  const goal = K.goal && K.goal.book ? K.goal : null;
-  const modeNote = () => setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : '';
-  const note = h('div.muted.small', modeNote());
-  const modeSeg = h('div.seg', [['auto', 'Auto'], ['guided', 'Guided'], ['quick', 'Quick']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('parseMode') === v), onclick: async (e) => {
-    await setSetting('parseMode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); note.textContent = modeNote();
-  } }, t)));
-  const newSel = h('select', { 'aria-label': 'New forms per day', onchange: async (e) => { await setSetting('parseNewPerDay', +e.target.value); landing(view); } }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)));
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
   const sm = smart('parse');
   clear(view).append(
@@ -468,19 +461,7 @@ async function landing(view) {
     h('div.stack',
       startButton(sm),
       paceNote(parsePace(), 'forms'),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), chartsButton()),
-      fold('Study a passage',
-        goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('div.row', h('a.btn.primary.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/all' }, 'Practice'), h('a.btn.sm', { href: '#/parse/run/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') + '/verb' }, 'Verbs only'))) : null,
-        passagePicker(view, goal, {
-          title: 'Parse a passage', blurb: 'Practice the forms that occur in the text you want to read, most frequent first.', label: 'Practice these forms',
-          href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/all',
-          also: [{ label: 'Verbs only', href: (sc) => '#/parse/run/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') + '/verb' }],
-          info: (sc) => { const ids = new Set(); let n = 0; for (const { toks } of scopeVerses(sc)) for (const t of toks) { n++; if (itemOf(canon[t >> 4])) ids.add(canon[t >> 4]); } return fmt(ids.size) + ' distinct forms to parse in ' + fmt(n) + ' words of text'; },
-        })),
-      fold('Options',
-        ...paceOptions('parse', 'forms', () => landing(view)),
-        h('div.row.between.wrap', h('div', h('b', 'Style'), h('div.muted.small', 'Guided asks one part at a time. Quick shows all parts at once. Auto moves up when you’re reliable.')), modeSeg), note,
-        h('div.row.between', h('span', 'New forms per day'), newSel),
-        h('div.row.wrap', h('a.btn.sm', { href: '#/parse/run/mix/verb' }, 'Verbs only'), h('a.btn.sm', { href: '#/parse/run/mix/noun' }, 'Nouns, adjectives & pronouns only'))),
+      h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots'), chartsButton()),
+      miniGoalCard(() => landing(view)),
       Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
 }

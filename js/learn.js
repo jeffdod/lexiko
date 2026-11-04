@@ -4,9 +4,10 @@ import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, token
 import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, goalNext, currentGoal, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
-import { paceNote, paceOptions } from './pace.js';
+import { paceNote } from './pace.js';
 import { verbBrake } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
+import { miniGoalCard } from './goals.js';
 import { missOutcome, snap, restore } from './retry.js';
 import { h, clear, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
@@ -211,47 +212,6 @@ function startFrom(view, kind, scope, title, only = null) {
   runSession(view, items, { title, scope });
 }
 
-export function passagePicker(view, initial, o = {}) {
-  const sc = { book: 'JHN', c1: 1, v1: 1, c2: 1, v2: 999, ...(initial || {}) };
-  const bookSel = h('select', { 'aria-label': 'Book' }, D.books.map((b) => h('option', { value: b.code, selected: b.code === sc.book }, b.name)));
-  const c1 = h('select', { 'aria-label': 'From chapter' }), c2 = h('select', { 'aria-label': 'To chapter' });
-  const v1 = h('input', { type: 'number', min: 1, placeholder: 'start', 'aria-label': 'From verse', style: { width: '5.5rem' } });
-  const v2 = h('input', { type: 'number', min: 1, placeholder: 'end', 'aria-label': 'To verse', style: { width: '5.5rem' } });
-  const sec = h('select', { 'aria-label': 'Section' });
-  const info = h('div.muted.small'), go = h('a.btn.primary', o.label || 'Study these words');
-  const also = (o.also || []).map((a) => ({ a, el: h('a.btn', a.label) }));            // extra one-click buttons beside the main one, e.g. “Verbs only”
-  let applying = false;
-  const fillSecs = () => { clear(sec).append(h('option', { value: '' }, 'Custom range…'), ...periBook(bookSel.value).map((p) => h('option', { value: p.id }, periRange(p) + ' · ' + p.title))); };
-  const fillChs = () => {
-    const b = D.bookByCode.get(bookSel.value);
-    [c1, c2].forEach((s, i) => { clear(s).append(...b.chapters.map(([c]) => h('option', { value: c, selected: c === (i ? sc.c2 : sc.c1) }, c))); });
-  };
-  const read = () => {
-    sc.book = bookSel.value; sc.c1 = +c1.value || 1; sc.c2 = Math.max(sc.c1, +c2.value || sc.c1);
-    sc.v1 = +v1.value || 1; sc.v2 = +v2.value || 999;
-    if (sc.c1 !== sc.c2 || sc.v2 < sc.v1) { if (sc.c1 === sc.c2 && sc.v2 < sc.v1) sc.v2 = 999; }
-    const rd = scopeReadiness(sc), words = passageWords(sc);
-    also.forEach(({ a, el }) => { el.href = a.href(sc); });
-    if (o.info) { clear(info).append(o.info(sc)); go.href = o.href(sc); return; }
-    clear(info).append(h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' known · ' + readinessLabel(rd.known)), ' ', words.length + ' word' + (words.length === 1 ? '' : 's') + ' to learn · ' + fmt(rd.tokens) + ' words of text');
-    go.href = o.href ? o.href(sc) : '#/learn/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/');
-    go.classList.toggle('disabled', !words.length); go.toggleAttribute('disabled', !words.length);
-  };
-  bookSel.addEventListener('change', () => { sc.c1 = sc.c2 = 1; v1.value = v2.value = ''; fillChs(); fillSecs(); read(); });
-  sec.addEventListener('change', () => {
-    const p = D.periList.find((x) => x.id === sec.value); if (!p) return;
-    applying = true; sc.c1 = p.c1; sc.c2 = p.c2; fillChs(); v1.value = p.v1; v2.value = p.v2; read(); applying = false; sec.value = p.id;
-  });
-  [c1, c2, v1, v2].forEach((e) => e.addEventListener('input', () => { if (!applying) sec.value = ''; }));
-  c1.addEventListener('change', () => { if (+c2.value < +c1.value) c2.value = c1.value; read(); });
-  [c2, v1, v2].forEach((e) => e.addEventListener('input', read)); [c2, v1, v2].forEach((e) => e.addEventListener('change', read));
-  fillChs(); fillSecs(); if (sc.v1 > 1) v1.value = sc.v1; if (sc.v2 < 999) v2.value = sc.v2; read();
-  return h('div.card.stack', h('h2', o.title || 'Prepare a passage'), h('p.muted.small', o.blurb || 'Pick the text you want to read. lexiko teaches the words in it that you don’t know yet, most useful first.'),
-    h('div.row.wrap', h('label.field', 'Book', bookSel)), h('label.field', 'Section', sec),
-    h('div.row.wrap', h('label.field', 'From chapter', c1), h('label.field', 'verse (optional)', v1)),
-    h('div.row.wrap', h('label.field', 'To chapter', c2), h('label.field', 'verse (optional)', v2)), info, h('div.row.wrap', go, ...also.map((x) => x.el)));
-}
-
 /** A few words you haven't started: from your goal passage if you have one, else the most common you don't know yet. */
 function previewWords(goal) {
   const fromGoal = goalNext(currentGoal(), 6).map((x) => x.n);
@@ -297,26 +257,15 @@ export function renderLearn(view, params) {
     h('div.pagehead', h('h1', 'Learn')),
     h('div.stack',
       startButton(next),
-      nextLine(up, dueAll),
       h('div.topics', ['words', 'parse'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)), tileNext(up, k) ? h('p.small.tilenext', icon('clock', 13), ' ' + tileNext(up, k)) : null))),
-      verbsInProgress() ? h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Verbs ›'), h('p', verbsInProgress() + (verbsInProgress() === 1 ? ' verb' : ' verbs') + ' in progress')) : h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Verbs ›'), h('p', 'Verbs you are learning')),
+      h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Verbs ›'), h('p', verbsInProgress() ? verbsInProgress() + (verbsInProgress() === 1 ? ' verb' : ' verbs') + ' in progress' : 'Verbs you are learning')),
+      miniGoalCard(() => renderLearn(view, params)),
       comingUp(up)));
 }
 
 /* ---------- Vocabulary page ---------- */
 /* ---------- study words by how common they are ---------- */
-const BANDS = [[1000, 1e9], [500, 999], [250, 499], [100, 249], [50, 99], [30, 49], [20, 29], [10, 19], [5, 9], [2, 4], [1, 1]];
 const bandLabel = ([lo, hi]) => hi >= 1e9 ? 'Words used ' + lo.toLocaleString('en-US') + '+ times' : lo === hi ? 'Words used once' : 'Words used ' + lo + '–' + hi + ' times';
-function bandsCard() {
-  const rows = BANDS.map((b) => {
-    const ws = D.lex.filter((L) => L.freq >= b[0] && L.freq <= b[1]);
-    const fresh = ws.filter((L) => status(L.n) === 'unknown').length;
-    return h('div.li', { style: { gap: '.7rem' } }, h('div.grow', h('b', bandLabel(b)), h('div.muted.small', ws.length.toLocaleString('en-US') + ' words · ' + (fresh ? fresh.toLocaleString('en-US') + ' new to you' : 'you know them all'))),
-      fresh ? h('a.btn.sm.primary', { href: '#/learn/set/' + b[0] + '/' + (b[1] >= 1e9 ? 999999 : b[1]) }, 'Study') : h('span.chip.good', '✓'));
-  });
-  return h('div.list', rows);
-}
-
 /** Shown on the Vocabulary page when the verb brake is on. */
 function verbHold() {
   const b = verbBrake(); if (!b.braked) return null;
@@ -324,7 +273,6 @@ function verbHold() {
 }
 
 function wordsPage(view) {
-  const goal = K.goal && K.goal.book ? K.goal : null;
   const sm = smart('words');
   clear(view).append(
     backHead('Vocabulary', '#/learn', 'Learn'),
@@ -332,14 +280,6 @@ function wordsPage(view) {
       startButton(sm),
       paceNote(wordsPace(), 'words'),
       verbHold(),
-      h('div.row.wrap', h('a.btn.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.words.review }, 'Review what I’ve learned')),
-      fold('Study a passage',
-        goal ? h('div.row.between', h('div', h('b', 'Your goal: ' + scopeLabel(goal))), h('a.btn.primary.sm', { href: '#/learn/passage/' + [goal.book, goal.c1, goal.v1 || 1, goal.c2, goal.v2 || 999].join('/') }, 'Study')) : null,
-        passagePicker(view, goal)),
-      fold('Study by how common the words are', h('p.muted.small', 'Pick a group of words by how often they occur in the New Testament. lexiko teaches the ones in it you don’t know yet.'), bandsCard()),
-      fold('Options',
-        ...paceOptions('words', 'words', () => wordsPage(view)),
-        h('div.row.between', h('div', h('b', 'Quiz style'), h('div.muted.small', 'How you answer each word.')),
-          h('div.seg', [['flash', 'Flashcards'], ['choice', 'Multiple choice']].map(([v, t]) => h('button', { 'aria-pressed': String(setting('mode') === v), onclick: async (e) => { await setSetting('mode', v); [...e.currentTarget.parentNode.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); } }, t)))),
-        h('div.row.wrap', h('a.btn.sm', { href: '#/learn/review' }, 'Review only'), h('a.btn.sm', { href: '#/learn/level' }, 'Learn the next common words'), h('a.btn.sm', { href: '#/settings' }, 'Change my level')))));
+      h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.words.review }, 'Review what I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.words.reinforce }, 'Strengthen weak spots')),
+      miniGoalCard(() => wordsPage(view))));
 }

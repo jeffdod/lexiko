@@ -42,9 +42,10 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
     await page.goto(URL + '#/read/MAT/2'); await page.waitForSelector('[data-t]'); await page.locator('[data-t]', { hasText: /^κατ’$/ }).first().click();
     ok(/\+ accusative/.test(await page.locator('#pop').innerText()), 'κατ’ ὄναρ shows the accusative sense'); await page.keyboard.press('Escape'); }
   // parsing a passage: one click for everything, one click for verbs only
-  await page.goto(URL + '#/parse'); await page.waitForSelector('summary:has-text("Study a passage")'); await page.click('summary:has-text("Study a passage")');
-  { const all = await page.locator('details a:has-text("Practice these forms")').getAttribute('href'), vb = await page.locator('details a.btn:has-text("Verbs only")').first().getAttribute('href');
-    ok(/\/all$/.test(all) && /\/verb$/.test(vb) && all.replace(/all$/, '') === vb.replace(/verb$/, ''), 'passage parsing offers all forms and verbs only for the same text: ' + all + ' | ' + vb);
+  await page.goto(URL + '#/parse'); await page.waitForSelector('.start');
+  ok(await page.locator('summary:has-text("Study a passage")').count() === 0 && await page.locator('summary:has-text("Options")').count() === 0, 'Parsing page no longer has Study a passage or Options sections');
+  ok(await page.locator('button:has-text("Change ›")').count() === 1, 'Parsing page has the goal card');
+  { const vb = '#/parse/run/passage/JHN/1/1/1/18/verb';
     await page.goto(URL + vb); await page.waitForSelector('.qcard'); await passVerb(page); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
   // parsing: when the answer is wrong, the right button is lit even for a voice that has no button of its own (middle or passive deponent)
   { const tgt = await page.evaluate(async () => { const { D } = await import('./js/data.js'); const { decode } = await import('./js/morph.js'); const k = await import('./js/know.js'); await k.setSetting('parseMode', 'guided');
@@ -129,14 +130,10 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
       for (const id of ids) kn.K.cards.delete(id);
       const sum = (label.match(/\d+/g) || []).reduce((a, b) => a + +b, 0); return { label, tile, total, sum }; });
     ok(r.label === r.tile && Math.abs(r.sum - r.total) <= 1, 'the Start label and Learn tile say what the session holds (' + r.label + ' vs ' + r.total + ' cards)'); }
-  // study by how common: Learn > Vocabulary lists groups; a group starts a session of only those words
-  await page.goto(URL + '#/learn/words'); await page.waitForSelector('summary:has-text("Study by how common")');
-  await page.click('summary:has-text("Study by how common")');
-  ok(await page.locator('a[href^="#/learn/set/"]').count() >= 1, 'word groups offer Study links');
-  const href = await page.locator('a[href^="#/learn/set/"]').first().getAttribute('href');
-  const [lo, hi] = href.split('/').slice(-2).map(Number);
-  await page.goto(URL + href); await page.waitForSelector('.qcard');
-  const n = +(await page.evaluate(() => (document.querySelector('.qcard') || {}).textContent ? 1 : 0)); ok(n === 1, 'a frequency group starts a session (' + lo + '–' + hi + ')');
+  // a frequency group still starts a session (reached from goals and direct links); the Vocabulary page itself is kept simple
+  await page.goto(URL + '#/learn/words'); await page.waitForSelector('.start');
+  ok(await page.locator('summary:has-text("Study by how common")').count() === 0 && await page.locator('summary:has-text("Study a passage")').count() === 0 && await page.locator('summary:has-text("Options")').count() === 0, 'Vocabulary page has no extra sections');
+  await page.goto(URL + '#/learn/set/50/99'); await page.waitForSelector('.qcard'); ok(true, 'a frequency group starts a session (50–99)');
 
   // growth chart: appears after two days of study data
   await page.goto(URL + '#/progress'); await page.waitForSelector('h1');

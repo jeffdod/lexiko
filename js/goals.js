@@ -1,7 +1,7 @@
 // Choosing a goal: the set of words you are working toward — by word frequency, by passage, or by section (pericope).
 import { D, scopeCounts, periScope, periRange, periBook } from './data.js';
-import { K, setting, status, scopeReadiness, FREQ_LADDER, freqCoverage, goalStats, goalLabel } from './know.js';
-import { h, clear, pct, fmt } from './util.js';
+import { K, setting, status, scopeReadiness, FREQ_LADDER, freqCoverage, goalStats, goalLabel, currentGoal, setGoal } from './know.js';
+import { h, clear, pct, fmt, add, icon } from './util.js';
 
 const perDay = () => Math.max(1, setting('newPerDay') || 10);
 const daysFor = (left) => Math.max(1, Math.ceil(left / perDay()));
@@ -110,4 +110,17 @@ export function goalPicker({ initial = null, onPick, confirmLabel = 'Set as my g
   }
   draw();
   return root;
+}
+
+/** A small goal card for the Learn pages: the goal, how far along it is, and Change › which opens the picker in place. */
+export function miniGoalCard(redraw) {
+  const box = h('div.card.stack');
+  const draw = (open = false) => {
+    const g = currentGoal(), gs = goalStats(g);
+    add(clear(box), h('div.row.between', h('b', icon('target', 18), ' Your goal'), h('button.btn.ghost.sm', { onclick: () => draw(!open) }, open ? 'Cancel' : 'Change ›')));
+    if (open) return add(box, goalPicker({ initial: g, onPick: async (ng) => { await setGoal(ng); redraw(); } }));
+    add(box, h('div.muted.small', goalLabel(g) + ' · ' + fmt(gs.known) + ' of ' + fmt(gs.total) + ' goal words known'), h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })));
+  };
+  draw();
+  return box;
 }

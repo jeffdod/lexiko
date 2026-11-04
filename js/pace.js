@@ -4,7 +4,7 @@ import { h } from './util.js';
 
 /** A line saying why new items are slowed, paused or waiting; nothing when all is normal. */
 export function paceNote(p, noun) {
-  if (p.paused) return h('div.card.small', h('b', 'New ' + noun + ' are paused.'), ' Turn this off in Options when you want more.');
+  if (p.paused) return h('div.card.small', h('b', 'New ' + noun + ' are paused.'), ' Turn this off in Settings when you want more.');
   if (p.auto && p.why) return h('div.card.small', h('b', p.slow ? 'New ' + noun + ' are slowed. ' : ''), p.why);
   return null;
 }
