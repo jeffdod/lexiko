@@ -8,7 +8,7 @@ import { exampleForm, paradigm, chartVerb } from './paradigms.js';
 import { MASTER, PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, openCharts } from './charts.js';
 import { h, clear, icon, pct, shuffle, toast, missedBlock, backHead, backLinks } from './util.js';
 
-export const ROWS = MASTER.filter(Boolean).map(([key, name, aug, stem, form, vowel, ends, para]) => ({ key, name, aug, stem, form, vowel, ends, para }));
+export const ROWS = MASTER.filter(Boolean).map(([key, name, aug, stem, form, vowel, ends, para]) => ({ key, name, aug: /^perf/.test(key) ? 'RED' : aug, stem, form, vowel, ends, para }));      // every perfect row reduplicates, with its own verb's first consonant
 const ENDSETS = [['prim-act', 'primary active', PRIMARY_ACT], ['prim-mp', 'primary middle/passive', PRIMARY_MP], ['sec-act', 'secondary active', SECOND_ACT], ['sec-mp', 'secondary middle/passive', SECOND_MP]];
 const PERSON = { '1 sg': '1st person singular', '2 sg': '2nd person singular', '3 sg': '3rd person singular', '1 pl': '1st person plural', '2 pl': '2nd person plural', '3 pl': '3rd person plural' };
 const ATTR_LABEL = { aug: 'Aug.', stem: 'Stem', form: 'Form.', vowel: 'Vowel', ends: 'Ends' };
@@ -17,8 +17,8 @@ const ATTR_LABEL = { aug: 'Aug.', stem: 'Stem', form: 'Form.', vowel: 'Vowel', e
 const SAY = { pres: 'present', fut: 'future', aor: 'aorist', perf: 'perfect', impf: 'imperfect', act: 'active', pas: 'passive', 'mid/pas': 'middle/passive', mid: 'middle', prim: 'primary', sec: 'secondary' };
 export const say = (t) => t.replace(/\b(mid\/pas|pres|fut|aor|perf|impf|act|pas|mid|prim|sec)\b/g, (m) => SAY[m]);
 const nice = (name) => { const t = say(name); return /^\d/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1); };
-/** The chart writes the reduplication for its model verb (λε- for λύω); in a real verb it is the verb's own first consonant + ε. */
-const augLabel = (v) => (v === 'λε' ? 'first consonant + ε (reduplication)' : v);
+/** The chart shows each row's reduplication for its own model verb (λε- for λύω, γε- for γίνομαι); in the quiz it is the verb's first consonant + ε. */
+const augLabel = (v) => (v === 'RED' ? 'first consonant + ε (reduplication)' : v);
 const none = (v, word = 'none') => (v === '' || v === '–' ? word : v);      // 'nothing' answers "what goes on the front"
 
 /* ---------- the items ---------- */
@@ -50,7 +50,7 @@ function question(it) {
     explain: summary(r) };
 }
 /** One line saying everything the chart says about a row. */
-export const summary = (r) => say(r.name).replace(/^./, (c) => c.toUpperCase()) + ': ' + (r.aug === 'λε' ? 'reduplication: ' + augLabel(r.aug) : r.aug ? 'augment ' + r.aug : 'no augment') + ', ' + say(r.stem) + ' stem, ' + (r.form ? 'formative ' + r.form : 'no formative') + ', ' + (r.vowel ? 'connecting vowel ' + r.vowel : 'no connecting vowel') + ', ' + say(r.ends) + ' endings.';
+export const summary = (r) => say(r.name).replace(/^./, (c) => c.toUpperCase()) + ': ' + (r.aug === 'RED' ? 'reduplication: ' + augLabel(r.aug) : r.aug ? 'augment ' + r.aug : 'no augment') + ', ' + say(r.stem) + ' stem, ' + (r.form ? 'formative ' + r.form : 'no formative') + ', ' + (r.vowel ? 'connecting vowel ' + r.vowel : 'no connecting vowel') + ', ' + say(r.ends) + ' endings.';
 
 /* ---------- a real example from the text ---------- */
 export const exampleFor = exampleForm;
