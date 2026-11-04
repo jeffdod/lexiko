@@ -80,12 +80,8 @@ async function registerSW() {
 
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__installEvt = e; });
 
-/* Installed (home-screen) app: no pinch or double-tap zoom, so the layout can't be knocked out of size by accident.
-   In an ordinary browser tab zoom stays available. */
-if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
-  document.querySelector('meta[name=viewport]')?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
-  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault());
-}
+/* Zoom stays available everywhere, including the installed app, so text can be enlarged for readability.
+   Double-tap zoom is off (touch-action: manipulation in the CSS) and inputs are 16px, so the page can't jump in size by itself. */
 
 async function boot() {
   const bar = document.getElementById('loadbar'), msg = document.getElementById('loadmsg');
