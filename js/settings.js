@@ -6,6 +6,7 @@ import { paceOptions } from './pace.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup, ENC_FORMAT, canLock, lockBackup, unlockBackup } from './store.js';
 import { h, clear, toast, icon, pct, fold, fmt } from './util.js';
 import { renderDev } from './timetravel.js';
+import { runBackup, autoSupported, autoState, chooseFolder, stopAuto, allowAuto, folderName, writeAuto, AUTO_FILE } from './backup.js';
 
 export const LEVELS = [null, 1000, 500, 250, 100, 50, 30, 20, 10, 5];
 
@@ -43,17 +44,6 @@ const seg = (opts, cur, onPick) => {
   return el;
 };
 
-/** Short, sortable file name, e.g. lex-261031-0553.json (year-month-day, then time), so the newest is obvious in the Files app. */
-function backupName(locked = false, d = new Date()) {
-  const p = (n) => String(n).padStart(2, '0');
-  return 'lex-' + p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + (locked ? '-locked' : '') + '.json';
-}
-
-function download(blob, name) {
-  const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
-}
-
 export function renderSettings(view, params = []) {
   if (params[0] === 'dev') return void renderDev(view);
   const persistLine = h('div.muted.small', 'Checking storage…');
@@ -85,21 +75,7 @@ export function renderSettings(view, params = []) {
     document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   });
   const passIn = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Optional passphrase', 'aria-label': 'Optional passphrase for the backup', style: { width: '100%' } });
-  const markBackedUp = async () => {
-    await setSetting('lastBackup', clockNow());
-    const el = document.querySelector('#bk-last'); if (el) el.textContent = 'Last backup: ' + new Date(K.settings.lastBackup).toLocaleString();
-  };
-  const doBackup = async () => {
-    const pass = passIn.value;
-    if (pass && pass.length < 6) return toast('Use a passphrase of at least 6 characters, or leave it empty.');
-    const plain = await makeBackup(), data = pass ? await lockBackup(plain, pass) : plain, json = JSON.stringify(data), name = backupName(!!pass);
-    const blob = new Blob([json], { type: 'application/json' });
-    try {
-      const file = new File([blob], name, { type: 'application/json' });
-      if (navigator.canShare && navigator.canShare({ files: [file] }) && /iPhone|iPad|Android/.test(navigator.userAgent)) { await navigator.share({ files: [file], title: 'lexiko backup' }); await markBackedUp(); return toast('Backup shared'); }
-    } catch (e) { if (e && e.name === 'AbortError') return; }      // cancelled the share sheet: not a backup
-    download(blob, name); await markBackedUp(); toast('Backup downloaded');
-  };
+  const doBackup = () => runBackup(passIn.value);
 
   const installBtn = h('button.btn', { hidden: !window.__installEvt, onclick: async () => { const e = window.__installEvt; if (!e) return; e.prompt(); await e.userChoice; window.__installEvt = null; installBtn.hidden = true; } }, icon('download', 18), 'Install app');
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
@@ -114,6 +90,19 @@ export function renderSettings(view, params = []) {
     };
     draw(false); return card;
   };
+  const autoBox = h('div.stack');
+  const drawAuto = async () => {
+    const st = await autoState(), name = await folderName();
+    clear(autoBox);
+    if (!autoSupported()) { autoBox.append(h('div.muted.small', h('b', 'Automatic backup'), h('br'), 'This browser can’t save to a folder by itself, so lexiko will remind you to back up instead. On a computer with Chrome or Edge you can turn on automatic backup.')); return; }
+    autoBox.append(h('div.row.between', h('div', h('b', 'Back up automatically'), h('div.muted.small', st === 'off' ? 'Keeps a backup file up to date in a folder you choose, such as one synced by iCloud, Dropbox, OneDrive or Google Drive.' : 'Saves to: ' + name)),
+      st === 'off' ? h('button.btn.sm', { onclick: async () => { if (await chooseFolder()) { await writeNow(); drawAuto(); } } }, 'Choose folder…') : h('button.btn.sm', { 'aria-label': 'Turn off automatic backup', onclick: async () => { await stopAuto(); drawAuto(); } }, 'Turn off')));
+    if (st === 'needs-permission') autoBox.append(h('div.muted.small', 'Your browser has paused automatic backup. Tap to allow it again.'), h('button.btn', { onclick: async () => { if (await allowAuto()) toast('Automatic backup is on'); drawAuto(); } }, 'Allow automatic backup'));
+    if (st !== 'off') autoBox.append(h('div.muted.small', 'One file, ' + AUTO_FILE + ', is kept up to date, plus a dated copy about once a week. Automatic backups are not locked with a passphrase.'),
+      h('button.btn.ghost.sm', { onclick: async () => { if (await chooseFolder()) { await writeNow(); drawAuto(); } } }, 'Choose a different folder ›'));
+  };
+  const writeNow = async () => { const ok = await writeAuto(true); if (ok) { toast('Backed up to your folder'); const el = document.querySelector('#bk-last'); if (el) el.textContent = 'Last backup: ' + new Date(K.settings.lastBackup).toLocaleString(); } };
+  drawAuto();
   const parseNoteEl = h('div.muted.small');
   const parseNote = async () => { const st = await getParseStats(); parseNoteEl.textContent = setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : ''; };
   parseNote();
@@ -122,6 +111,9 @@ export function renderSettings(view, params = []) {
     h('div.card.stack', h('h2', 'Your data'),
       h('div.muted.small', { id: 'bk-last' }, lastBackup ? 'Last backup: ' + new Date(lastBackup).toLocaleString() : 'No backup yet. Your progress lives only on this device — back it up now and then.'),
       h('div.row.wrap', h('button.btn.primary', { onclick: doBackup }, icon('download', 18), 'Back up progress'), h('button.btn', { onclick: () => fileIn.click() }, icon('upload', 18), 'Restore…'), fileIn),
+      autoBox,
+      h('div.row.between', h('div', h('b', 'Remind me to back up'), h('div.muted.small', 'A note on Home when it has been over 4 days and you have made progress.')),
+        seg([[true, 'On'], [false, 'Off']], setting('backupReminder') !== false, (v) => setSetting('backupReminder', v))),
       canLock() ? fold('Lock the backup with a passphrase (optional)', h('label.field', 'Passphrase', passIn),
         h('div.muted.small', 'Leave it empty for an ordinary backup. If you set one, you’ll need the same passphrase to restore, and lexiko can’t recover it for you: it isn’t stored anywhere.')) : null,
       fold('Where backups go, and storage', h('p.muted.small', { id: 'bk-where' }, ios ? 'On iPhone/iPad: tap Back up progress, then choose “Save to Files” in the menu that appears, and pick a folder in iCloud Drive (a folder named lexiko works well). To restore later, tap Restore… and choose that file. Backup names start with “lex” and end with the date, so the newest is easy to find.'

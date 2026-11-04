@@ -6,6 +6,7 @@ import { goalLabel } from './know.js';
 import { goalPicker, previewLine } from './goals.js';
 import { h, clear, add, pct, fmt, icon, startButton, fold } from './util.js';
 import { growthCard } from './growth.js';
+import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
 import { smartAll, counts, upcoming, nextLine } from './smart.js';
 import { renderWelcome } from './welcome.js';
 import { suggestions, suggestionItem } from './progress.js';
@@ -64,15 +65,16 @@ export function renderHome(view) {
   const cnt = counts(), due = cnt.words.due + cnt.parse.due;
   const studied = studiedCount('w:');
   const newLeft = Math.max(0, setting('newPerDay') - newToday());
-  const lastBackup = K.settings.lastBackup;
-  const needsBackup = studied >= 15 && (!lastBackup || clockNow() - lastBackup > 14 * DAY);
+  const needsBackup = backupDue(studied);
 
   const stack = h('div.stack');
   stack.append(h('div.row.between', { style: { flexWrap: 'nowrap' } },
     h('div', h('h1', { style: { fontSize: '2rem' } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'), h('div.muted', 'Build your Greek vocabulary. Read the Greek New Testament better.')),
     h('a.btn.icon', { href: '#/search', 'aria-label': 'Search words', style: { flex: 'none' } }, icon('search', 20))));
 
-  if (needsBackup) stack.append(h('div.banner', icon('download', 22), h('div.grow', h('b', 'Back up your progress'), h('div.small', 'It lives only on this device. A backup takes two seconds.')), h('a.btn.sm', { href: '#/settings' }, 'Back up')));
+  if (needsBackup) { const last = K.settings.lastBackup, days = last ? Math.floor((clockNow() - last) / DAY) : 0;
+    stack.append(h('div.banner', icon('download', 22), h('div.grow', h('b', 'Back up your progress'), h('div.small', (last ? 'Your last backup was ' + days + ' days ago. ' : 'You have not made a backup yet. ') + 'Your progress is stored only on this device.'),
+      h('div.row.wrap', { style: { marginTop: '.6rem' } }, h('button.btn.primary.sm', { onclick: async () => { if (await runBackup()) renderHome(view); } }, 'Back up now'), h('button.btn.sm', { onclick: async () => { await snoozeBackupReminder(); renderHome(view); } }, 'Not now'))))); }
 
   // 1. the one thing to do now
   const next = smartAll();
