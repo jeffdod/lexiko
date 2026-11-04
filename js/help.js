@@ -4,7 +4,7 @@ import { h, clear, fold } from './util.js';
 export function renderHelp(view) {
   const p = (t) => h('p', t);
   clear(view).append(h('div.pagehead', h('h1', 'How lexiko works')), h('div.stack',
-    h('p.muted', 'lexiko helps you build your Greek vocabulary and read the Greek New Testament better. It doesn’t teach grammar; it gives you the words and the practice.'),
+    h('p.muted', 'lexiko helps you build your Greek vocabulary and read the Greek New Testament with confidence. It doesn’t teach grammar; it gives you the words and the practice.'),
     fold('Reading',
       p('Open Read, choose a book and chapter, and tap any word to see what it means and what form it is. Words you haven’t learned yet are underlined; words you’re still learning are underlined differently. You can turn on short glosses for new words in the reading options (the Aa button).'),
       p('Tap “I know this” on a word you’re sure of, or “Learn this” to add it to your reviews. The percentage at the top of a chapter is how many of its words you know, and the label next to it says how comfortable it will be to read.')),

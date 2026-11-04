@@ -1,6 +1,6 @@
 # lexiko
 
-Build your Greek vocabulary. Read the Greek New Testament better. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
+Build your Greek vocabulary. Read the Greek New Testament with confidence. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
 
 **What it has:** a tap-for-parsing reader, vocabulary spaced repetition (FSRS), parsing and principal-parts practice, passage readiness and goals, reference charts, search, backup/restore, and an offline PWA shell.
 

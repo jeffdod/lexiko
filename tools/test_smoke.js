@@ -12,7 +12,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached', timeout: 20000 });
-  ok(await page.title() === 'lexiko — build your Greek vocabulary and read the Greek New Testament better', 'title');
+  ok(await page.title() === 'lexiko — build your Greek vocabulary and read the Greek New Testament with confidence', 'title');
   ok(/How much Greek do you know/.test(await page.textContent('#view')), 'first run asks how much Greek you know');
   await page.screenshot({ path: out + '/01-home-light.png' });
 
