@@ -83,6 +83,8 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   { await go('#/learn/charts/run/pres-act'); let seen = null;
     for (let i = 0; i < 6 && !seen; i++) { await p.waitForSelector('.qcard'); const ask = await p.textContent('.qask'); if (/front/.test(ask)) seen = await p.$$eval('.opt', (o) => o.map((x) => x.textContent.replace(/[✓✗]/g, '').trim())); else { await p.locator('.opt').first().click(); await p.waitForSelector('.fb'); await p.click('button:text-is("Continue")'); await p.waitForTimeout(150); } }
     ok(seen && seen.includes('nothing') && !seen.includes('none'), 'augment question: the empty answer reads "nothing"', JSON.stringify(seen)); }
+  { const r = await p.evaluate(async () => { const C = await import('./js/chartdrill.js'); return { s: C.summary(C.ROWS.find((x) => x.key === 'perf-mp')), t: C.summary(C.ROWS.find((x) => x.key === 'aor1-pas')) }; });
+    ok(/first consonant \+ ε/.test(r.s) && !/λε/.test(r.s) && /augment ε/.test(r.t), 'the reduplication is described for any verb (first consonant + ε), not as the model verb\'s λε', r.s); }
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();
