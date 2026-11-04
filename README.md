@@ -2,7 +2,7 @@
 
 Build your Greek vocabulary. Read the Greek New Testament with confidence. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
 
-**What it has:** a tap-for-parsing reader, vocabulary spaced repetition (FSRS), parsing and principal-parts practice, passage readiness and goals, reference charts, search, backup/restore, and an offline PWA shell.
+**What it has:** a tap-for-parsing reader, vocabulary spaced repetition (FSRS), parsing and principal-parts practice, passage readiness and goals, reference charts with chart practice and a guided "Recognize a verb form" drill, search, backup/restore, and an offline PWA shell.
 
 ## Use it
 Open `https://lexiko.org/` and "Add to Home Screen" / "Install app". It then runs full-screen and fully offline.
@@ -21,6 +21,7 @@ python3 tools/make_icons.py && node tools/render_icons.js                       
 python3 tools/build_sw.py        # ALWAYS run after changing any app file: regenerates the offline precache list/version
 node tools/serve.js &            # local test server at http://localhost:8123/lexiko/ (or double-click preview.command / preview.bat)
 node tools/test_smoke.js         # end-to-end test in headless Chromium (needs playwright)
+node tools/test_recognize.js     # the guided "Recognize a verb form" drill and its lessons
 node tools/test_round2.js        # home, keyboard, charts, undo, search-related checks, phone-width reader
 node tools/test_parts.js         # principal-parts practice
 node tools/test_a11y.js          # names, tap targets and contrast, light and dark
