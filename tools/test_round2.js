@@ -101,11 +101,11 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
     ok(r <= 3, 'no word fills a parsing session (most forms of one word: ' + r + ')'); }
   await page.goto(URL + '#/parse/run/passage/JHN/1/1/1/6/verb'); await page.waitForSelector('.qcard');
   { const seq = []; for (let i = 0; i < 40; i++) { if (!(await page.locator('.qcount').count())) break; seq.push((await page.textContent('.qcount')).trim());
-      await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb'); await page.click('button.primary.block'); await page.waitForTimeout(200); }
+      await page.click('button:has-text("I don’t know")'); await page.waitForSelector('.fb, .opt.right'); await page.click('button.primary.block'); await page.waitForTimeout(200); }
     const first = seq.filter((x) => !x.startsWith('↻')), tot = new Set(first.map((x) => x.split(' / ')[1]));
     ok(tot.size === 1 && first.every((x, i) => x.startsWith((i + 1) + ' / ')) && seq.some((x) => x.startsWith('↻ 1 / ')) && seq.findIndex((x) => x.startsWith('↻')) === first.length, 'quiz total never changes; missed items come back in a retry round at the end ' + seq.join(' | ')); }
   await page.goto(URL + '#/parse/run/passage/MRK/1/1/1/8/verb'); await page.waitForSelector('.qcard');
-  { for (let i = 0; i < 80 && !(await page.locator('.missed').count()); i++) { await page.click('button:has-text("I don’t know")').catch(() => {}); await page.waitForSelector('.fb,.missed').catch(() => {}); if (await page.locator('.fb').count()) await page.click('button.primary.block'); await page.waitForTimeout(120); }
+  { for (let i = 0; i < 80 && !(await page.locator('.missed').count()); i++) { await page.click('button:has-text("I don’t know")').catch(() => {}); await page.waitForSelector('.fb,.opt.right,.missed').catch(() => {}); if (await page.locator('.fb,.opt.right').count()) await page.click('button.primary.block'); await page.waitForTimeout(120); }
     ok(await page.locator('.missed .miss').count() >= 1, 'session-complete lists the words you missed');
     await page.click('button:has-text("Practice these")'); await page.waitForSelector('.qcard'); ok(await page.locator('.qcount').count() === 1, 'Practice these starts a session of the missed words'); }
   { await page.evaluate(async () => { const kn = await import('./js/know.js'); for (const n of [3588, 846, 1510, 3004, 2316, 4771, 3056, 2962]) { await kn.rate(n, 1, 'new', 3000); await kn.rate(n, 1, 'review', 3000); } });

@@ -4,7 +4,7 @@ import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { passagePicker } from './learn.js';
@@ -166,7 +166,7 @@ const stop = () => { if (keyHandler) { document.removeEventListener('keydown', k
 
 function runSession(view, queue, { title, scope, restart, practice = false }) {
   const total = queue.length;
-  const S = { missed: [], shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {} };
+  const S = { missed: [], shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {}, hist: [] };
   let st = null, cur = null;
 
   const finish = () => {
@@ -194,7 +194,7 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
   };
 
   function frame(c, inner) {
-    const tag = c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Refresher'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
+    const tag = c.rescue ? ['gold', 'One more try'] : c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Refresher'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? S.rk / S.R : S.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
@@ -220,11 +220,12 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     if (first) {
       if (!practice) next = await rateParse(cardIdFor(c.id), grade, ms, { m: mode, w: res.wrong.join('') });
       if (!res.full) S.missed.push({ id: c.id, wrong: res.wrong });
-      S.done++; if (res.full) S.full++; if (c.type === 'new') S.fresh++;
+      S.done++; if (res.full) S.full++; if (c.type === 'new') S.fresh++; S.hist.push(!!res.full);
       for (const [k, v] of Object.entries(res.perSlot)) { const s = (S.slots[k] ||= [0, 0]); s[1]++; if (v.ok) s[0]++; }
       if (!practice) await recordResult(st, it, res);
     }
     if (!res.full && first) retryQ.push({ ...c, retry: true });
+    else if (!res.full && c.retry && !c.rescue) retryQ.push({ ...c, rescue: 'twice' });          // missed again on the retry: its next appearance is the easier question
     const L = D.lexByN.get(it.strongs), best = res.best;
         const others = it.valid.filter((v) => v !== best);
     const soft = Object.entries(res.perSlot).filter(([, v]) => v.soft);
@@ -245,8 +246,45 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
     window.scrollTo({ top: fb.offsetTop - 80, behavior: SMOOTH });
   }
 
+  /* ----- the easier question: pick the whole parsing from four ----- */
+  const fullLabel = (keys, slots) => keys.map((k) => labelOf(k, slots[k])).join(' · ');
+  function parsingChoices(it) {
+    const best = it.valid[0], keys = best.keys, seen = new Set(it.valid.map((v) => fullLabel(keys, v.slots))), out = [{ label: fullLabel(keys, best.slots), ok: true }];
+    const swap = (sl) => { const s = { ...sl }, k = shuffle(keys.filter((x) => x !== 'mood' && OPTIONS[x] && OPTIONS[x].length > 1))[0]; if (!k) return null; const alt = shuffle(OPTIONS[k].filter(([code]) => code !== sl[k]))[0]; if (!alt) return null; s[k] = alt[0]; return s; };
+    for (let i = 0; i < 60 && out.length < 4; i++) { let s = swap(best.slots); if (s && i > 20) s = swap(s); if (!s) continue; const label = fullLabel(keys, s); if (!seen.has(label)) { seen.add(label); out.push({ label, ok: false }); } }
+    return shuffle(out);
+  }
+  function rescueStep(c, it) {
+    const L = D.lexByN.get(it.strongs), t0 = clockNow(), choices = parsingChoices(it), first = !c.retry;
+    const optsEl = h('div.opts'), tail = h('div');
+    let done = false;
+    const answer = async (pickedIdx) => {
+      if (done) return; done = true; stop();
+      const ok = pickedIdx >= 0 && choices[pickedIdx].ok, ms = clockNow() - t0; let next = null;
+      [...optsEl.children].forEach((b, i) => { b.disabled = true; b.classList.toggle('right', choices[i].ok); if (i === pickedIdx && !choices[i].ok) b.classList.add('wrong'); b.querySelector('.mark').textContent = choices[i].ok ? '✓' : (i === pickedIdx ? '✗' : ''); });
+      if (!practice) next = await rateParse(cardIdFor(c.id), ok ? 2 : 1, ms, { m: 'c', w: ok ? '' : 'rescue' });             // right = Hard (recognized with help), wrong = Again
+      if (first) { S.done++; if (c.type === 'new') S.fresh++; if (!ok) S.missed.push({ id: c.id, wrong: ['parsing'] }); }
+      const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
+      clear(tail).append(h('div.rescue-note', 'That’s enough for this one.' + (next ? ' You’ll see this form again ' + soonText(next.due - clockNow()) + '.' : '')), chartLink(it, it.valid[0].d), go);
+      go.focus({ preventScroll: true });
+      keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
+      document.addEventListener('keydown', keyHandler);
+    };
+    choices.forEach((o, i) => optsEl.append(h('button.opt', { onclick: () => answer(i) }, h('span', o.label), h('span.mark', ''))));
+    keyHandler = (e) => { const n = +e.key; if (n >= 1 && n <= choices.length) { e.preventDefault(); answer(n - 1); } };
+    document.addEventListener('keydown', keyHandler);
+    const note = c.rescue === 'streak' ? 'A few misses in a row, so here is an easier question. Pick its parsing.' : 'You’ve missed this form twice. Pick its parsing.';
+    frame(c, [h('div.qcard.pcard', h('div.qask', 'Which parsing is this?'), h('div.qgreek', { lang: 'grc' }, it.form.plain), h('div.qmeta', L.head + ' · ' + L.brief)),
+      h('div.rescue-note', note), optsEl, h('div.row', h('button.btn.ghost.sm', { onclick: () => answer(-1) }, 'I don’t know')), tail]);
+  }
+  const badStreak = () => S.hist.length >= 6 && S.hist.slice(-6).filter((x) => !x).length >= 5;      // five of the last six first tries fully missed
+
   function show(c) {
-    const it = itemOf(c.id), mode = effectiveMode(groupOfItem(it), st);
+    if (!c.rescue && !c.retry && !practice && badStreak()) { c = { ...c, rescue: 'streak' }; S.hist = []; }
+    const it = itemOf(c.id);
+    if (c.rescue) return rescueStep(c, it);
+    const mode = effectiveMode(groupOfItem(it), st);
+
     const parse = (aided = false, verbOk = false) => (mode === 'quick' ? quick : guided)(c, it, clockNow(), aided);
     if (it.group === 'V') verbStep(c, it, parse); else parse();
   }
@@ -262,9 +300,9 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
       if (!c.retry) {
         if (!practice) next = await rateParse(cardIdFor(c.id), 1, ms, { m: 'v', w: 'verb' });
         S.missed.push({ id: c.id, wrong: ['verb'] }); S.done++; if (c.type === 'new') S.fresh++;
-        retryQ.push({ ...c, retry: true });
+        retryQ.push({ ...c, retry: true }); S.hist.push(false);
         if (!practice) await saveParseStats(st);
-      }
+      } else if (!c.rescue) retryQ.push({ ...c, rescue: 'twice' });
       const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
       area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.')), go);
       go.focus({ preventScroll: true });
