@@ -13,6 +13,7 @@ import { h, clear, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fo
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
+import { runDrill, renderChartsPage, counts as chartCounts } from './chartdrill.js';
 
 /** The long definition, only when it adds something to the short gloss: shown outright when short, otherwise behind a "More" tap. */
 const FILLER = new Set(['a', 'an', 'the', 'of', 'to', 'in', 'and', 'or', 'for', 'is', 'as', 'i', 'definite', 'article', 'particle', 'pronoun', 'preposition', 'conjunction', 'adverb', 'indeclinable']);
@@ -222,6 +223,7 @@ export function renderLearn(view, params) {
   const [mode, ...rest] = params;
   if (mode === 'words') return void wordsPage(view);
   if (mode === 'verbs') return void renderVerbsPage(view);
+  if (mode === 'charts') return void (rest[0] === 'run' ? runDrill(view) : renderChartsPage(view));
   if (mode === 'verb') return void renderVerbPage(view, rest[0]);
   if (mode === 'daily') return void startFrom(view, 'daily', null, 'Today’s session');
   if (mode === 'review') return void startFrom(view, 'review', null, 'Review');
@@ -259,6 +261,7 @@ export function renderLearn(view, params) {
       startButton(next),
       h('div.topics', ['words', 'parse'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)), tileNext(up, k) ? h('p.small.tilenext', icon('clock', 13), ' ' + tileNext(up, k)) : null))),
       h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Verbs ›'), h('p', verbsInProgress() ? verbsInProgress() + (verbsInProgress() === 1 ? ' verb' : ' verbs') + ' in progress' : 'Verbs you are learning')),
+      h('a.tile', { href: '#/learn/charts' }, h('h3', 'Charts ›'), h('p', (() => { const c = chartCounts(); return c.due ? c.due + ' squares due' : c.started ? 'Verb chart: ' + c.known + ' of ' + c.total + ' squares known' : 'Learn the master verb chart'; })())),
       miniGoalCard(() => renderLearn(view, params)),
       comingUp(up)));
 }

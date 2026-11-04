@@ -24,3 +24,11 @@ export function levelOfTag(tag) {
 }
 const FIXED = ['Indicative: active and middle', 'Indicative: passive', 'Indicative: perfect'];
 export const levelName = (l) => (l <= 3 ? FIXED[l - 1] : KEY_NAME[laterOrder()[l - 4]] || 'Other forms');
+
+/** The master verb chart: its rows, the five things each row teaches, and the verb-form level each row belongs to. */
+export const CHART_ATTRS = ['aug', 'stem', 'form', 'vowel', 'ends'];
+export const ROW_LEVEL = {
+  'pres-act': 1, 'impf-act': 1, 'fut-act': 1, 'fut-liq-act': 1, 'fut-mid': 1, 'fut-liq-mid': 1, 'aor1-act': 1, 'aor-liq-act': 1, 'aor2-act': 1, 'aor1-mid': 1, 'aor2-mid': 1,
+  'pres-mp': 2, 'impf-mp': 2, 'fut-pas1': 2, 'fut-pas2': 2, 'aor1-pas': 2, 'aor2-pas': 2,
+  'perf1-act': 3, 'perf2-act': 3, 'perf-mp': 3,
+};
