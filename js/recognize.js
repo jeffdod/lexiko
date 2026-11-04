@@ -85,7 +85,7 @@ export const RULES = [
     link: 'An augment goes with secondary endings, which have no ι or αι. The perfect is the exception: it has a prefix but takes primary endings.' },
   { id: 'endings', title: 'The personal endings', lead: 'Primary endings carry an ι or αι. Secondary endings do not.',
     rows: [['Primary', 'present, future, perfect: -ω, -εις, -ει · -μαι, -σαι, -ται'], ['Secondary', 'imperfect, aorist: -ν, -ς, nothing · -μην, -σο, -το']], ex: [['λύεις', 'primary active'], ['ἔλυες', 'secondary active'], ['λύεται', 'primary middle/passive'], ['ἐλύετο', 'secondary middle/passive']],
-    link: 'Middle/passive endings have μ, σ, τ or ν in them (-μαι, -μην, -σαι, -σο). Active endings do not.' },
+    link: 'Active or middle/passive? In the plural, a θ marks the middle/passive (-μεθα, -σθε), where the active has -μεν and -τε. In the singular and the 3rd plural, the middle/passive endings are -μαι/-μην, -σαι/-σο, -ται/-το, -νται/-ντο.' },
   { id: 'formative', title: 'The tense formative', lead: 'Look between the stem and the ending. The formative names the tense and voice.',
     rows: [['σ', 'future (no augment)'], ['σα or α', 'aorist active/middle (with an augment)'], ['θη or η', 'aorist passive (with an augment)'], ['θησ or ησ', 'future passive (no augment)'], ['κα or α', 'perfect active (with a reduplication)'], ['nothing', 'present, imperfect, 2nd aorist, perfect middle/passive']],
     ex: [['λύσω', 'future'], ['ἔλυσα', 'aorist'], ['ἐλύθην', 'aorist passive'], ['λυθήσομαι', 'future passive'], ['λέλυκα', 'perfect']],
