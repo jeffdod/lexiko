@@ -130,14 +130,14 @@ export function renderChartsPage(view) {
   const start = p.due.length || p.nw.length ? h('a.btn.primary.block.start', { href: '#/learn/charts/run' }, h('b', 'Practice the verb chart'), h('small', sub)) : h('div.btn.block.start.done', h('b', 'Practice the verb chart'), h('small', sub));
   const head = h('div.sqrow.head', h('span'), CHART_ATTRS.map((a) => h('span', ATTR_LABEL[a])));
   const rows = [];
-  for (const r of ROWS) rows.push(h('a.sqrow.rowbtn', { href: '#/learn/charts/paradigm/' + r.key, 'aria-label': r.name + ': see an example' }, h('span.rn', r.name), CHART_ATTRS.map((a) => square(squareId(r.key, a), r.name + ', ' + ATTR_LABEL[a]))));
+  for (const r of ROWS) rows.push(h('div.sqrow', h('a.rn.rowlink', { href: '#/learn/charts/paradigm/' + r.key, 'aria-label': r.name + ': see its paradigm' }, r.name + ' ›'), CHART_ATTRS.map((a) => square(squareId(r.key, a), r.name + ', ' + ATTR_LABEL[a]))));
   const ends = ENDSETS.map(([set, title, table]) => h('div.sqrow.e', h('span.rn', title.replace('middle/passive', 'mid/pas')), table.map((pp) => square(endingId(set, pp[0]), title + ', ' + pp[0]))));
   const gaps = [4, 10, 17]; gaps.reverse().forEach((i) => rows.splice(i, 0, h('div', { style: { height: '.35rem' } })));
   clear(view).append(backHead('Charts', '#/learn', 'Learn'), h('div.stack',
     start,
     h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts() }, icon('table', 18), ' Look at the chart'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
     h('div.card.stack', h('div.row.between', h('h2', 'Master verb chart'), h('span.chip', c.known + ' of ' + c.total + ' known')),
-      h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row to see a real example from the text.'), head, ...rows,
+      h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row name to see its paradigm.'), head, ...rows,
       h('div.legend', h('span', h('i.sq.known', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'known'), h('span', h('i.sq.shaky', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'shaky'), h('span', h('i.sq.new', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'new'))),
     h('div.card.stack', h('h2', 'Personal endings'), h('p.muted.small', 'One square for each person, in each set of endings.'),
       h('div.sqrow.head.e', h('span'), ['1s', '2s', '3s', '1p', '2p', '3p'].map((t) => h('span', t))), ...ends),
