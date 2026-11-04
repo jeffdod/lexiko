@@ -399,3 +399,7 @@ a.rowlink { color: var(--accent); font-weight: 600; text-decoration: none; }
 .hintlink[aria-expanded] { text-decoration: none; }
 .hintgrc { color: var(--ink); font-size: 1.05rem; } .hintgrc.big { font-size: 1.2rem; }
 .warnline { color: var(--warn, #e0a040); margin-top: .2rem; text-align: center; }
+
+/* a popup keeps the scroll: nothing behind it moves, and reaching its end does not hand the scroll to the page */
+html:has(dialog[open]) { overflow: hidden; }
+dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
