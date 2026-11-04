@@ -79,7 +79,7 @@ export function runDrill(view, rowKey = null) {
         h('div.row.wrap', h('a.btn.primary', { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'), ...backLinks('#/learn', 'Back to Learn'))));
   };
   const runList = (list) => { queue.length = 0; queue.push(...list); S.shown = 0; next(); };
-  const next = () => { stop(); const c = queue.shift(); if (!c) return finish(); S.shown++; show(c); };
+  const next = () => { stop(); const c = queue.shift(); if (!c) return finish(); if (!c.tries) S.shown++; show(c); };   // a retry is not a new card
   const after = async (c, ok) => {
     if (c.tries === 0) {                                              // only the first try is recorded
       const lv = formLevel(); await rateChart(c.it.id, ok ? 3 : 1); S.done++; if (ok) S.good++; else S.missed.push(c.it);
