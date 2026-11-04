@@ -1,4 +1,4 @@
-// One paradigm for each row of the master verb chart, using the verb the chart names for that row. A form is shown whole only when it is written in the text; otherwise just its ending.
+// One paradigm for each row of the master verb chart, using the verb the chart names for that row. Forms are written out as in a grammar; `inText` marks the ones that also occur in the text.
 import { D } from './data.js';
 
 const TAG = /^V-([12]?)([PIFARL])([AMPEDONQX]?)([IMSONP])(?:-([123])([SP]))?/;
@@ -81,11 +81,10 @@ export function paradigm(row) {
     const k = Math.min(lcp(forms), Math.min(...forms.map((w) => chars(w).length)) - 1);
     const cells = CELLS.map((cell, i) => {
       const f = forms[i], vs = f.includes('(ν)') ? [f.replace('(ν)', ''), f.replace('(ν)', 'ν')] : [f];
-      const hit = vs.find(inTheText), w = chars(hit || vs[0]), split = (x) => ({ stem: x.slice(0, k).join(''), ending: x.slice(k).join('') });
-      return hit ? { cell, label: CELL_LABEL[cell], have: true, word: hit, ...split(w) }
-        : { cell, label: CELL_LABEL[cell], have: false, word: null, stem: '', ending: chars(f.replace('(ν)', '')).slice(k).join('') };
+      const hit = vs.find(inTheText), word = hit || f, w = chars(word);
+      return { cell, label: CELL_LABEL[cell], have: true, inText: !!hit, word, stem: w.slice(0, k).join(''), ending: w.slice(k).join('') };
     });
-    out = { row, n, head: L.head, brief: L.brief, cells, attested: cells.filter((c) => c.have).length };
+    out = { row, n, head: L.head, brief: L.brief, cells, attested: cells.filter((c) => c.inText).length };
   }
   cache.set(row, out); return out;
 }
