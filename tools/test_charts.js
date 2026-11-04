@@ -19,8 +19,8 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await go('#/learn');
   ok(await p.locator('a.tile[href="#/learn/charts"]').count() === 1 && /Learn the master verb chart/.test(await p.textContent('a.tile[href="#/learn/charts"]')), 'Learn: Charts tile');
   await p.click('a.tile[href="#/learn/charts"]'); await p.waitForSelector('h1:text-is("Charts")');
-  ok(await p.locator('.sqrow.rowbtn').count() === 20 && await p.locator('.sqrow.e:not(.head)').count() === 4, 'Charts page: 20 chart rows and 4 endings rows');
-  ok(await p.locator('.sqrow.rowbtn .sq').count() === 100 && await p.locator('a.start:has-text("20 new")').count() === 1, 'Charts page: 100 squares, start button offers a full round of 20 new');
+  ok(await p.locator('a.rowlink').count() === 20 && await p.locator('.sqrow.e:not(.head)').count() === 4, 'Charts page: 20 chart rows and 4 endings rows');
+  ok(await p.locator('.sqrow:has(a.rowlink) .sq').count() === 100 && await p.locator('a.start:has-text("20 new")').count() === 1, 'Charts page: 100 squares, start button offers a full round of 20 new');
   ok(!/(null|undefined)/.test(await p.textContent('#view')), 'Charts page: no stray null/undefined');
 
   // a drill: answer everything right except the first question, then check cards
@@ -70,7 +70,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(pg.rows === 20 && pg.none.length === 0, 'every chart row has a paradigm', JSON.stringify(pg.none));
   ok(pg.bad.length === 0, 'every form marked in-the-text really is in the text', pg.bad.join(' '));
   ok(pg.rows === 20, 'the chart-named verbs give a paradigm for every row');
-  await go('#/learn/charts'); await p.click('a.rowbtn >> nth=0'); await p.waitForSelector('.pline');
+  await go('#/learn/charts'); await p.click('a.rowlink >> nth=0'); await p.waitForSelector('.pline');
   ok(await p.locator('.pline').count() === 6 && await p.locator('.pend').count() >= 3 && /Present active indicative/.test(await p.textContent('.chip')), 'paradigm page: six lines for the present active row');
   { const m = await p.evaluate(() => { const w = document.querySelector('.pword'), a = w.querySelector('.pstem'), b = w.querySelector('.pend'), cs = getComputedStyle(a), r1 = a.getBoundingClientRect(), r2 = b.getBoundingClientRect(); return { border: cs.borderTopWidth, disp: cs.display, sameLine: Math.abs(r1.top - r2.top) < 6 && r2.left >= r1.right - 1, text: w.textContent }; });
     ok(m.border === '0px' && m.disp === 'inline' && m.sameLine, 'paradigm: the whole word on one line, no box around the stem', JSON.stringify(m)); }
