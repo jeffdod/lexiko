@@ -229,24 +229,34 @@ export function renderReader(view, params) {
   syncDbg();
   const tr = barTracker(), bars = (on, why) => { document.body.classList.toggle('rd-hide', !on); tr.set(on, scrollY); note((on ? 'SHOW ' : 'HIDE ') + (why || '?') + ' y=' + Math.round(scrollY)); };
   const watch = new MutationObserver(() => note('class now ' + (document.body.classList.contains('rd-hide') ? 'hidden' : 'shown'))); watch.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-  // Shown by scrolling up, a tap or a key, the bars slide away again a moment after you stop (unless you are at the top, a dialog is open, or focus is in a bar).
-  let idleT = 0; const atEnd = () => scrollY + innerHeight > document.documentElement.scrollHeight - 80;      // the bars stay up at the top and at the bottom of the chapter
-  const arm = (ms) => { clearTimeout(idleT); idleT = setTimeout(() => {
-    const inBar = document.activeElement && document.activeElement.closest && document.activeElement.closest('.readbar, #nav');
-    if (scrollY >= 80 && !atEnd() && !inBar && !document.querySelector('dialog[open]')) bars(false, 'idle'); }, ms); };
+  // Shown by scrolling up, a tap or a key, the bars slide away again a moment after you stop. A check every 300ms does it, so it holds
+  // however the bars came up. They wait while you are at the top or bottom of the chapter, a dialog is open, or keyboard focus is in a bar.
+  let holdUntil = performance.now() + 3000, lastWhy = '';
+  const hold = (ms) => { holdUntil = performance.now() + ms; };
+  const atEnd = () => scrollY + innerHeight > document.documentElement.scrollHeight - 80;
+  const waitsFor = () => {
+    if (scrollY < 80) return 'at the top'; if (atEnd()) return 'at the bottom'; if (document.querySelector('dialog[open]')) return 'a dialog is open';
+    const f = document.activeElement; if (f && f.closest && f.closest('.readbar, #nav') && f.matches(':focus-visible')) return 'keyboard focus is in a bar';
+    return '';
+  };
+  const beat = setInterval(() => {
+    if (document.body.classList.contains('rd-hide')) { lastWhy = ''; return; }
+    if (performance.now() < holdUntil) return;
+    const why = waitsFor(); if (why) { if (why !== lastWhy) { lastWhy = why; note('bars stay: ' + why); } return; }
+    lastWhy = ''; bars(false, 'idle');
+  }, 300);
   calm = performance.now() + 700;
   const onScroll = () => {
-    const y = scrollY; syncDbg();
-    if (y < 80 || atEnd() || document.querySelector('dialog[open]')) { clearTimeout(idleT); return document.body.classList.contains('rd-hide') ? bars(true, y < 80 ? 'top' : atEnd() ? 'bottom' : 'dialog') : tr.set(true, y); }
-    if (!document.body.classList.contains('rd-hide')) arm(1500);        // still scrolling with the bars up: wait until it stops
+    const y = scrollY; syncDbg(); hold(1500);        // any scrolling keeps the bars up until it has stopped for a moment
+    if (y < 80 || atEnd() || document.querySelector('dialog[open]')) return document.body.classList.contains('rd-hide') ? bars(true, y < 80 ? 'top' : atEnd() ? 'bottom' : 'dialog') : tr.set(true, y);
     if (performance.now() < calm) return tr.set(!document.body.classList.contains('rd-hide'), y);      // the page's own jump (opening at a verse, redrawing) is not reading; a fast flick is
-    const r = tr.feed(y); if (r !== null) { bars(r, r ? 'scrolled up' : 'scrolled down'); if (r) arm(1500); else clearTimeout(idleT); }
+    const r = tr.feed(y); if (r !== null) bars(r, r ? 'scrolled up' : 'scrolled down');
   };
-  const blankTap = (e) => { note('tap ' + (e.target.closest('.w') ? 'on a word' : e.target.tagName.toLowerCase() + (e.target.className ? '.' + e.target.className : ''))); if (!e.target.closest('.w, a, button, input, select, textarea, #pop, dialog')) { bars(true, 'blank tap'); arm(3500); } };
-  const anyKey = (e) => { bars(true, 'key ' + e.key); arm(4000); };
-  const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) arm(4000); };
+  const blankTap = (e) => { note('tap ' + (e.target.closest('.w') ? 'on a word' : e.target.tagName.toLowerCase() + (e.target.className ? '.' + e.target.className : ''))); if (!e.target.closest('.w, a, button, input, select, textarea, #pop, dialog')) { bars(true, 'blank tap'); hold(3500); } };
+  const anyKey = (e) => { bars(true, 'key ' + e.key); hold(4000); };
+  const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) hold(4000); };
   addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
 
   if (vsS) { const v = body.querySelector('#v' + (+vsS)); if (v) { v.classList.add('focus'); requestAnimationFrame(() => v.scrollIntoView({ block: 'center' })); } } else scrollTo(0, 0);
-  return () => { hidePop(); clearTimeout(idleT); bars(true, 'leaving'); watch.disconnect(); if (dbg) dbg.remove(); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  return () => { hidePop(); clearInterval(beat); bars(true, 'leaving'); watch.disconnect(); if (dbg) dbg.remove(); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }

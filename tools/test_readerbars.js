@@ -50,8 +50,11 @@ const { chromium } = require('playwright');
   // after scrolling up the bars slide away again a moment after you stop; not while focus is in a bar, and not at the top
   await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(500); await wheel(p, -120, 3); s = await state(p); ok(!s.hidden, 'shown while scrolling up');
   await p.waitForTimeout(2200); s = await state(p); ok(s.hidden, 'they slide away again after you stop: ' + JSON.stringify(s));
-  await wheel(p, -120, 3); await p.focus('.readbar button.title'); await p.waitForTimeout(2300); s = await state(p); ok(!s.hidden, 'they stay while focus is in a bar: ' + JSON.stringify(s));
+  await wheel(p, -120, 3); await p.keyboard.press('Tab'); await p.waitForTimeout(4600); s = await state(p); ok(!s.hidden, 'they stay while keyboard focus is in a bar: ' + JSON.stringify(s));
   await p.evaluate(() => document.activeElement.blur()); await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(2300); s = await state(p); ok(!s.hidden, 'at the top they stay');
+  // pointer focus left on a bar button (as after closing the Aa dialog) does not keep them up
+  await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(300); await wheel(p, 120, 4); await wheel(p, -120, 3);
+  await p.evaluate(() => document.querySelector('.readbar .btn.ghost.sm:not(.icon)').focus({ focusVisible: false })); await p.waitForTimeout(2300); s = await state(p); ok(s.hidden, 'a pointer-focused bar button does not keep the bars up: ' + JSON.stringify(s));
   // the bottom of the chapter keeps them up too
   await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(300); await wheel(p, 120, 4); s = await state(p); ok(s.hidden, 'hidden mid-chapter before heading to the end');
   await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(2300); s = await state(p); ok(!s.hidden, 'at the bottom they come up and stay: ' + JSON.stringify(s));
