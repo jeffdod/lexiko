@@ -59,6 +59,7 @@ button { font: inherit; color: inherit; }
   body.rd-hide #nav { transform: translateY(100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; }
 }
 @media (prefers-reduced-motion: reduce) { .readbar, #nav, body.rd-hide .readbar, body.rd-hide #nav { transition: none; } }
+#bardbg { position: fixed; z-index: 95; left: 6px; right: 6px; top: calc(env(safe-area-inset-top) + 4px); padding: .3rem .5rem; border-radius: 8px; background: rgba(20, 24, 32, .86); color: #d7f5d0; font: 11px/1.35 ui-monospace, Menlo, monospace; white-space: pre; pointer-events: none; }
 #nav a[aria-current='page'] { color: var(--accent); }
 #nav a[aria-current='page'] svg { stroke-width: 2.2; }
 #nav .brand { display: none; }
