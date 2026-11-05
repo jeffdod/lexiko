@@ -14,7 +14,6 @@ import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileN
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
 import { runDrill, renderChartsPage, renderParadigm, counts as chartCounts } from './chartdrill.js';
-import { renderRules, runRecognize } from './recognize.js';
 
 /** The long definition, only when it adds something to the short gloss: shown outright when short, otherwise behind a "More" tap. */
 const FILLER = new Set(['a', 'an', 'the', 'of', 'to', 'in', 'and', 'or', 'for', 'is', 'as', 'i', 'definite', 'article', 'particle', 'pronoun', 'preposition', 'conjunction', 'adverb', 'indeclinable']);
@@ -224,7 +223,7 @@ export function renderLearn(view, params) {
   const [mode, ...rest] = params;
   if (mode === 'words') return void wordsPage(view);
   if (mode === 'verbs') return void renderVerbsPage(view);
-  if (mode === 'charts') return void (rest[0] === 'rules' ? renderRules(view, rest[1] || null) : rest[0] === 'recognize' ? runRecognize(view, rest[1] === 'rule' ? { only: rest[2] } : { tier: rest[1] === '2' ? 2 : 1 }) : rest[0] === 'run' ? runDrill(view, rest[1] || null) : rest[0] === 'paradigm' ? renderParadigm(view, rest[1]) : renderChartsPage(view));
+  if (mode === 'charts') return void (rest[0] === 'run' ? runDrill(view, rest[1] || null) : rest[0] === 'paradigm' ? renderParadigm(view, rest[1]) : renderChartsPage(view));
   if (mode === 'verb') return void renderVerbPage(view, rest[0]);
   if (mode === 'daily') return void startFrom(view, 'daily', null, 'Today’s session');
   if (mode === 'review') return void startFrom(view, 'review', null, 'Review');
