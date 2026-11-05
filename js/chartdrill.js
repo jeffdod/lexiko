@@ -163,6 +163,7 @@ export function renderChartsPage(view) {
   const gaps = [4, 10, 17]; gaps.reverse().forEach((i) => rows.splice(i, 0, h('div', { style: { height: '.35rem' } })));
   clear(view).append(backHead('Charts', '#/learn', 'Learn'), h('div.stack',
     start,
+    h('div.card.stack', h('h2', 'Participles'), h('p.muted.small', 'How to read a participle, a paradigm for each kind, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/participles' }, 'Open Participles')),
     h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts() }, icon('table', 18), ' Look at the chart'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
     h('div.card.stack', h('div.row.between', h('h2', 'Master verb chart'), h('span.chip', c.known + ' of ' + c.total + ' known')),
       h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row name to see its paradigm.'), head, ...rows,
