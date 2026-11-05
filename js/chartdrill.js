@@ -163,16 +163,17 @@ export function renderChartsPage(view) {
   const gaps = [4, 10, 17]; gaps.reverse().forEach((i) => rows.splice(i, 0, h('div', { style: { height: '.35rem' } })));
   clear(view).append(backHead('Charts', '#/learn', 'Learn'), h('div.stack',
     start,
-    h('div.card.stack', h('h2', 'Participles'), h('p.muted.small', 'How to read a participle, a paradigm for each kind, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/participles' }, 'Open Participles')),
-    h('div.card.stack', h('h2', 'Infinitives'), h('p.muted.small', 'The ten kinds, how to tell them apart, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/infinitives' }, 'Open Infinitives')),
-    h('div.card.stack', h('h2', 'Subjunctive'), h('p.muted.small', 'How to read a subjunctive, a paradigm for each of the eight kinds, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/subjunctive' }, 'Open Subjunctive')),
-    h('div.card.stack', h('h2', 'Imperative'), h('p.muted.small', 'How to read an imperative, a paradigm for each of the eight kinds, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/imperative' }, 'Open Imperative')),
-    h('div.card.stack', h('h2', 'Verbs in -μι'), h('p.muted.small', 'δίδωμι, τίθημι, ἵστημι and the rest: their roots, reduplication, and the forms to know.'), h('a.btn', { href: '#/learn/charts/mi' }, 'Open Verbs in -μι')),
     h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts() }, icon('table', 18), ' Look at the chart'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
     h('div.card.stack', h('div.row.between', h('h2', 'Master verb chart'), h('span.chip', c.known + ' of ' + c.total + ' known')),
       h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row name to see its paradigm.'), head, ...rows,
       h('div.legend', h('span', h('i.sq.known', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'known'), h('span', h('i.sq.shaky', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'shaky'), h('span', h('i.sq.new', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'new'))),
     h('div.card.stack', h('h2', 'Personal endings'), h('p.muted.small', 'One square for each person, in each set of endings.'),
       h('div.sqrow.head.e', h('span'), ['1s', '2s', '3s', '1p', '2p', '3p'].map((t) => h('span', t))), ...ends),
-    h('p.muted.small', 'Learning the chart also opens the matching kinds of verb form in Parsing.')));
+    h('p.muted.small', 'Learning the chart also opens the matching kinds of verb form in Parsing.'),
+    h('div.card.stack', h('h2', 'Participles'), h('p.muted.small', 'How to read a participle, a paradigm for each kind, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/participles' }, 'Open Participles')),
+    h('div.card.stack', h('h2', 'Infinitives'), h('p.muted.small', 'The ten kinds, how to tell them apart, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/infinitives' }, 'Open Infinitives')),
+    h('div.card.stack', h('h2', 'Subjunctive'), h('p.muted.small', 'How to read a subjunctive, a paradigm for each of the eight kinds, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/subjunctive' }, 'Open Subjunctive')),
+    h('div.card.stack', h('h2', 'Imperative'), h('p.muted.small', 'How to read an imperative, a paradigm for each of the eight kinds, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/imperative' }, 'Open Imperative')),
+    h('div.card.stack', h('h2', 'Verbs in -μι'), h('p.muted.small', 'δίδωμι, τίθημι, ἵστημι and the rest: their roots, reduplication, and the forms to know.'), h('a.btn', { href: '#/learn/charts/mi' }, 'Open Verbs in -μι'))
+  ));
 }
