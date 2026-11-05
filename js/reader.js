@@ -3,6 +3,7 @@ import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, pe
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal } from './know.js';
 import { partsGrid } from './partforms.js';
+import { barTracker } from './readbars.js';
 import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -204,11 +205,12 @@ export function renderReader(view, params) {
 
   // word interactions (delegated)
   const wordOf = (e) => e.target.closest && e.target.closest('.w');
+  let calm = 0;
   const click = async (e) => {
     const act = e.target.closest && e.target.closest('[data-act="pread"]');
     if (act) { const id = act.dataset.pid, [c1, c2] = act.dataset.pspan.split('-').map(Number), sec = { id, code: id.split(':')[1], c1, c2 }, on = !sectionRead(sec); if (on) await setReadKey(id, true); else await unmarkSection(sec); toast(on ? 'Section marked as read' : 'Unmarked'); return redraw(); }
     const w = wordOf(e); if (w) { e.preventDefault(); showPop(w, true, redraw); } };
-  const redraw = () => { const y = scrollY; draw(); scrollTo(0, y); if (popAnchor) { const el = body.querySelector('.w[data-t="' + popAnchor.dataset.t + '"]'); if (el) showPop(el, true, redraw); } };
+  const redraw = () => { const y = scrollY; calm = performance.now() + 500; draw(); scrollTo(0, y); if (popAnchor) { const el = body.querySelector('.w[data-t="' + popAnchor.dataset.t + '"]'); if (el) showPop(el, true, redraw); } };
   const outside = (e) => { if (pop && !pop.hidden && popPinned && !pop.contains(e.target) && !wordOf(e)) hidePop(); };
   const esc_ = (e) => { if (e.key === 'Escape') hidePop(); };
   body.addEventListener('click', click);
@@ -216,14 +218,13 @@ export function renderReader(view, params) {
 
   // On a phone the top bar and the bottom navigation slide away while you read down the page, and come back when you scroll up,
   // tap a blank spot, press a key, or reach the top. Tapping a word leaves them as they are. (CSS only applies it on a narrow screen.)
-  const bars = (on) => document.body.classList.toggle('rd-hide', !on);
-  let lastY = scrollY, run = 0, calm = performance.now() + 700;
+  const tr = barTracker(), bars = (on) => { document.body.classList.toggle('rd-hide', !on); tr.set(on, scrollY); };
+  calm = performance.now() + 700;
   const onScroll = () => {
-    const y = scrollY, dy = y - lastY; lastY = y;
-    if (y < 80 || document.querySelector('dialog[open]')) { run = 0; return bars(true); }
-    if (performance.now() < calm || Math.abs(dy) > 400) { run = 0; return; }       // a jump (verse link, redraw) is not reading
-    run = Math.sign(dy) === Math.sign(run) ? run + dy : dy;
-    if (run > 24) bars(false); else if (run < -24) bars(true);
+    const y = scrollY;
+    if (y < 80 || document.querySelector('dialog[open]')) return bars(true);
+    if (performance.now() < calm) return tr.set(!document.body.classList.contains('rd-hide'), y);      // the page's own jump (opening at a verse, redrawing) is not reading; a fast flick is
+    const r = tr.feed(y); if (r !== null) bars(r);
   };
   const blankTap = (e) => { if (!e.target.closest('.w, a, button, input, select, textarea, #pop, dialog')) bars(true); };
   const anyKey = () => bars(true);

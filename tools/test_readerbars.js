@@ -13,6 +13,24 @@ const { chromium } = require('playwright');
   await p.mouse.move(200, 400); await wheel(p, 120, 8);
   s = await state(p); ok(s.hidden && !s.nav && !s.bar, 'bars hidden after scrolling down: ' + JSON.stringify(s));
   await wheel(p, 40, 3); s = await state(p); ok(s.hidden, 'small further scrolling keeps them hidden');
+  // the rule itself, fed the jitter of a slow thumb drag (steps of 0, +1, -1 and +2) and a few other paths
+  const rule = await p.evaluate(async () => {
+    const { barTracker } = await import('/lexiko/js/readbars.js'), run = (ys, shown = true, y0 = 400) => { const t = barTracker(); t.set(shown, y0); let last = null; for (const y of ys) { const r = t.feed(y); if (r !== null) last = r; } return last; };
+    const jitter = (from, n, to) => { const ys = []; let y = from, i = 0; while (y < to && i++ < 5000) { y += [1, 0, 1, -1, 2, 0][i % 6]; ys.push(y); } return ys; };
+    const down = (a, b) => { const ys = []; for (let y = a; y <= b; y += 1) ys.push(y); return ys; };
+    return { slowDown: run(jitter(400, 0, 440)), shortDrag: run(down(400, 420)), tooShort: run(down(400, 410)),
+      slowUp: run(jitter(900, 0, 940).map((y) => 1840 - y), false, 940),   // falling positions, with the same jitter
+      back: run([...down(400, 460), ...down(460, 450).slice(1)]), flick: run([400, 1900]) };
+  });
+  ok(rule.slowDown === false, 'a slow, jittery 40px drag down hides the bars: ' + rule.slowDown);
+  ok(rule.shortDrag === false, 'a short (20px) drag down hides them: ' + rule.shortDrag);
+  ok(rule.tooShort === null, 'a 10px nudge does nothing: ' + rule.tooShort);
+  ok(rule.slowUp === true, 'a slow, jittery scroll up brings them back: ' + rule.slowUp);
+  ok(rule.back === false, 'a small slip back (10px) does not bring them back: ' + rule.back);
+  ok(rule.flick === false, 'one big jump hides them: ' + rule.flick);
+  // one fast flick arrives as a single big scroll event and still counts as reading
+  await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(500); s = await state(p); ok(!s.hidden, 'shown again at the top');
+  await p.evaluate(() => scrollBy(0, 1500)); await p.waitForTimeout(500); s = await state(p); ok(s.hidden, 'a single fast flick hides the bars: ' + JSON.stringify(s));
   // a word tap: popup opens, bars stay hidden
   s = await state(p); const before = s.hidden;
   const pt = await p.evaluate(() => { const w = [...document.querySelectorAll('#view .w')].find((e) => { const r = e.getBoundingClientRect(); return r.top > 150 && r.bottom < 450; }); const r = w.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
