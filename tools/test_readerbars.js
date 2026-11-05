@@ -47,8 +47,21 @@ const { chromium } = require('playwright');
   await p.keyboard.press('Tab'); await p.waitForTimeout(400); s = await state(p); ok(!s.hidden, 'a key press brings them back');
   // the top of the chapter
   await wheel(p, 120, 6); await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(500); s = await state(p); ok(!s.hidden, 'bars are shown at the top');
+  // after scrolling up the bars slide away again a moment after you stop; not while focus is in a bar, and not at the top
+  await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(500); await wheel(p, -120, 3); s = await state(p); ok(!s.hidden, 'shown while scrolling up');
+  await p.waitForTimeout(2200); s = await state(p); ok(s.hidden, 'they slide away again after you stop: ' + JSON.stringify(s));
+  await wheel(p, -120, 3); await p.focus('.readbar button.title'); await p.waitForTimeout(2300); s = await state(p); ok(!s.hidden, 'they stay while focus is in a bar: ' + JSON.stringify(s));
+  await p.evaluate(() => document.activeElement.blur()); await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(2300); s = await state(p); ok(!s.hidden, 'at the top they stay');
+  // the bottom of the chapter keeps them up too
+  await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(300); await wheel(p, 120, 4); s = await state(p); ok(s.hidden, 'hidden mid-chapter before heading to the end');
+  await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(2300); s = await state(p); ok(!s.hidden, 'at the bottom they come up and stay: ' + JSON.stringify(s));
+  // the diagnostics strip follows the setting at once
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setSetting('barsDebug', true); }); await p.waitForTimeout(100);
+  await p.evaluate(() => scrollBy(0, -300)); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => !!document.getElementById('bardbg')), 'the strip appears once the setting is on (without reopening the chapter)');
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setSetting('barsDebug', false); });
   // leaving the reader clears it
-  await wheel(p, 120, 8); s = await state(p); ok(s.hidden, 'hidden before leaving');
+  await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(300); await wheel(p, 120, 8); s = await state(p); ok(s.hidden, 'hidden before leaving');
   await p.evaluate(() => { location.hash = '#/learn'; }); await p.waitForTimeout(800); s = await state(p); ok(!s.hidden && s.nav, 'leaving the reader shows the navigation');
   // a wide screen keeps the rail
   const q = await b.newPage({ viewport: { width: 1100, height: 780 } });
