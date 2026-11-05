@@ -17,8 +17,8 @@ import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
-import { currentGoal, goalWords, formLevel, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
-import { levelOfTag, NLEVELS, levelName } from './families.js';
+import { currentGoal, goalWords, formLevel, chartAllowsAny, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
+import { levelOfTag, NLEVELS, levelName, isLiquidVerb } from './families.js';
 import { store } from './store.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
@@ -61,6 +61,8 @@ const requiredFormIds = (n) => {
   if (!r) { r = new Set(); const rs = requiredStems(n); if (rs) for (const s of rs.stems) for (const f of s.forms) for (const row of f.rows) r.add(canon[row]); reqCache.set(n, r); }
   return r;
 };
+/** What the daily sessions may serve: itemOf, and with "Only forms from chart rows I know" on, a verb form waits until its chart row is learned. Practice (a row, a kind, "Parse forms like this") is not held back. */
+const autoItemOf = (id) => { const it = itemOf(id); return it && it.group === 'V' && !chartAllowsAny(it.valid.map((v) => v.code), it.strongs) ? null : it; };
 const isVerbForm = (id) => { const it = itemOf(id); return !!it && it.group === 'V'; };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
 
@@ -96,10 +98,10 @@ function candidatePool(scope, kinds) {
   if (scope) {
     const counts = new Map();
     for (const { toks } of scopeVerses(scope)) for (const t of toks) counts.set(canon[t >> 4], (counts.get(canon[t >> 4]) || 0) + 1);
-    for (const [id, n] of counts) { const it = itemOf(id); if (it && ok.has(it.kind)) out.push({ id, w: n * 3 + Math.sqrt(D.forms[id].count) }); }
+    for (const [id, n] of counts) { const it = autoItemOf(id); if (it && ok.has(it.kind)) out.push({ id, w: n * 3 + Math.sqrt(D.forms[id].count) }); }
     return out;
   }
-  const take = (pred) => { for (const id of members.keys()) { const it = itemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
+  const take = (pred) => { for (const id of members.keys()) { const it = autoItemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
   const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]);        // a verb comes in through the forms it requires; its other forms are practiced, never required
   take((f) => status(f.an[0].s) !== 'unknown' && mine(f));
   if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400 && mine(f)); }   // nothing known yet: start with the most common words
@@ -110,7 +112,7 @@ function candidatePool(scope, kinds) {
 export function parseDueCount(now = clockNow()) {
   ensureIndex();
   const seen = new Set();
-  for (const c of parseCardsDue(now)) { const id = keyMap.get(c.id); if (id != null && itemOf(id)) seen.add(id); }
+  for (const c of parseCardsDue(now)) { const id = keyMap.get(c.id); if (id != null && autoItemOf(id)) seen.add(id); }
   return seen.size;
 }
 setParseDueCounter(parseDueCount);
@@ -121,7 +123,7 @@ export function planParseSession({ scope = null, kind = 'all', size = setting('s
   const kinds = KINDS[kind] || KINDS.all, now = clockNow();
   const pool = candidatePool(scope, kinds), inPool = new Set(pool.map((x) => x.id));
   const due = parseCardsDue(now).map((c) => ({ c, id: keyMap.get(c.id) }))
-    .filter((x) => x.id != null && itemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
+    .filter((x) => x.id != null && autoItemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
     .sort((a, b) => a.c.due - b.c.due).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);       // one entry per form
   const limit = newLimit != null ? newLimit : scope ? size : parsePace().left;
   const fresh = pool.filter((x) => isFresh(x.id));
@@ -155,7 +157,6 @@ export function buildParseSession(opts) {
 /** Forms of one chart row, from verbs you know: the pool for "Parse forms like this". The liquid rows are the regular row's forms from liquid verbs (λ, μ, ν, ρ), and the regular rows leave those out. */
 const LIQ_PARENT = { 'fut-liq-act': 'fut-act', 'fut-liq-mid': 'fut-mid', 'aor-liq-act': 'aor1-act' };
 const HAS_LIQ = new Set(['fut-act', 'fut-mid', 'aor1-act']);
-const isLiquidVerb = (n) => { const L = D.lexByN.get(n); return !!L && /[λμνρ]ω$/.test(L.head.normalize('NFD').replace(/[\u0300-\u036f]/g, '')); };
 export function rowPool(key, { ignoreLevel = false } = {}) {
   ensureIndex();
   const want = LIQ_PARENT[key] || key, liqRow = key in LIQ_PARENT, out = [];
@@ -619,6 +620,7 @@ export function renderParse(view, params) {
 function levelsCard(redraw) {
   const lv = formLevel(), all = !!setting('formsAll'), box = h('div.card.stack');
   box.append(h('h2', 'Forms you are working on'));
+  if (setting('formsByChart')) box.append(h('p.muted.small', 'An indicative form also waits until its row on the Master verb chart is learned (Settings, Parsing).'));
   if (all) { box.append(h('p.muted.small', 'Every kind of form is open, because Show all forms is on in Settings.')); return box; }
   box.append(h('p.muted.small', 'Only these kinds of verb form appear in questions for now.'),
     h('div.row.wrap', { style: { gap: '.4rem' } }, Array.from({ length: lv }, (_, i) => h('span.chip.accent', levelName(i + 1)))));

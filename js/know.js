@@ -5,11 +5,11 @@ import { D, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBoo
 import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
-import { levelOfTag, NLEVELS, CHART_ATTRS, ROW_LEVEL } from './families.js';
+import { levelOfTag, NLEVELS, CHART_ATTRS, ROW_LEVEL, rowOfTag } from './families.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false, formsByChart: false,
 };
 export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, ready: false };
 
@@ -320,7 +320,7 @@ const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 /** Where one verb stands: its required stems and chosen forms (known or not), and whether its forms are learned. Null for a word with no verb forms. */
 export function verbStatus(n) {
   const rs = requiredStems(n); if (!rs) return null;
-  const lv = formLevel(), inPlay = (f) => levelOfTag(D.forms[f.rows[0]].an[0].m) <= lv;       // forms of levels you have not opened yet are not required
+  const lv = formLevel(), inPlay = (f) => { const tag = D.forms[f.rows[0]].an[0].m; return levelOfTag(tag) <= lv && chartAllows(tag, n); };       // forms of levels you have not opened yet are not required
   const stems = rs.stems.map((s) => { const forms = s.forms.filter(inPlay).map((f) => ({ w: f.w, count: f.count, rows: f.rows, known: formKnown(f.rows) })); return { slot: s.slot, name: s.name, share: s.share, forms, known: forms.filter((f) => f.known).length, total: forms.length }; }).filter((s) => s.total > 0);
   const total = stems.reduce((x, s) => x + s.total, 0), known = stems.reduce((x, s) => x + s.known, 0);
   const a = (K.verbParse[n] || []).slice(-LEARNED_WINDOW), acc = a.length ? mean(a) : null;
@@ -391,7 +391,12 @@ export const FAM_WINDOW = 20, FAM_MIN = 15, FAM_ACC = 0.85;
 export const formLevel = () => (K.settings.formsAll ? NLEVELS : Math.max(1, Math.min(NLEVELS, K.settings.formLevel || 1)));
 export function famStats(l) { const a = (K.famAcc[l] || []).slice(-FAM_WINDOW); return { n: a.length, acc: a.length ? mean(a) : null }; }
 /** Has every square of the master-chart rows of this level been learned? (Learning the chart opens the matching verb forms too.) */
-export const chartKnown = (l) => { const rows = Object.keys(ROW_LEVEL).filter((r) => ROW_LEVEL[r] === l); return rows.length > 0 && rows.every((r) => CHART_ATTRS.every((a) => cardKnown(K.cards.get('c:' + r + ':' + a)))); };
+export const chartRowKnown = (r) => CHART_ATTRS.every((a) => cardKnown(K.cards.get('c:' + r + ':' + a)));
+export const chartKnown = (l) => { const rows = Object.keys(ROW_LEVEL).filter((r) => ROW_LEVEL[r] === l); return rows.length > 0 && rows.every(chartRowKnown); };
+/** With "Only forms from chart rows I know" on, an indicative verb form comes up only once every square of its master-chart row is learned. Other moods are not on the master chart, so this leaves them alone. */
+export const chartAllows = (tag, n) => { if (!K.settings.formsByChart) return true; const r = rowOfTag(tag, n); return !r || chartRowKnown(r); };
+/** The same for a form with several possible parses (tags): it waits unless some indicative parse has its row learned, or none is indicative. */
+export const chartAllowsAny = (tags, n) => { if (!K.settings.formsByChart) return true; const rs = tags.map((t) => rowOfTag(t, n)).filter(Boolean); return !rs.length || rs.some(chartRowKnown); };
 export const famGate = (l) => { const s = famStats(l); return (s.n >= FAM_MIN && s.acc >= FAM_ACC) || chartKnown(l); };
 /** Open the next level while the newest open one is answered well enough. Returns the new level if any opened. */
 export async function advanceLevels() {
