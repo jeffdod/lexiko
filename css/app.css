@@ -53,6 +53,12 @@ button { font: inherit; color: inherit; }
 #view { padding: calc(env(safe-area-inset-top) + .9rem) max(1rem, env(safe-area-inset-right)) calc(var(--nav-h) + env(safe-area-inset-bottom) + 1.5rem) max(1rem, env(safe-area-inset-left)); max-width: 46rem; margin: 0 auto; }
 #nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; display: flex; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 #nav a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .12rem; height: var(--nav-h); color: var(--muted); text-decoration: none; font-size: .72rem; font-weight: 600; letter-spacing: .02em; }
+@media (max-width: 879px) {   /* reader: the bars slide away while reading down the page (see js/reader.js) */
+  .readbar, #nav { transition: transform .25s ease, visibility 0s linear 0s; }
+  body.rd-hide .readbar { transform: translateY(-100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; }
+  body.rd-hide #nav { transform: translateY(100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; }
+}
+@media (prefers-reduced-motion: reduce) { .readbar, #nav, body.rd-hide .readbar, body.rd-hide #nav { transition: none; } }
 #nav a[aria-current='page'] { color: var(--accent); }
 #nav a[aria-current='page'] svg { stroke-width: 2.2; }
 #nav .brand { display: none; }
