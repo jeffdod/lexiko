@@ -6,10 +6,11 @@ import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
 import { levelOfTag, NLEVELS, CHART_ATTRS, ROW_LEVEL, rowOfTag } from './families.js';
+import { miClass } from './midata.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false, formsByChart: false,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false, formsByChart: false, holdMi: false,
 };
 export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, ready: false };
 
@@ -317,8 +318,13 @@ const isVerb = (n) => { const L = D.lexByN.get(n); return !!L && L.pos === 'V' &
 const cardKnown = (c) => !!c && c.state === 'review' && ((c.stability || 0) >= 7 || (c.reps || 0) >= 2);       // the word-card rule
 const formKnown = (rows) => rows.some((i) => cardKnown(K.cards.get(parseId(D.forms[i]))));
 const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+/** δίδωμι, τίθημι, ἵστημι, ἀφίημι, δείκνυμι and their compounds. */
+export const isMiVerb = (n) => { const L = D.lexByN.get(n); return !!L && !!miClass(L.head); };
+/** With "Hold back verbs in -μι" on, these verbs stay out of daily practice and are not required of you. */
+export const miHeld = (n) => !!K.settings.holdMi && isMiVerb(n);
 /** Where one verb stands: its required stems and chosen forms (known or not), and whether its forms are learned. Null for a word with no verb forms. */
 export function verbStatus(n) {
+  if (miHeld(n)) return null;
   const rs = requiredStems(n); if (!rs) return null;
   const lv = formLevel(), inPlay = (f) => { const tag = D.forms[f.rows[0]].an[0].m; return levelOfTag(tag) <= lv && chartAllows(tag, n); };       // forms of levels you have not opened yet are not required
   const stems = rs.stems.map((s) => { const forms = s.forms.filter(inPlay).map((f) => ({ w: f.w, count: f.count, rows: f.rows, known: formKnown(f.rows) })); return { slot: s.slot, name: s.name, share: s.share, forms, known: forms.filter((f) => f.known).length, total: forms.length }; }).filter((s) => s.total > 0);
