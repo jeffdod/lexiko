@@ -214,6 +214,21 @@ export function renderReader(view, params) {
   body.addEventListener('click', click);
   document.addEventListener('pointerdown', outside); document.addEventListener('keydown', esc_);
 
+  // On a phone the top bar and the bottom navigation slide away while you read down the page, and come back when you scroll up,
+  // tap a blank spot, press a key, or reach the top. Tapping a word leaves them as they are. (CSS only applies it on a narrow screen.)
+  const bars = (on) => document.body.classList.toggle('rd-hide', !on);
+  let lastY = scrollY, run = 0, calm = performance.now() + 700;
+  const onScroll = () => {
+    const y = scrollY, dy = y - lastY; lastY = y;
+    if (y < 80 || document.querySelector('dialog[open]')) { run = 0; return bars(true); }
+    if (performance.now() < calm || Math.abs(dy) > 400) { run = 0; return; }       // a jump (verse link, redraw) is not reading
+    run = Math.sign(dy) === Math.sign(run) ? run + dy : dy;
+    if (run > 24) bars(false); else if (run < -24) bars(true);
+  };
+  const blankTap = (e) => { if (!e.target.closest('.w, a, button, input, select, textarea, #pop, dialog')) bars(true); };
+  const anyKey = () => bars(true);
+  addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey);
+
   if (vsS) { const v = body.querySelector('#v' + (+vsS)); if (v) { v.classList.add('focus'); requestAnimationFrame(() => v.scrollIntoView({ block: 'center' })); } } else scrollTo(0, 0);
-  return () => { hidePop(); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  return () => { hidePop(); bars(true); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }
