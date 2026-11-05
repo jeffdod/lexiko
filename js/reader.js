@@ -194,7 +194,7 @@ export function renderReader(view, params) {
       h('div.row.between', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('span.t', { style: { fontWeight: 600 } }, 'Text size'),
         h('span.row', h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.max(0.95, +(setting('readerSize') - 0.1).toFixed(2))); draw(); } }, 'A−'),
           h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.min(2.4, +(setting('readerSize') + 0.1).toFixed(2))); draw(); } }, 'A+'))));
-    document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
+    document.body.append(dlg); dlg.addEventListener('close', () => { dlg.remove(); syncDbg(); }); dlg.showModal();
   };
 
   const bar = h('div.readbar',
@@ -220,22 +220,33 @@ export function renderReader(view, params) {
   // On a phone the top bar and the bottom navigation slide away while you read down the page, and come back when you scroll up,
   // tap a blank spot, press a key, or reach the top. Tapping a word leaves them as they are. (CSS only applies it on a narrow screen.)
   // Optional diagnostics (Aa > Bar diagnostics): a strip listing each hide/show and what caused it, plus any change to the page's class from elsewhere.
-  const dbg = setting('barsDebug') ? h('div#bardbg', { 'aria-hidden': 'true' }) : null, lines = [];
+  let dbg = null; const lines = [];
+  const syncDbg = () => {        // follows the setting at once, so switching it on in the Aa dialog shows the strip when the dialog closes
+    if (setting('barsDebug') && !dbg) { dbg = h('div#bardbg', { 'aria-hidden': 'true' }); document.body.append(dbg); note('on, y=' + Math.round(scrollY) + ', width ' + innerWidth); }
+    else if (!setting('barsDebug') && dbg) { dbg.remove(); dbg = null; lines.length = 0; }
+  };
   const note = (t) => { if (!dbg) return; const d = new Date(); lines.push(String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0') + ' ' + t); if (lines.length > 7) lines.shift(); dbg.textContent = lines.join('\n'); };
-  if (dbg) { document.body.append(dbg); note('on, y=' + Math.round(scrollY) + ', width ' + innerWidth); }
+  syncDbg();
   const tr = barTracker(), bars = (on, why) => { document.body.classList.toggle('rd-hide', !on); tr.set(on, scrollY); note((on ? 'SHOW ' : 'HIDE ') + (why || '?') + ' y=' + Math.round(scrollY)); };
-  const watch = dbg && new MutationObserver(() => note('class now ' + (document.body.classList.contains('rd-hide') ? 'hidden' : 'shown'))); if (watch) watch.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  const watch = new MutationObserver(() => note('class now ' + (document.body.classList.contains('rd-hide') ? 'hidden' : 'shown'))); watch.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  // Shown by scrolling up, a tap or a key, the bars slide away again a moment after you stop (unless you are at the top, a dialog is open, or focus is in a bar).
+  let idleT = 0; const atEnd = () => scrollY + innerHeight > document.documentElement.scrollHeight - 80;      // the bars stay up at the top and at the bottom of the chapter
+  const arm = (ms) => { clearTimeout(idleT); idleT = setTimeout(() => {
+    const inBar = document.activeElement && document.activeElement.closest && document.activeElement.closest('.readbar, #nav');
+    if (scrollY >= 80 && !atEnd() && !inBar && !document.querySelector('dialog[open]')) bars(false, 'idle'); }, ms); };
   calm = performance.now() + 700;
   const onScroll = () => {
-    const y = scrollY;
-    if (y < 80 || document.querySelector('dialog[open]')) return document.body.classList.contains('rd-hide') ? bars(true, y < 80 ? 'top' : 'dialog') : tr.set(true, y);
+    const y = scrollY; syncDbg();
+    if (y < 80 || atEnd() || document.querySelector('dialog[open]')) { clearTimeout(idleT); return document.body.classList.contains('rd-hide') ? bars(true, y < 80 ? 'top' : atEnd() ? 'bottom' : 'dialog') : tr.set(true, y); }
+    if (!document.body.classList.contains('rd-hide')) arm(1500);        // still scrolling with the bars up: wait until it stops
     if (performance.now() < calm) return tr.set(!document.body.classList.contains('rd-hide'), y);      // the page's own jump (opening at a verse, redrawing) is not reading; a fast flick is
-    const r = tr.feed(y); if (r !== null) bars(r, r ? 'scrolled up' : 'scrolled down');
+    const r = tr.feed(y); if (r !== null) { bars(r, r ? 'scrolled up' : 'scrolled down'); if (r) arm(1500); else clearTimeout(idleT); }
   };
-  const blankTap = (e) => { note('tap ' + (e.target.closest('.w') ? 'on a word' : e.target.tagName.toLowerCase() + (e.target.className ? '.' + e.target.className : ''))); if (!e.target.closest('.w, a, button, input, select, textarea, #pop, dialog')) bars(true, 'blank tap'); };
-  const anyKey = (e) => bars(true, 'key ' + e.key);
-  addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey);
+  const blankTap = (e) => { note('tap ' + (e.target.closest('.w') ? 'on a word' : e.target.tagName.toLowerCase() + (e.target.className ? '.' + e.target.className : ''))); if (!e.target.closest('.w, a, button, input, select, textarea, #pop, dialog')) { bars(true, 'blank tap'); arm(3500); } };
+  const anyKey = (e) => { bars(true, 'key ' + e.key); arm(4000); };
+  const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) arm(4000); };
+  addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
 
   if (vsS) { const v = body.querySelector('#v' + (+vsS)); if (v) { v.classList.add('focus'); requestAnimationFrame(() => v.scrollIntoView({ block: 'center' })); } } else scrollTo(0, 0);
-  return () => { hidePop(); bars(true, 'leaving'); if (watch) watch.disconnect(); if (dbg) dbg.remove(); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  return () => { hidePop(); clearTimeout(idleT); bars(true, 'leaving'); watch.disconnect(); if (dbg) dbg.remove(); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }
