@@ -33,6 +33,8 @@ export function upcoming(now = clockNow()) {
       if (c.due < week) o.week++;
     }
   }
+  out.parse.due = parseDueCount(now);              // as a session serves them: one per form, only forms still quizzed (raw due cards can include ones it never shows)
+  out.all.due = out.words.due + out.parse.due;
   return out;
 }
 /** "in 20 min", "in 3 h", "tomorrow", "in 3 days" */

@@ -11,7 +11,7 @@ export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
   readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, recAcc: {}, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -29,7 +29,6 @@ export async function initKnow() {
   K.parseAcc = (await store.get('parseAcc')) || [];
   K.verbParse = (await store.get('verbParse')) || {};
   K.famAcc = (await store.get('famAcc')) || {};
-  K.recAcc = (await store.get('recAcc')) || {};
   K.ready = true;
 }
 
@@ -417,16 +416,6 @@ export async function rateChart(id, grade) {
   await advanceLevels();
   return next;
 }
-/* ---------- recognizing a verb form (guided drill): last answers per tier, and whether Tier 2 is open ---------- */
-export async function noteRec(step, ok, tier) {
-  const k = tier === 2 ? 't2' : 't1', a = (K.recAcc[k] ||= []); a.push(ok ? 1 : 0); if (a.length > 60) a.shift();
-  await store.set('recAcc', K.recAcc);
-}
-export async function recForm() { const d = (K.daily[todayKey()] ||= {}); d.cr = (d.cr || 0) + 1; await store.set('daily', K.daily); }
-export const recT2Open = () => !!K.recAcc.open;
-export async function openRecT2() { K.recAcc.open = true; await store.set('recAcc', K.recAcc); }
-/** Tier 1 is solid: at least 20 answers and 85% right over the last 20. */
-export function recGate() { const a = (K.recAcc.t1 || []).slice(-20); const acc = a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; return { n: a.length, acc, ok: a.length >= 20 && acc >= 0.85 }; }
 export const chartCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => (c.id.startsWith('c:') || c.id.startsWith('e:')) && c.state !== 'new' && c.due <= now);
 export const PARSE_DEFAULT = { slots: {}, recent: { verb: [], other: [] }, mode: { verb: 'guided', other: 'guided' }, total: 0 };
 export async function getParseStats() { return { ...PARSE_DEFAULT, ...((await store.get('parseStats')) || {}) }; }

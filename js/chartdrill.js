@@ -134,7 +134,7 @@ export function runDrill(view, rowKey = null) {
 const paradigmGrid = (key) => {
   const P = paradigm(key); if (!P) return null;
   return h('div.pmini', h('div.small.muted', h('b', 'Paradigm'), ' · verb ', h('span', { lang: 'grc' }, P.head)),
-    h('div.pgrid', P.cells.map((c) => h('div.pcell', h('div.small.muted.plabel', c.label + (c.inText ? ' · in the text' : '')), h('span.pword', { lang: 'grc' }, h('span.pstem', c.stem), h('b.pend', c.ending))))));
+    h('div.pgrid.ppara', P.cells.map((c) => h('div.pcell', h('div.small.muted.plabel', c.label + (c.inText ? ' · in the text' : '')), h('span.pword', { lang: 'grc' }, h('span.pstem', c.stem), h('b.pend', c.ending))))));
 };
 
 export function renderParadigm(view, key) {
@@ -164,8 +164,6 @@ export function renderChartsPage(view) {
   clear(view).append(backHead('Charts', '#/learn', 'Learn'), h('div.stack',
     start,
     h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts() }, icon('table', 18), ' Look at the chart'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
-    h('div.card.stack', h('h2', 'Recognize a verb form'), h('p.muted.small', 'Four rules let you read a form from the outside in: prefix, endings, formative, connecting vowel.'),
-      h('div.row.wrap', h('a.btn', { href: '#/learn/charts/rules' }, 'Learn the rules'), h('a.btn.primary', { href: '#/learn/charts/recognize' }, 'Practice'))),
     h('div.card.stack', h('div.row.between', h('h2', 'Master verb chart'), h('span.chip', c.known + ' of ' + c.total + ' known')),
       h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row name to see its paradigm.'), head, ...rows,
       h('div.legend', h('span', h('i.sq.known', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'known'), h('span', h('i.sq.shaky', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'shaky'), h('span', h('i.sq.new', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'new'))),
