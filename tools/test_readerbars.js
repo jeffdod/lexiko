@@ -13,6 +13,9 @@ const { chromium } = require('playwright');
   await p.mouse.move(200, 400); await wheel(p, 120, 8);
   s = await state(p); ok(s.hidden && !s.nav && !s.bar, 'bars hidden after scrolling down: ' + JSON.stringify(s));
   await wheel(p, 40, 3); s = await state(p); ok(s.hidden, 'small further scrolling keeps them hidden');
+  // one fast flick arrives as a single big scroll event and still counts as reading
+  await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(500); s = await state(p); ok(!s.hidden, 'shown again at the top');
+  await p.evaluate(() => scrollBy(0, 1500)); await p.waitForTimeout(500); s = await state(p); ok(s.hidden, 'a single fast flick hides the bars: ' + JSON.stringify(s));
   // a word tap: popup opens, bars stay hidden
   s = await state(p); const before = s.hidden;
   const pt = await p.evaluate(() => { const w = [...document.querySelectorAll('#view .w')].find((e) => { const r = e.getBoundingClientRect(); return r.top > 150 && r.bottom < 450; }); const r = w.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
