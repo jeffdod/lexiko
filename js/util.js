@@ -103,7 +103,7 @@ export function icon(name, size = 22) {
 }
 
 /** Shown on Extra practice screens: nothing answered here touches the review schedule. */
-export const practiceBanner = (preview, recent = false) => h('div.practice-note', h('b', preview ? 'Look ahead' : recent ? 'Refresher' : 'Strengthen'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : recent ? 'words you started recently; practice only, so it won’t change your review schedule.' : 'practice only; it won’t change your review schedule.'));
+export const practiceBanner = (preview, recent = false, row = false) => h('div.practice-note', h('b', preview ? 'Look ahead' : recent ? 'Refresher' : row ? 'Chart row' : 'Strengthen'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : row ? 'forms of this row from the text, in verbs you know; practice only, so it won’t change your review schedule.' : recent ? 'words you started recently; practice only, so it won’t change your review schedule.' : 'practice only; it won’t change your review schedule.'));
 
 /** A collapsed section: keeps secondary options out of the way until you want them. */
 export const fold = (title, ...kids) => h('details.fold', h('summary', title), h('div.stack', kids));

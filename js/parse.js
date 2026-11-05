@@ -5,6 +5,7 @@ import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from
 import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { h, clear, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
+import { ROWS, say } from './chartdrill.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { miniGoalCard } from './goals.js';
@@ -147,6 +148,26 @@ export function buildParseSession(opts) {
   return shuffle([...dueIds, ...newIds]);
 }
 
+/** Forms of one chart row, from verbs you know: the pool for "Parse forms like this". The liquid rows are the regular row's forms from liquid verbs (λ, μ, ν, ρ), and the regular rows leave those out. */
+const LIQ_PARENT = { 'fut-liq-act': 'fut-act', 'fut-liq-mid': 'fut-mid', 'aor-liq-act': 'aor1-act' };
+const HAS_LIQ = new Set(['fut-act', 'fut-mid', 'aor1-act']);
+const isLiquidVerb = (n) => { const L = D.lexByN.get(n); return !!L && /[λμνρ]ω$/.test(L.head.normalize('NFD').replace(/[\u0300-\u036f]/g, '')); };
+export function rowPool(key, { ignoreLevel = false } = {}) {
+  ensureIndex();
+  const want = LIQ_PARENT[key] || key, liqRow = key in LIQ_PARENT, out = [];
+  for (const id of members.keys()) {
+    const it = ignoreLevel ? rawItem(id) : itemOf(id);
+    if (!it || it.group !== 'V' || status(it.strongs) !== 'known') continue;
+    if (!it.valid.some((v) => chartRowForSlots(v.slots) === want)) continue;
+    const liq = isLiquidVerb(it.strongs);
+    if (liqRow ? !liq : HAS_LIQ.has(key) && liq) continue;
+    out.push(id);
+  }
+  return out;
+}
+/** A round of about a dozen forms of the row, leaning on the commonest. */
+const rowQueue = (key) => shuffle(rowPool(key).sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 30)).slice(0, 12).map((id) => ({ id, type: 'row' }));
+
 /** Extra practice: never scheduled. 'trouble' = your shakiest forms; 'preview' = a few frequent forms you haven't started. */
 export function buildParseExtra(kind) {
   ensureIndex();
@@ -183,7 +204,7 @@ async function recordResult(st, it, res) {
 let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
 
-function runSession(view, queue, { title, scope, restart, practice = false }) {
+function runSession(view, queue, { title, scope, restart, practice = false, back = ['#/parse', 'Back to Parsing'] }) {
   const total = queue.length;
   const S = { missed: [], shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {}, hist: [] };
   let st = null, cur = null;
@@ -198,9 +219,9 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
         Object.keys(S.slots).length ? h('div', h('b', 'Accuracy by part'), slotBars(S.slots)) : null,
         weakest && weakest[1] < 0.8 ? h('p.muted', 'Most slips this time: ' + SLOT_TITLE[weakest[0]].toLowerCase() + '. It will keep coming back until it sticks.') : null,
         missedBlock(S.missed.map((m) => { const it = itemOf(m.id), L = it && D.lexByN.get(it.strongs); return { greek: true, word: D.forms[m.id].plain, sub: L ? L.head + ' · ' + L.brief : '', why: m.wrong.length ? 'Missed: ' + m.wrong.map((k) => (SLOT_TITLE[k] || k).toLowerCase()).join(', ') : '' }; }),
-          () => runSession(view, S.missed.map((m) => ({ id: m.id, type: 'practice' })), { title, scope, restart, practice: true })),
+          () => runSession(view, S.missed.map((m) => ({ id: m.id, type: 'practice' })), { title, scope, restart, practice: true, back })),
         h('div.row.wrap', h('button.btn' + (S.missed.length ? '' : '.primary'), { onclick: restart }, 'Practice more'),
-          ...backLinks('#/parse', 'Back to Parsing'), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
+          ...backLinks(back[0], back[1]), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
   };
 
   const retryQ = [];                                      // missed forms wait here and come back after the last one, in a retry round
@@ -213,11 +234,11 @@ function runSession(view, queue, { title, scope, restart, practice = false }) {
   };
 
   function frame(c, inner) {
-    const tag = c.rescue ? ['gold', 'One more try'] : c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Refresher'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
+    const tag = c.rescue ? ['gold', 'One more try'] : c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Refresher'] : c.type === 'row' ? ['', 'Chart row'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? S.rk / S.R : S.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
-      practice ? practiceBanner(c.type === 'preview', c.type === 'recent') : null, inner));
+      practice ? practiceBanner(c.type === 'preview', c.type === 'recent', c.type === 'row') : null, inner));
   }
 
   function prompt(c, it, { ask = 'Parse this word', hideVerb = false } = {}) {
@@ -444,6 +465,18 @@ export function renderParse(view, params) {
       const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'recent' ? 'recent' : rest[1] === 'review' ? 'review' : 'trouble');
       if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practice yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
+    }
+    if (rest[0] === 'row') {                                      // from the charts: forms of one row, practice only
+      const r = ROWS.find((x) => x.key === rest[1]); if (!r) { location.hash = '#/learn/charts'; return; }
+      const title = say(r.name).replace(/^./, (c) => c.toUpperCase()), q = rowQueue(r.key);
+      if (!q.length) {
+        const locked = rowPool(r.key, { ignoreLevel: true }).length > 0;
+        clear(view).append(backHead(title, '#/learn/charts/paradigm/' + r.key, 'Paradigm'), h('div.card.stack',
+          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no forms of this row in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('a.btn', { href: '#/learn/charts/paradigm/' + r.key }, 'Back to the paradigm')));
+        return;
+      }
+      return runSession(view, q, { title, practice: true, back: ['#/learn/charts/paradigm/' + r.key, 'Back to the paradigm'], restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'verbs') {                                    // the required forms of the verbs you are working on (or one verb)
       const ns = rest[1] ? [+rest[1]] : startedVerbs(), ids = [...new Set(ns.flatMap((n) => [...requiredFormIds(n)]))].filter((id) => itemOf(id));
