@@ -25,10 +25,11 @@ const { chromium } = require('playwright');
     const t = m.split('ἀκού\u00adου\u00adσιν', 'pres-act'); return { n, shy, bad: bad.slice(0, 5), t }; });
   ok(real.n > 100 && !real.bad.length && real.shy === 0, 'real participles split cleanly: ' + real.n + ' forms, no soft hyphens left', JSON.stringify(real.bad));
   ok(real.t && real.t.stem === 'ἀκού' && real.t.formative === 'ου' && real.t.rest === 'σιν', 'ἀκούουσιν (with soft hyphens) splits as ἀκού · ου · σιν', JSON.stringify(real.t));
-  const noContract = await p.evaluate(async () => { const m = await import('./js/participles.js'), pd = await import('./js/ptcdata.js'); const q = []; for (let i = 0; i < 15; i++) q.push(...m.ptcQueue(null)); return q.filter((x) => /^pres/.test(x.key) && m.CONTRACT.test(pd.skel(x.head))).length; });
-  ok(noContract === 0, 'no contract or -μι verbs in the present rows of the quiz', String(noContract));
+  const noContract = await p.evaluate(async () => { const m = await import('./js/participles.js'), pd = await import('./js/ptcdata.js'); const q = []; for (let i = 0; i < 15; i++) q.push(...m.ptcQueue(null)); return q.filter((x) => /^pres/.test(x.key) && /μι$/.test(pd.skel(x.head)) && !(x.sp && x.sp.mi)).length; });
+  ok(noContract === 0, '-μι present rows are split by the -μι rules, never by the plain pattern', String(noContract));
   // the quiz
   const before = await p.evaluate(async () => { const k = await import('./js/know.js'); return JSON.stringify([[...k.K.cards.keys()].length, k.K.daily]); });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); k.K.settings.formLevel = 1; });
   await go('#/learn/charts/participles/run'); await p.waitForSelector('.qwrap');
   const total = +(await p.innerText('.qcount')).match(/\/\s*(\d+)/)[1]; ok(total >= 6 && total <= 12, 'a round of up to twelve participles: ' + total);
   ok(await p.locator('.opt').count() === 4, 'four choices');
@@ -59,6 +60,7 @@ const { chromium } = require('playwright');
   const la = await p.evaluate(async () => { const m = await import('./js/participles.js'); let n = 0; for (let i = 0; i < 20; i++) if (m.ptcOptions('pres-act').some((r) => r.key === 'aor2-act')) n++; return n; });
   ok(la === 20, 'a present active always has the 2nd aorist active beside it');
   // parsing route
+  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.formLevel = F.NLEVELS; });
   await go('#/parse/run/ptc/all'); await p.waitForSelector('.qwrap');
   ok(/Chart row/.test(await p.innerText('.practice-note')) && /practice only/.test(await p.innerText('.practice-note')), 'Parse some participles: practice only');
   // empty state

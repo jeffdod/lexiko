@@ -3,7 +3,10 @@
 import { D } from './data.js';
 import { participleForms } from './parse.js';
 import { openCharts } from './charts.js';
-import { PTC, PTCB, CELL_ROWS, modelForm, split, skel, chars, FORMATIVE_MEANING, MORPHEME_MEANING, LOOKALIKE } from './ptcdata.js';
+import { PTC, PTCB, CELL_ROWS, modelForm, split, skel, chars, isLiquid, aoristNotes, FORMATIVE_MEANING, MORPHEME_MEANING, LOOKALIKE } from './ptcdata.js';
+import { contractType, contractSplit, pairsFrom, contractNote } from './contract.js';
+import { miClass, miSplit, explainMi } from './midata.js';
+import { tailsOf } from './ptcdata.js';
 import { h, clear, icon, pct, shuffle, missedBlock, backHead, backLinks } from './util.js';
 
 const lg = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
@@ -56,12 +59,18 @@ let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
 const ROUND = 12;
 /** Present-system verbs whose stem vowel merges with the connecting vowel (ποιέω, ἀγαπάω, πληρόω) or that are -μι verbs: their stems can't be read off by the plain pattern, so they stay out of this quiz. */
+/** The split of a participle of the text: contract presents through the merge engine, everything else through the kind's own pattern. */
+export function splitX(x) {
+  if (miClass(x.head) && /^(pres|aor2)-(act|mp|mid)$/.test(x.key)) { const m = miSplit(x.w, x.head, x.key, 'ptc'); return m && { stem: '', formative: '', rest: '', stemSkel: '', ...m }; }
+  if (/^pres/.test(x.key) && contractType(x.head)) { const c = contractSplit(x.w, x.head, pairsFrom(tailsOf(PTCB.get(x.key)))); return c && { stem: c.stem, formative: c.vowel, rest: c.ending, stemSkel: c.stemSkel, contract: c.contract }; }
+  return split(x.w, x.key, { liquid: isLiquid(x.head) });
+}
 export const CONTRACT = /(αω|εω|οω|αομαι|εομαι|οομαι|μι)$/;
 
 /** About a dozen participles spread over the kinds, the commonest of each; only forms the splitter understands. */
 export function ptcQueue(only = null) {
   const by = new Map();
-  for (const x of participleForms(only)) { if (/^pres/.test(x.key) && CONTRACT.test(skel(x.head))) continue; const sp = split(x.w, x.key); if (!sp) continue; if (!by.has(x.key)) by.set(x.key, []); by.get(x.key).push({ ...x, sp }); }
+  for (const x of participleForms(only, { ignoreLevel: true })) { const sp = splitX(x); if (!sp) continue; if (!by.has(x.key)) by.set(x.key, []); by.get(x.key).push({ ...x, sp }); }
   if (!by.size) return [];
   const lists = shuffle([...by.keys()]).map((k) => shuffle(by.get(k).sort((a, b) => b.count - a.count).slice(0, 12)));
   const out = [];
@@ -77,7 +86,10 @@ export function ptcOptions(key) {
 const presentStem = (head) => skel(head).replace(/(ομαι|μαι|ω)$/, '');
 /** What to say after an answer: the pieces, and the stem comparison when present and 2nd aorist look alike. */
 export function explain(x) {
-  const r = PTCB.get(x.key), { sp } = x, bits = [r.name + ': ' + (r.form ? 'formative ' + r.form : 'no formative') + ', morpheme ' + r.morph + '.'];
+  const r = PTCB.get(x.key), { sp } = x;
+  if (sp.mi) return explainMi(sp, r, x.head);
+  const bits = [r.name + ': ' + (r.form ? 'formative ' + r.form : 'no formative') + ', morpheme ' + r.morph + '.'];
+  if (sp.contract) { bits[0] = r.name + ': the stem, the contracted vowel and the ending.'; bits.push(contractNote(sp, x.head), 'The stem ' + sp.stemSkel + '- is the present stem of ' + x.head + ', so it is a present.'); return bits; }
   if (r.form && r.morph === 'ντ' && skel(sp.formative) !== skel(r.form) && /^(ω|ου)$/.test(skel(sp.formative))) bits[0] += ' In this form the ντ has changed or dropped out, so the ο shows as ' + sp.formative.normalize('NFD').replace(/[̀-ͯ]/g, '').normalize('NFC') + '.';
   if (LOOKALIKE[x.key]) {
     const ps = presentStem(x.head), same = sp.stemSkel === ps || sp.stemSkel.replace(/σσ/g, 'ττ') === ps;
@@ -85,6 +97,7 @@ export function explain(x) {
     bits.push(r.form + ' + ' + r.morph + ' fits both a present and a 2nd aorist. The stem decides: here it is ' + sp.stemSkel + '-, and the present stem of ' + x.head + ' is ' + ps + '-'
       + (pres && same ? ', the same, so it is a present.' : !pres && !same ? ', different, so it is a 2nd aorist.' : '.'));
   }
+  bits.push(...aoristNotes(sp));
   return bits;
 }
 
@@ -92,7 +105,7 @@ export function runPtcDrill(view, only = null) {
   const queue = ptcQueue(only).map((x) => ({ x, tries: 0 }));
   if (!queue.length) {
     clear(view).append(backHead('Which kind is it?', '#/learn/charts/participles', 'Participles'), h('div.card.stack',
-      h('p', 'There are no participles to practice yet in verbs you know. They appear as you learn more vocabulary and open more parsing levels.'), h('a.btn', { href: '#/learn/charts/participles' }, 'Back to Participles')));
+      h('p', 'There are no participles to practice yet in verbs you know. They appear as you learn more vocabulary.'), h('a.btn', { href: '#/learn/charts/participles' }, 'Back to Participles')));
     return;
   }
   const total = queue.length, retryQ = [], S = { shown: 0, done: 0, good: 0, missed: [], round: 0, R: 0, rk: 0 };
@@ -119,7 +132,7 @@ export function runPtcDrill(view, only = null) {
   function show(c) {
     const x = c.x, r = PTCB.get(x.key), options = ptcOptions(x.key), opts = h('div.opts'), tail = h('div'), hint = h('div.hintbox');
     const piece = (t, lab) => h('div', lg(t || '·'), lab ? h('small', lab) : null);
-    const pieces = (lab) => h('div.ptcparts', piece(x.sp.stem, lab && 'stem'), piece(x.sp.formative || '—', lab && 'formative'), piece(x.sp.rest, lab && 'morpheme + ending'));
+    const pieces = (lab) => x.sp.mi ? h('div.ptcparts', piece(x.sp.mi.prefix, lab && 'prefix'), piece(x.sp.mi.redup, lab && 'reduplication'), piece(x.sp.mi.root, lab && 'root'), piece(x.sp.mi.ending, lab && 'ending')) : h('div.ptcparts', piece(x.sp.stem, lab && 'stem'), piece(x.sp.formative || '—', lab && (x.sp.contract ? 'contracted vowel' : 'formative')), piece(x.sp.rest, lab && 'morpheme + ending'));
     const drawHint = () => {
       clear(hint); if (tail.childElementCount) return;
       const lvl = c.peek ? 2 : c.hint1 ? 1 : 0;
