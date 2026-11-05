@@ -134,6 +134,8 @@ export function renderSettings(view, params = []) {
         seg([[true, 'On'], [false, 'Off']], !!setting('formsAll'), (v) => setSetting('formsAll', v))),
       h('div.row.between.wrap', h('div', h('b', 'Only forms from chart rows I know'), h('div.muted.small', 'In daily practice, a verb form comes up only after you have learned its row on the Master verb chart. Practice you start yourself is not limited.')),
         seg([[true, 'On'], [false, 'Off']], !!setting('formsByChart'), (v) => setSetting('formsByChart', v))),
+      h('div.row.between.wrap', h('div', h('b', 'Hold back verbs in -μι'), h('div.muted.small', 'δίδωμι, τίθημι, ἵστημι and the rest stay out of daily parsing until you turn this off. Practice you start yourself is not limited.')),
+        seg([[true, 'On'], [false, 'Off']], !!setting('holdMi'), (v) => setSetting('holdMi', v))),
       h('div.row.between', h('b', 'New forms per day'), h('select', { 'aria-label': 'New forms per day', onchange: (e) => setSetting('parseNewPerDay', +e.target.value) }, [5, 10, 15, 20, 30].map((n) => h('option', { value: n, selected: n === setting('parseNewPerDay') }, n)))),
       ...paceOptions('parse', 'forms', () => renderSettings(view))),
     fold('Advanced',

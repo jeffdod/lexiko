@@ -17,7 +17,7 @@ import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
-import { currentGoal, goalWords, formLevel, chartAllowsAny, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
+import { currentGoal, goalWords, formLevel, chartAllowsAny, miHeld, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
 import { levelOfTag, NLEVELS, levelName, isLiquidVerb } from './families.js';
 import { store } from './store.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
@@ -62,7 +62,7 @@ const requiredFormIds = (n) => {
   return r;
 };
 /** What the daily sessions may serve: itemOf, and with "Only forms from chart rows I know" on, a verb form waits until its chart row is learned. Practice (a row, a kind, "Parse forms like this") is not held back. */
-const autoItemOf = (id) => { const it = itemOf(id); return it && it.group === 'V' && !chartAllowsAny(it.valid.map((v) => v.code), it.strongs) ? null : it; };
+const autoItemOf = (id) => { const it = itemOf(id); return it && it.group === 'V' && (miHeld(it.strongs) || !chartAllowsAny(it.valid.map((v) => v.code), it.strongs)) ? null : it; };
 const isVerbForm = (id) => { const it = itemOf(id); return !!it && it.group === 'V'; };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
 
