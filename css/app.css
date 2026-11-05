@@ -102,8 +102,9 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 .banner { display: flex; gap: .8rem; align-items: center; padding: .8rem 1rem; border-radius: var(--r); background: var(--gold-soft); color: var(--ink); border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent); }
 .banner.info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 #toasts { position: fixed; z-index: 90; left: 0; right: 0; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + .8rem); display: flex; flex-direction: column; align-items: center; gap: .4rem; pointer-events: none; }
-.toast { background: var(--ink); color: var(--bg); padding: .6rem 1rem; border-radius: 999px; font-size: .9rem; font-weight: 600; box-shadow: var(--shadow); transition: opacity .3s, transform .3s; max-width: 90vw; }
+.toast { background: var(--ink); color: var(--bg); padding: .7rem 1.1rem; border-radius: 1.1rem; text-align: center; line-height: 1.35; font-size: .9rem; font-weight: 600; box-shadow: var(--shadow); transition: opacity .3s, transform .3s; max-width: 90vw; }
 .toast.out { opacity: 0; transform: translateY(6px); }
+@media (min-width: 880px) { #toasts { left: var(--rail-w); bottom: 1.4rem; } }     /* the nav is a side rail here: centre on the page, not the screen */
 #loading { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--splash); color: #fff; transition: opacity .3s; }
 #loading.done { opacity: 0; pointer-events: none; }
 #loading .box { text-align: center; width: min(18rem, 80vw); }
