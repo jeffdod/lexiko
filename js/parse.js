@@ -7,6 +7,9 @@ import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, O
 import { h, clear, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { ROWS, say } from './chartdrill.js';
 import { PTCB } from './ptcdata.js';
+import { INFB, infKey } from './infdata.js';
+import { SUBB, subKey } from './subdata.js';
+import { IMPB, impKey } from './impdata.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
 import { smart, TOPICS } from './smart.js';
 import { miniGoalCard } from './goals.js';
@@ -174,6 +177,48 @@ export function participleForms(key = null, { ignoreLevel = false } = {}) {
     const it = ignoreLevel ? rawItem(id) : itemOf(id);
     if (!it || it.group !== 'V' || status(it.strongs) !== 'known') continue;
     let k = null; for (const v of it.valid) { const hl = participleHighlight(v.slots); if (hl && hl.key) { k = hl.key; break; } }
+    if (!k || (key && k !== key)) continue;
+    const L = D.lexByN.get(it.strongs);
+    out.push({ id, key: k, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', brief: L ? L.brief : '', count: D.forms[id].count });
+  }
+  return out;
+}
+/** Infinitives of verbs you know, with the kind (chart row key) each is, for the infinitive pages. */
+export function infinitiveForms(key = null, { ignoreLevel = false } = {}) {
+  ensureIndex();
+  const out = [];
+  for (const id of members.keys()) {
+    const it = ignoreLevel ? rawItem(id) : itemOf(id);
+    if (!it || it.group !== 'V' || status(it.strongs) !== 'known') continue;
+    let k = null; for (const v of it.valid) { k = infKey(v.slots); if (k) break; }
+    if (!k || (key && k !== key)) continue;
+    const L = D.lexByN.get(it.strongs);
+    out.push({ id, key: k, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', brief: L ? L.brief : '', count: D.forms[id].count });
+  }
+  return out;
+}
+/** Subjunctives of verbs you know, with the kind (chart row key) each is, for the subjunctive pages. */
+export function subjunctiveForms(key = null, { ignoreLevel = false } = {}) {
+  ensureIndex();
+  const out = [];
+  for (const id of members.keys()) {
+    const it = ignoreLevel ? rawItem(id) : itemOf(id);
+    if (!it || it.group !== 'V' || status(it.strongs) !== 'known') continue;
+    let k = null; for (const v of it.valid) { k = subKey(v.slots); if (k) break; }
+    if (!k || (key && k !== key)) continue;
+    const L = D.lexByN.get(it.strongs);
+    out.push({ id, key: k, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', brief: L ? L.brief : '', count: D.forms[id].count });
+  }
+  return out;
+}
+/** Imperatives of verbs you know, with the kind (chart row key) each is, for the imperative pages. */
+export function imperativeForms(key = null, { ignoreLevel = false } = {}) {
+  ensureIndex();
+  const out = [];
+  for (const id of members.keys()) {
+    const it = ignoreLevel ? rawItem(id) : itemOf(id);
+    if (!it || it.group !== 'V' || status(it.strongs) !== 'known') continue;
+    let k = null; for (const v of it.valid) { k = impKey(v.slots); if (k) break; }
     if (!k || (key && k !== key)) continue;
     const L = D.lexByN.get(it.strongs);
     out.push({ id, key: k, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', brief: L ? L.brief : '', count: D.forms[id].count });
@@ -505,6 +550,45 @@ export function renderParse(view, params) {
         return;
       }
       return runSession(view, q, { title, practice: true, back: [back, 'Back to participles'], restart: () => renderParse(view, params) });
+    }
+    if (rest[0] === 'inf') {                                      // from the infinitive page: infinitives of one kind (or any), practice only
+      const key = rest[1] === 'all' ? null : rest[1], r = key ? INFB.get(key) : null; if (key && !r) { location.hash = '#/learn/charts/infinitives'; return; }
+      const title = r ? r.name + ' infinitives' : 'Infinitives', back = '#/learn/charts/infinitives';
+      const q = shuffle(infinitiveForms(key).sort((a, b) => b.count - a.count).slice(0, 30)).slice(0, 12).map((x) => ({ id: x.id, type: 'row' }));
+      if (!q.length) {
+        const locked = infinitiveForms(key, { ignoreLevel: true }).length > 0;
+        clear(view).append(backHead(title, back, 'Infinitives'), h('div.card.stack',
+          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no infinitives of this kind in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('a.btn', { href: back }, 'Back')));
+        return;
+      }
+      return runSession(view, q, { title, practice: true, back: [back, 'Back to infinitives'], restart: () => renderParse(view, params) });
+    }
+    if (rest[0] === 'sub') {                                      // from the subjunctive page: subjunctives of one kind (or any), practice only
+      const key = rest[1] === 'all' ? null : rest[1], r = key ? SUBB.get(key) : null; if (key && !r) { location.hash = '#/learn/charts/subjunctive'; return; }
+      const title = r ? r.name + ' subjunctives' : 'Subjunctive', back = r ? '#/learn/charts/subjunctive/' + r.key : '#/learn/charts/subjunctive';
+      const q = shuffle(subjunctiveForms(key).sort((a, b) => b.count - a.count).slice(0, 30)).slice(0, 12).map((x) => ({ id: x.id, type: 'row' }));
+      if (!q.length) {
+        const locked = subjunctiveForms(key, { ignoreLevel: true }).length > 0;
+        clear(view).append(backHead(title, back, 'Subjunctive'), h('div.card.stack',
+          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no subjunctives of this kind in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('a.btn', { href: back }, 'Back')));
+        return;
+      }
+      return runSession(view, q, { title, practice: true, back: [back, 'Back to subjunctive'], restart: () => renderParse(view, params) });
+    }
+    if (rest[0] === 'imp') {                                      // from the imperative page: imperatives of one kind (or any), practice only
+      const key = rest[1] === 'all' ? null : rest[1], r = key ? IMPB.get(key) : null; if (key && !r) { location.hash = '#/learn/charts/imperative'; return; }
+      const title = r ? r.name + ' imperatives' : 'Imperative', back = r ? '#/learn/charts/imperative/' + r.key : '#/learn/charts/imperative';
+      const q = shuffle(imperativeForms(key).sort((a, b) => b.count - a.count).slice(0, 30)).slice(0, 12).map((x) => ({ id: x.id, type: 'row' }));
+      if (!q.length) {
+        const locked = imperativeForms(key, { ignoreLevel: true }).length > 0;
+        clear(view).append(backHead(title, back, 'Imperative'), h('div.card.stack',
+          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no imperatives of this kind in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('a.btn', { href: back }, 'Back')));
+        return;
+      }
+      return runSession(view, q, { title, practice: true, back: [back, 'Back to imperative'], restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'verbs') {                                    // the required forms of the verbs you are working on (or one verb)
       const ns = rest[1] ? [+rest[1]] : startedVerbs(), ids = [...new Set(ns.flatMap((n) => [...requiredFormIds(n)]))].filter((id) => itemOf(id));

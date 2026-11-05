@@ -97,8 +97,8 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     // peeking then answering right still counts as missed
     const r = await p.evaluate(async () => { const K = await import('./js/know.js'); return [...K.K.cards.values()].filter((c) => c.id.startsWith('c:aor1-pas:')).map((c) => [c.id, c.lapses, c.state]); });
     ok(r.length >= 1 && r.some((x) => x[1] > 0 || x[2] === 'relearning' || x[2] === 'learning'), 'hint 2 then answering is recorded as a miss', JSON.stringify(r)); }
-  { await go('#/learn/charts'); await p.evaluate(() => window.scrollTo(0, 120)); const y0 = await p.evaluate(() => window.scrollY);
-    await p.click('button:has-text("Look at the chart")'); await p.waitForSelector('dialog.charts[open]');
+  { await go('#/learn/charts'); await p.evaluate(() => window.scrollTo(0, 120));
+    await p.click('button:has-text("Look at the chart")'); await p.waitForSelector('dialog.charts[open]'); const y0 = await p.evaluate(() => window.scrollY);   // after the click: the button may need scrolling into view first
     const o = await p.evaluate(() => ({ html: getComputedStyle(document.documentElement).overflow, dlg: getComputedStyle(document.querySelector('dialog.charts')).overscrollBehaviorY }));
     ok(o.html === 'hidden' && o.dlg === 'contain', 'popup: the page behind is locked and scroll does not chain', JSON.stringify(o));
     await p.mouse.move(400, 400); for (let i = 0; i < 12; i++) await p.mouse.wheel(0, 600);

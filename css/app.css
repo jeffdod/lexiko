@@ -415,6 +415,7 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .ptcrow { border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: .6rem; } .ptcfam + .ptcrow { border-top: 0; }
 .ptcrow a { display: block; flex: 1; padding: .5rem 0; color: var(--ink); text-decoration: none; min-height: 2.6rem; }
 .ptcrow a > span:first-child { color: var(--accent); font-weight: 600; display: block; } .ptcrow .mf { display: block; font-size: .95rem; color: var(--muted); font-weight: 400; }
+.infname { flex: 1; padding: .5rem 0; } .infname > span:first-child { color: var(--accent); font-weight: 600; display: block; } .infname .mf { display: block; font-size: .95rem; color: var(--muted); } .infname .mf.en { font-size: .85rem; }
 .ptcchips { display: flex; gap: .3rem; } .ptcchips span { background: var(--accent-soft); border-radius: 8px; padding: .05rem .5rem; font-family: var(--greek); font-size: 1.05rem; }
 .ptcthree { display: grid; gap: .5rem; } .ptcthree > div { border: 1px solid var(--line); border-radius: 12px; padding: .55rem .8rem; background: var(--surface-2); display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
 .ptcthree .m { font-family: var(--greek); font-size: 1.35rem; font-weight: 600; color: var(--accent); } .ptcthree i { order: 3; margin-left: auto; font-style: normal; font-size: .75rem; font-weight: 700; color: var(--muted); } .ptcthree span:not(.m) { font-size: .9rem; color: var(--ink-2); }
@@ -422,3 +423,8 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .ptctable th { white-space: nowrap; font-size: .8rem; } .ptctable td { font-size: 1.1rem; } .ptctable tr.sep th, .ptctable tr.sep td { border-top: 2px solid var(--line); } .ptctable .pend { color: var(--accent); }
 .ptcparts { display: flex; gap: .3rem; margin: .5rem 0; flex-wrap: wrap; } .ptcparts > div { text-align: center; } .ptcparts > div > span { display: block; background: var(--accent-soft); border-radius: 8px; padding: .1rem .6rem; font-family: var(--greek); font-size: 1.3rem; }
 .ptcparts small { font-size: .6rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+
+.pform { background: var(--accent-soft); border-radius: 4px; } .pvow { color: var(--good); font-weight: 700; } .ptcparts .pvow { color: var(--good); }
+.subcmp { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; } .subpair { border: 1px solid var(--line); border-radius: 10px; padding: .4rem .6rem; text-align: center; background: var(--surface); } .subpair small { display: block; font: 700 .62rem var(--ui); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); } .subpair .g { font-size: 1.15rem; }
+.pcell.pone { border-left: 3px solid var(--accent); padding-left: .5rem; }
+.mitab { width: 100%; border-collapse: collapse; } .mitab th, .mitab td { text-align: left; padding: .35rem .4rem; border-top: 1px solid var(--line); vertical-align: top; } .mitab thead th { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-top: 0; } .mitab tbody th { font-size: .8rem; color: var(--muted); font-weight: 600; white-space: nowrap; } .mitab td { font: 1.05rem/1.35 var(--greek); }

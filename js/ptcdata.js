@@ -5,6 +5,20 @@ export const skel = (s) => s.normalize('NFD').replace(/[̀-ͯͅ­]/g, '').toLowe
 export const chars = (w) => [...w.replace(/[\u00ad\u200b]/g, '').normalize('NFC')];      // the text marks syllables with soft hyphens: drop them, or letters and positions drift apart
 const sk1 = (w) => chars(w).map(skel);                    // one skeleton letter per written letter, so positions line up
 
+/** A liquid verb (stem in λ, μ, ν or ρ): its 1st aorist has no σ. */
+export const isLiquid = (head) => /[λμνρ](ω|ομαι)$/.test(skel(head));
+/** First aorist active and middle: ψ and ξ are the σ merged with the stem's last consonant. Returns the skeleton with the last ψ/ξ read as σ, or null. */
+export const unmerge = (s) => { const i = Math.max(s.lastIndexOf('ψ'), s.lastIndexOf('ξ')); return i < 0 ? null : s.slice(0, i) + 'σ' + s.slice(i + 1); };
+export const AOR1 = new Set(['aor1-act', 'aor1-mid']);
+
+/** Extra lines for 1st aorists whose σ has merged (ψ, ξ) or dropped (liquid verbs). */
+export function aoristNotes(sp) {
+  const w = [sp.stem, sp.formative, sp.vowel, sp.ending].join('') + (sp.rest || ''), out = [];
+  if (sp.merged) { const psi = /ψ/.test(w.slice(sp.stem.length)); out.push('The ' + (psi ? 'ψ' : 'ξ') + ' is the σ merged with the stem’s last consonant (' + (psi ? 'π, β or φ' : 'κ, γ or χ') + ').'); }
+  if (sp.liquid) out.push('A liquid verb (stem in λ, μ, ν or ρ) has no σ in the 1st aorist, and its stem vowel is usually lengthened.');
+  return out;
+}
+
 /** Rows of a paradigm, in this order; each cell is masculine, feminine, neuter. */
 export const CELL_ROWS = ['Nom. sg.', 'Gen. sg.', 'Dat. sg.', 'Acc. sg.', 'Nom. pl.', 'Gen. pl.', 'Dat. pl.', 'Acc. pl.'];
 
@@ -47,7 +61,7 @@ export const PTCB = new Map(PTC.map((r) => [r.key, r]));
 export const modelForm = (r) => r.forms[4][0];
 
 /** Every ending of a row, as skeletons without the stem (a movable ν is allowed). */
-const tailsOf = (r) => {
+export const tailsOf = (r) => {
   if (r._tails) return r._tails;
   const out = new Set();
   for (const cell of r.forms) for (const f of cell) {
@@ -61,16 +75,24 @@ const tailsOf = (r) => {
  * Split a written participle of a kind into { stem, formative, rest }, where rest is the morpheme and the case ending together.
  * Null when it doesn't fit the kind's pattern (liquid and contract verbs, second perfects, the verb "to be", ...).
  */
-export function split(word, key) {
+export function split(word, key, opts = {}) {
   const r = PTCB.get(key); if (!r) return null;
-  const cs = chars(word), s = cs.map(skel).join('');
-  const tail = tailsOf(r).find((t) => s.endsWith(t) && s.length - t.length >= 1);
-  if (!tail) return null;
-  const k = cs.length - tail.length;
-  let fl = 0;
-  if (r.fre) { const m = r.fre.exec(tail); if (!m) return null; fl = m[0].length; }
-  return { stem: cs.slice(0, k).join(''), formative: cs.slice(k, k + fl).join(''), rest: cs.slice(k + fl).join(''), stemSkel: s.slice(0, k) };
+  const cs = chars(word), s0 = cs.map(skel).join('');
+  const tryOne = (s, tails, fre, extra) => {
+    const tail = tails.find((t) => s.endsWith(t) && s.length - t.length >= 1);
+    if (!tail) return null;
+    const k = cs.length - tail.length;
+    let fl = 0;
+    if (fre) { const m = fre.exec(tail); if (!m) return null; fl = m[0].length; }
+    return { stem: cs.slice(0, k).join(''), formative: cs.slice(k, k + fl).join(''), rest: cs.slice(k + fl).join(''), stemSkel: s.slice(0, k), ...extra };
+  };
+  const plain = tryOne(s0, tailsOf(r), r.fre, {}); if (plain) return plain;
+  if (!AOR1.has(key)) return null;
+  const um = unmerge(s0), merged = um && tryOne(um, tailsOf(r), r.fre, { merged: true }); if (merged) return merged;
+  const lq = opts.liquid ? tryOne(s0, liquidTails(r), /^α/, { liquid: true }) : null;
+  return lq && /[λμνρ]$/.test(lq.stemSkel) ? lq : null;                    // φέρω's ἤνεγκα is not a liquid aorist: its stem ends in γκ
 }
+const liquidTails = (r) => r._ltails || (r._ltails = [...new Set(tailsOf(r).map((t) => t.replace('σ', '')))].sort((a, b) => b.length - a.length));
 
 export const FORMATIVE_MEANING = { 'ο': 'present, or 2nd aorist active and middle', 'σα': '1st aorist active and middle', 'θε': '1st aorist passive', 'ε': '2nd aorist passive', 'κ': 'perfect active (a perfect also reduplicates)', '': 'perfect middle/passive: no formative (it reduplicates)' };
 export const MORPHEME_MEANING = { 'ντ': 'active, and the aorist passive; endings 3-1-3', 'οτ': 'perfect active; endings 3-1-3', 'μενο': 'middle or passive (middle only in the aorists); endings 2-1-2' };

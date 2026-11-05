@@ -120,7 +120,7 @@ export function missedBlock(rows, onPractice) {
 
 /* ---------- "Back to …" after a quiz: offer the place the quiz was started from ---------- */
 export const origin = { href: null, prev: null, readFrom: null };
-const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage|charts\/run|charts\/participles\/run)|parse\/run|parts\/exercise)/;
+const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage|charts\/run|charts\/participles\/run|charts\/infinitives\/run|charts\/subjunctive\/run|charts\/imperative\/run)|parse\/run|parts\/exercise)/;
 /** Called on every route change: remembers where a quiz was launched from (not from another quiz). */
 export function noteRoute(hash) {
   const cur = hash || '#/';
