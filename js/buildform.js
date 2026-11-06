@@ -1,7 +1,8 @@
 // Build the form: practice only. You are told which form of which verb (tense, voice, person, number), and put it together one slot at a time:
 // front (augment or reduplication) → stem → tense formative → ending. The forms are real forms from the text, taken apart with the chart's own pieces.
-// A form is only offered when it adds up exactly (front + stem + formative + ending is the word, ignoring accents); anything else (contract verbs, vowel-initial
-// stems, compound verbs, liquid and other irregular stems) is left out rather than split wrongly.
+// A form is only offered when it adds up exactly (front + stem + formative + ending is the word, ignoring accents); anything else (vowel-initial
+// stems, compound verbs, liquid and other irregular stems) is left out rather than split wrongly. Contract verbs (-άω, -έω, -όω) with a consonant at the front are
+// built too: in the present and imperfect the stem vowel contracts with the ending (a Contraction step); elsewhere the stem vowel lengthens (ποιε- → ποιη-).
 import { D, notParsed } from './data.js';
 import { ROWS, say } from './chartdrill.js';
 import { rowPool } from './parse.js';
@@ -34,7 +35,14 @@ const VOWEL_START = /^[αεηιουω]/;
 
 const TAG = /^V-[12]?[PIFARL][AMPEDONQX]?I-([123])([SP])/;
 const cellOf = (m) => { const x = TAG.exec(m || ''); return x ? x[1] + x[2] : null; };
-const contract = (n) => { const L = D.lexByN.get(n); return !L || /(αω|εω|οω|μι|αομαι|εομαι|οομαι)$/.test(skel(L.head)) || isCompoundLemma(L.head); };
+/** The stem vowel of a contract verb (α, ε or ο), or null. */
+const contractKind = (n) => { const L = D.lexByN.get(n), m = L ? /([αεο])(ω|ομαι)$/.exec(skel(L.head)) : null; return m ? m[1] : null; };
+/** Verbs left out: unknown, -μι, compound, and contract verbs that begin with a vowel (the augment would lengthen it). */
+const contract = (n) => { const L = D.lexByN.get(n); if (!L) return true; const s = skel(L.head); return /μι$/.test(s) || isCompoundLemma(L.head) || (!!contractKind(n) && VOWEL_START.test(s)); };
+const lengthen = (p) => p.slice(0, -1) + ({ 'α': 'η', 'ε': 'η', 'ο': 'ω' }[p.slice(-1)] || p.slice(-1));
+/** How a contract verb's stem vowel and the first vowel(s) of an uncontracted ending are written together (the endings are those of λύω). */
+const CONTRACTS = { 'α': { ο: 'ω', ω: 'ω', ου: 'ω', ε: 'α', η: 'ᾳ', ει: 'ᾳ' }, 'ε': { ο: 'ου', ω: 'ω', ου: 'ου', ε: 'ει', η: 'ῃ', ει: 'ει' }, 'ο': { ο: 'ου', ω: 'ω', ου: 'ου', ε: 'ου', η: 'οι', ει: 'οι' } };
+const INITS = ['ου', 'ει', 'ω', 'ο', 'ε', 'η'], INIT_SHOWN = { 'η': 'ῃ' };
 /** The present stem of a verb, from its lexical form (λύω → λυ, ἔρχομαι is left out: its stem is not the present's). */
 const presentStem = (n) => { const L = D.lexByN.get(n), s = L ? skel(L.head) : ''; return /(ω|ομαι)$/.test(s) ? s.replace(/(ω|ομαι)$/, '') : null; };      // contract and -μι verbs do not add up to a simple split
 
@@ -42,6 +50,7 @@ const presentStem = (n) => { const L = D.lexByN.get(n), s = L ? skel(L.head) : '
 export function decompose(id, row) {
   const f = D.forms[id], a = f.an[0], T = BUILD[row]; if (!a || !T || notParsed(a)) return null;
   const cell = cellOf(a.m); if (!cell || contract(a.s) || rowOfTag(a.m, a.s) !== row) return null;
+  if (contractKind(a.s) && /^(pres|impf)-/.test(row)) return decomposeContract(id, row, f, a, cell);
   const w = skel(f.w), end = variants(T.E[CELLS.indexOf(cell)]).map((e) => T.F + e).find((suffix) => w.endsWith(suffix) && w.length - suffix.length >= 3);
   if (end == null) return null;
   const E = T.E[CELLS.indexOf(cell)], body = w.slice(0, w.length - end.length), used = variants(E).find((e) => w.endsWith(T.F + e));
@@ -51,8 +60,21 @@ export function decompose(id, row) {
   if (S.length < 2) return null;
   // a stem that is only the present stem with sounds dropped or changed (a stop before σ, a σ before θ) would be misleading: those rows must show the verb's own present stem
   // (the second aorist and second perfect are different stems by definition, so they are free)
-  if (!/^(aor2|perf2)/.test(row) && S !== presentStem(a.s)) return null;
+  const k = contractKind(a.s), P = presentStem(a.s);
+  if (/^(aor2|perf2)/.test(row)) { if (k) return null; } else if (!(S === P || (k && S === lengthen(P)))) return null;
   return { row, cell, A, S, F: T.F, E, used, word: f.w.replace(/­/g, ''), n: a.s, id };
+}
+
+/** A present or imperfect form of a contract verb: the stem keeps its vowel (ποιε-) and that vowel contracts with the ending: { ..., contract: { k, init, res, rest, head } }. */
+function decomposeContract(id, row, f, a, cell) {
+  const T = BUILD[row], k = contractKind(a.s), P = presentStem(a.s), w = skel(f.w), U = T.E[CELLS.indexOf(cell)];
+  if (!P || P.length < 3 || P.slice(-1) !== k) return null;
+  for (const u of variants(U)) {
+    const init = INITS.find((x) => u.startsWith(x)), res = init && CONTRACTS[k][init]; if (!res) continue;
+    const A = T.A === 'ε' ? 'ε' : '', rest = u.slice(init.length);
+    if (w === A + P.slice(0, -1) + skel(res) + rest) return { row, cell, A, S: P, F: '', E: U, used: u, word: f.w.replace(/­/g, ''), n: a.s, id, contract: { k, init, res, rest, head: P.slice(0, -1) } };
+  }
+  return null;
 }
 
 /* ---------- the chart's own pieces ----------
@@ -94,7 +116,8 @@ function frontOptions(d) {
 const frontAnswer = (d) => (d.A === '' ? 'none' : d.A === 'ε' ? 'ε' : 'red');
 function stemOptions(d) {
   const others = uniq(formsOfVerb(d.n).flatMap((i) => BUILD_ROWS.map((r) => { const x = D.forms[i].an[0]; return x && cellOf(x.m) ? decompose(i, r) : null; }).filter(Boolean)).map((x) => x.S)).filter((s) => s !== d.S);
-  const synthetic = uniq([d.S + 'σ', d.S + 'θ', d.S.slice(0, -1), d.S + 'κ'].filter((s) => s.length >= 2 && s !== d.S));
+  const k = contractKind(d.n), P = k ? presentStem(d.n) : null;
+  const synthetic = uniq((k ? [P, lengthen(P), P.slice(0, -1)] : [d.S + 'σ', d.S + 'θ', d.S.slice(0, -1), d.S + 'κ']).filter((s) => s.length >= 2 && s !== d.S));
   return shuffle([d.S, ...shuffle(others).slice(0, 2), ...shuffle(synthetic)].filter((s, i, a) => a.indexOf(s) === i).slice(0, 4)).map((s) => [s, s + '-']);
 }
 const FORMATIVES = uniq(BUILD_ROWS.map((r) => ROW[r].form));
@@ -107,6 +130,12 @@ function endingOptions(d, c) {
   return shuffle(uniq([c.PE, ...shuffle(same).slice(0, 2), ...shuffle(cross).slice(0, 1), ...shuffle(same).slice(2)]).slice(0, 4)).map((e) => [e, peLabel(e)]);
 }
 
+const dispInit = (x) => INIT_SHOWN[x] || x;
+function contractOptions(d) {
+  const { k, init, res } = d.contract, others = uniq([...Object.entries(CONTRACTS[k]).filter(([x]) => x !== init).map(([, r]) => r), ...Object.values(CONTRACTS).map((t) => t[init])].filter((r) => r !== res && skel(r) !== skel(res)));
+  return shuffle([res, ...shuffle(others).slice(0, 3)]).map((r) => [r, r]);
+}
+
 /* ---------- the screens ---------- */
 /** A word shown on its own: an accent that only comes from a following enclitic (πέποιθάς τε) is dropped, so it never shows two accents. */
 const isolated = (w) => { const s = w.normalize('NFD'), m = [...s.matchAll(/[\u0300\u0301\u0342]/g)]; if (m.length < 2) return w; const k = m[m.length - 1].index; return (s.slice(0, k) + s.slice(k + 1)).normalize('NFC'); };
@@ -115,6 +144,7 @@ const pieces = (d, c, upto, mark) => {
   const tiles = [['Front', d.A === '' ? '—' : d.A + '-'], ['Stem', d.S + '-'], ['Formative', c.F || '—']];
   if (c.V) tiles.push(['Vowel', c.V]);
   tiles.push(['Ending', c.PE === '–' ? '—' : '-' + c.PE]);
+  if (d.contract) tiles.push(['Contract', d.contract.res]);
   return h('div', { lang: 'grc', style: { display: 'flex', justifyContent: 'center', gap: '.3rem', flexWrap: 'wrap', margin: '.5rem 0' } },
     ...tiles.map(([label, text], i) => h('div', { style: { minWidth: '3.6rem', textAlign: 'center', padding: '.35rem .45rem', borderRadius: '12px', border: '2px ' + (i < upto ? 'solid' : 'dashed') + ' ' + (i === mark ? 'var(--accent)' : i < upto ? 'var(--good)' : 'var(--line)'), background: i < upto ? 'var(--good-soft)' : 'var(--surface)' } },
       h('small', { style: { display: 'block', font: '700 .6rem var(--ui)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--muted)' } }, label), h('span', { style: { fontFamily: 'var(--greek)', fontSize: '1.3rem' } }, i < upto ? text : ' '))));
@@ -132,25 +162,32 @@ export function renderBuild(view, mode) {
     h('div.card.small', { style: { background: 'var(--accent-soft)', border: 'none' } }, h('b', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative, ' + CELL_NAME[d.cell].replace('person ', '')), h('div', { style: { color: 'var(--ink-2)' } }, 'of ', greek(L.head), ' · ', L.brief)),
     pieces(d, chartPieces(d), upto, mark), ...body))); };
   const chartLine = (d) => h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the master verb chart:'), masterRowTable(d.row));
-  const choose = (d, i, title, options, right, onRight) => {
+  const choose = (d, i, title, options, right, onRight, note = null, prompt = null) => {
     const box = h('div.opts.two'); let locked = false;
-    for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
-    return [h('p', h('b', title)), box];
+    for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); if (note) { box.after(h('div.card.small.stack', { style: { background: 'var(--accent-soft)', border: 'none' } }, note, h('div', h('button.btn.primary.sm', { onclick: onRight }, 'Continue')))); } else setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
+    return [h('p', h('b', title)), prompt ? h('p.muted.small', { style: { margin: 0 } }, prompt) : null, box];
   };
   const show = () => {
-    const d = queue[at], c = chartPieces(d), last = c.V ? 5 : 4, step = (i) => {
-      if (i === 0) frame(d, choose(d, 0, 'Front', frontOptions(d), frontAnswer(d), () => step(1)), 0, 0);
-      else if (i === 1) frame(d, choose(d, 1, 'Stem', stemOptions(d), d.S, () => step(2)), 1, 1);
-      else if (i === 2) frame(d, choose(d, 2, 'Tense formative', formativeOptions(c), c.F, () => step(3)), 2, 2);
-      else if (i === 3 && c.V) frame(d, choose(d, 3, 'Connecting vowel', vowelOptions(c), c.V, () => step(4)), 3, 3);
-      else if (i < 5 && (i === 4 || !c.V)) { const at4 = c.V ? 4 : 3; frame(d, choose(d, at4, 'Personal ending', endingOptions(d, c), c.PE, () => step(5)), at4, at4); }
-      else {
-        const parts = [d.A || null, d.S, c.F || null, c.V || null, c.PE === '–' ? null : c.PE].filter(Boolean);
-        frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
-          h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
-          c.changes ? h('p.muted.small', { style: { margin: 0 } }, 'The pieces run together in the spelling: ', greek(final(c.naive) || '—'), ' is written ', greek(c.written), '.') : null,
-          h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next'), chartLine(d)], last, -1);
-      }
+    const d = queue[at], c = chartPieces(d), k = contractKind(d.n), P = k ? presentStem(d.n) : null, seq = [];
+    seq.push(['Front', frontOptions(d), frontAnswer(d)]);
+    seq.push(['Stem', stemOptions(d), d.S, k && !d.contract ? (d.S === P ? h('span', 'A contract verb’s last stem vowel usually lengthens before σ, θ and κ (ε → η, α → η, ο → ω). Here it stays ', greek(P + '-'), '.')
+      : h('span', 'A contract verb’s last stem vowel lengthens before σ, θ and κ: ', greek(P + '- → ' + d.S + '-'), ' (ε → η, α → η, ο → ω).')) : null]);
+    seq.push(['Tense formative', formativeOptions(c), c.F]);
+    if (c.V) seq.push(['Connecting vowel', vowelOptions(c), c.V]);
+    seq.push(['Personal ending', endingOptions(d, c), c.PE]);
+    if (d.contract) {
+      const { init, res, rest } = d.contract, ex = ENDING_TABLE[ROW[d.row].ends][CELLS.indexOf(d.cell)][1];
+      seq.push(['Contraction', contractOptions(d), res, h('span', 'Rule: ', greek(k + ' + ' + dispInit(init) + ' → ' + res), '. So the ending ', greek('-' + shown(d.E)), ' is written ', greek('-' + final(res + rest)), ' after this stem.'),
+        h('span', 'The stem ends in ', greek(k), '. The uncontracted ending is ', greek('-' + shown(d.E)), ' (as in ', greek(ex.replace(/[()]/g, '')), '). How are the stem vowel ', greek(k), ' and the ending’s ', greek(dispInit(init)), ' written together?')]);
+    }
+    const step = (i) => {
+      if (i < seq.length) { const [title, opts, right, note, prompt] = seq[i]; frame(d, choose(d, i, title, opts, right, () => step(i + 1), note, prompt), i, i); return; }
+      const parts = d.contract ? [d.A || null, d.contract.head, '(' + d.contract.k + ' + ' + dispInit(d.contract.init) + ' → ' + d.contract.res + ')', d.contract.rest ? final(d.contract.rest) : null].filter(Boolean)
+        : [d.A || null, d.S, c.F || null, c.V || null, c.PE === '–' ? null : c.PE].filter(Boolean);
+      frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
+        h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
+        c.changes && !d.contract ? h('p.muted.small', { style: { margin: 0 } }, 'The pieces run together in the spelling: ', greek(final(c.naive) || '—'), ' is written ', greek(c.written), '.') : null,
+        h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next'), chartLine(d)], seq.length, -1);
     };
     step(0);
   };
