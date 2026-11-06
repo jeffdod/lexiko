@@ -89,6 +89,9 @@ const PREPS = { ανα: ['ανα', 'αν'], αντι: ['αντι', 'αντ', 'α
 const PREP_KEYS = Object.keys(PREPS).sort((a, b) => b.length - a.length);
 const skeleton = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
 const letters = (w) => { const out = []; for (const c of w.replace(/­/g, '').normalize('NFD')) { if (/[̀-ͯ]/.test(c) && out.length) out[out.length - 1].text += c; else out.push({ ch: c.toLowerCase().replace('ς', 'σ'), text: c }); } return out; };
+/** True when the lexeme begins with a preposition (a compound verb). */
+const ELIDED = ['επ', 'απ', 'υπ', 'αν', 'εξ', 'συλ', 'συμ', 'συγ', 'αφ', 'καθ', 'μεθ', 'υφ', 'εμ', 'εγ', 'εφ', 'ανθ'];
+export const isCompoundLemma = (head) => { const lem = skeleton(head); return [...PREP_KEYS, ...ELIDED].some((k) => lem.startsWith(k) && lem.length >= k.length + 3); };
 /** A compound verb's form in three pieces [preposition, augment or reduplication, the rest], or null. The lexeme must begin with a preposition; the form must show the augment right after it. */
 export function splitCompound(word, head, row) {
   if (!row || !(row.aug === 'ε' || row.aug === 'RED')) return null;

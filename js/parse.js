@@ -21,6 +21,7 @@ import { currentGoal, goalWords, formLevel, chartAllowsAny, miHeld, noteFamily, 
 import { levelOfTag, NLEVELS, levelName, isLiquidVerb } from './families.js';
 import { store } from './store.js';
 import { renderClues } from './cluehunt.js';
+import { renderBuild } from './buildform.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
 /** Answer codes that have no button of their own, and the button that stands for them. */
@@ -543,6 +544,7 @@ export function renderParse(view, params) {
       if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practice yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
+    if (rest[0] === 'build') return renderBuild(view, rest[1] === 'any' ? 'any' : 'known');
     if (rest[0] === 'clues') return rest[1] === 'form' ? renderClues(view, 'known', { formIdx: +rest[2], an: +rest[3] || 0 }) : renderClues(view, rest[1] === 'any' ? 'any' : 'known');
     if (rest[0] === 'rows') {                                     // from the chart picker: forms of several rows, practice only
       const keys = (rest[1] || '').split(',').filter((k) => ROWS.some((x) => x.key === k)), any = rest[2] === 'any';
@@ -668,7 +670,7 @@ async function landing(view) {
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots'), chartsButton()),
       h('div.card.stack', h('h2', 'Practice by form'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
-        h('div.pracgrid', [['Clue hunt', '#/parse/run/clues/known', 'Find the clues, then name the form'], ['Parse from the chart', '#/learn/charts/pick', 'Pick rows of the master verb chart'], ['Master verb chart', '#/learn/charts/run', 'Drill the chart squares'], ['Participles', '#/learn/charts/participles', 'Tell the kinds apart'], ['Infinitives', '#/learn/charts/infinitives', 'The ten kinds'], ['Subjunctive', '#/learn/charts/subjunctive', 'The eight kinds'], ['Imperative', '#/learn/charts/imperative', 'The eight kinds'], ['Verbs in -μι', '#/learn/charts/mi', 'Roots and reduplication']].map(([t, href, d]) => h('a.tile', { href }, h('h3', t), h('p', d))))),
+        h('div.pracgrid', [['Clue hunt', '#/parse/run/clues/known', 'Find the clues, then name the form'], ['Build the form', '#/parse/run/build/known', 'Put a form together from its pieces'], ['Parse from the chart', '#/learn/charts/pick', 'Pick rows of the master verb chart'], ['Master verb chart', '#/learn/charts/run', 'Drill the chart squares'], ['Participles', '#/learn/charts/participles', 'Tell the kinds apart'], ['Infinitives', '#/learn/charts/infinitives', 'The ten kinds'], ['Subjunctive', '#/learn/charts/subjunctive', 'The eight kinds'], ['Imperative', '#/learn/charts/imperative', 'The eight kinds'], ['Verbs in -μι', '#/learn/charts/mi', 'Roots and reduplication']].map(([t, href, d]) => h('a.tile', { href }, h('h3', t), h('p', d))))),
       miniGoalCard(() => landing(view)),
       levelsCard(() => landing(view)),
       Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
