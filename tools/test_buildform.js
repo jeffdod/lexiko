@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
       contract: sp('ἠγάπησεν', 'aor1-act'), compound: sp('προσεκύνει', 'impf-act'), compound2: sp('ἐκβάλλει', 'pres-act'), mi: sp('ἔδωκεν', 'aor1-act'), vowel: sp('ἦλθον', 'aor2-act'), wrongrow: sp('πιστεύει', 'impf-act') }; });
   ok(d.a === 'ε|πιστευ|σ|αν|3P', 'ἐπίστευσαν: ' + d.a); ok(d.b === 'ε|λαβ||ον|3P' || d.b === 'ε|λαβ||ον|1S', 'ἔλαβον: ' + d.b); ok(d.c === '|πιστευ|σ|ει|3S', 'πιστεύσει: ' + d.c);
   ok(d.d === 'ε|πιστευ|σ|αμεν|1P', 'ἐπιστεύσαμεν: ' + d.d); ok(d.e === '|πιστευ||ει|3S', 'πιστεύει: ' + d.e); ok(d.f === 'ε|πιστευ||ετε|2P', 'ἐπιστεύετε: ' + d.f);
-  ok(d.contract === null && d.compound === null && d.compound2 === null && d.mi === null && d.vowel === null && d.wrongrow === null, 'contract, compound, -μι, vowel-initial and wrong-row forms are left out: ' + JSON.stringify(d));
+  ok(d.compound === null && d.compound2 === null && d.mi === null && d.vowel === null && d.wrongrow === null, 'contract, compound, -μι, vowel-initial and wrong-row forms are left out: ' + JSON.stringify(d));
   // the chart's own pieces: formative κα / σα / θη, connecting vowel only on thematic rows, personal ending
   const cp = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), { D } = await import('/lexiko/js/data.js');
     const at = (w) => D.forms.findIndex((f) => f.w.replace(/­/g, '') === w), cp = (w, row) => { const i = at(w); if (i < 0) return 'missing'; const x = B.decompose(i, row); if (!x) return null; const c = B.chartPieces(x); return [c.F, c.V, c.PE, c.changes].join('|'); };
@@ -26,13 +26,19 @@ const { chromium } = require('playwright');
     return { a: sp('ποιεῖ', 'pres-act'), b: sp('ποιοῦσιν', 'pres-act'), c: sp('ἐποίησεν', 'aor1-act'), d: sp('ἐκάλεσεν', 'aor1-act'), e: sp('ἐπληρώθη', 'aor1-pas'), f: sp('ἐκλήθη', 'aor1-pas'), g: sp('ἀγαπᾷ', 'pres-act'), h: sp('ἐποίει', 'impf-act'), i: sp('πεπλήρωκεν', 'perf1-act'), j: sp('ἠγάπησεν', 'aor1-act') }; });
   ok(cv.a === '|ποιε|ε+ει=ει|ει', 'ποιεῖ contracts: ' + cv.a); ok(cv.b === '|ποιε|ε+ου=ου|ουσι(ν)', 'ποιοῦσιν: ' + cv.b); ok(cv.c === 'ε|ποιη|σ|ε(ν)'.replace('ε(ν)', cv.c.split('|')[3]) && cv.c.startsWith('ε|ποιη|σ|'), 'ἐποίησεν has the lengthened stem: ' + cv.c);
   ok(cv.d && cv.d.startsWith('ε|καλε|σ|'), 'ἐκάλεσεν keeps the short stem: ' + cv.d); ok(cv.e && cv.e.startsWith('ε|πληρω|θ|'), 'ἐπληρώθη: ' + cv.e); ok(cv.f === null, 'ἐκλήθη (irregular stem) is left out: ' + cv.f);
-  ok(cv.g === 'missing' || cv.g === null, 'a vowel-initial contract verb is left out: ' + cv.g); ok(cv.h && cv.h.startsWith('ε|ποιε|ε+ε=ει'), 'ἐποίει: ' + cv.h); ok(cv.i && cv.i.startsWith('πε|πληρω|κ|'), 'πεπλήρωκεν: ' + cv.i); ok(cv.j === null, 'ἠγάπησεν stays out: ' + cv.j);
+  ok(cv.g && cv.g.startsWith('|αγαπα|α+ει=ᾳ'), 'ἀγαπᾷ (vowel-initial, no augment): ' + cv.g); ok(cv.h && cv.h.startsWith('ε|ποιε|ε+ε=ει'), 'ἐποίει: ' + cv.h); ok(cv.i && cv.i.startsWith('πε|πληρω|κ|'), 'πεπλήρωκεν: ' + cv.i); ok(cv.j && cv.j.startsWith('|αγαπη|σ|'), 'ἠγάπησεν: ' + cv.j);
+  // vowel-initial verbs: the first vowel lengthens (the stem is shown without the augment); second aorists and long vowels are left out
+  const av = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), { D } = await import('/lexiko/js/data.js');
+    const at = (w) => D.forms.findIndex((f) => f.w.replace(/­/g, '') === w), sp = (w, row) => { const i = at(w); if (i < 0) return 'missing'; const x = B.decompose(i, row); return x ? (x.aug ? x.aug.from + '>' + x.aug.to : '-') + ' ' + x.S : null; };
+    return { a: sp('ἠγάπησεν', 'aor1-act'), b: sp('ἤκουσεν', 'aor1-act'), c: sp('εἶχον', 'impf-act'), d: sp('ἤρχοντο', 'impf-mp'), e: sp('ἦλθον', 'aor2-act'), f: sp('ἠγάπων', 'impf-act'), g: sp('ᾐτήσατο', 'aor1-mid'), h: sp('ἤλπισεν', 'aor1-act') }; });
+  ok(av.a === 'α>η αγαπη', 'ἠγάπησεν: ' + av.a); ok(av.b === 'α>η ακου', 'ἤκουσεν: ' + av.b); ok(av.c === 'missing' || av.c === 'ε>ει εχ', 'εἶχον: ' + av.c); ok(av.d === 'missing' || av.d === 'ε>η ερχ', 'ἤρχοντο: ' + av.d);
+  ok(av.e === null, 'ἦλθον (second aorist) stays out: ' + av.e); ok(av.f === 'missing' || av.f === 'α>η αγαπα', 'ἠγάπων: ' + av.f); ok(av.g === 'missing' || av.g === 'αι>ῃ αιτη', 'ᾐτήσατο: ' + av.g); ok(av.h === 'missing' || av.h === null, 'ἤλπισεν (dental stem) stays out: ' + av.h);
   // every form that is offered adds up, and every offered row/cell is consistent
-  const all = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js'); let n = 0, bad = 0, con = 0; const rows = new Set();
+  const all = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js'); let n = 0, bad = 0, con = 0, aug = 0; const pairs = new Set(); const rows = new Set();
     const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
-    for (const row of B.BUILD_ROWS) for (const id of P.rowPool(row, { ignoreLevel: true, anyVerb: true })) { const x = B.decompose(id, row); if (!x) continue; n++; rows.add(row); const want = x.contract ? x.A + x.contract.head + sk(x.contract.res) + x.contract.rest : x.A + x.S + x.F + x.used; if (sk(D.forms[id].w) !== want) bad++; if (x.contract) con++; }
-    return { n, bad, rows: rows.size, con }; });
-  ok(all.n > 800 && all.bad === 0 && all.rows >= 14 && all.con > 100, 'all offered forms add up exactly: ' + JSON.stringify(all));
+    for (const row of B.BUILD_ROWS) for (const id of P.rowPool(row, { ignoreLevel: true, anyVerb: true })) { const x = B.decompose(id, row); if (!x) continue; n++; rows.add(row); const lead = x.aug ? sk(x.aug.to) + x.S.slice(x.aug.from.length, x.contract ? -1 : undefined) : x.contract ? x.A + x.contract.head : x.A + x.S; const want = x.contract ? lead + sk(x.contract.res) + x.contract.rest : lead + x.F + x.used; if (x.aug) { aug++; pairs.add(x.aug.from + '>' + x.aug.to); } if (sk(D.forms[id].w) !== want) { bad++; (globalThis.__bad = globalThis.__bad || []).push(D.forms[id].w + ' ' + row); } if (x.contract) con++; }
+    return { n, bad, badlist: (globalThis.__bad || []).slice(0, 5), rows: rows.size, con, aug, pairs: [...pairs].sort().join(' ') }; });
+  ok(all.n > 800 && all.bad === 0 && all.rows >= 14 && all.con > 100 && all.aug > 100 && ['α>η', 'ε>η', 'ο>ω', 'αι>ῃ'].every((x) => all.pairs.includes(x)), 'all offered forms add up exactly: ' + JSON.stringify(all));
   // the model paradigms: the table reproduces the six forms of λύω in each of its rows
   const para = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), PD = await import('/lexiko/js/paradigms.js'); const sk = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const bad = [];
     for (const row of B.BUILD_ROWS) { const pr = PD.paradigm(row); if (!pr || pr.head !== 'λύω') continue; const T = B.BUILD[row];
@@ -51,7 +57,7 @@ const { chromium } = require('playwright');
       await p.waitForFunction(() => document.querySelector('#view .opts'), null, { timeout: 4000 }).catch(() => ok(false, 'a step shows'));
       seen.push(await p.locator('#view p b').first().innerText()); await p.locator('.opt').first().click(); await p.waitForTimeout(1450); const cont = p.getByRole('button', { name: 'Continue' }); if (await cont.count()) { seen.noted = (seen.noted || 0) + 1; await cont.click(); await p.waitForTimeout(200); }
     }
-    ok(seen.length >= 4 && seen.length <= 6 && seen[0] === 'Front' && seen[1] === 'Stem' && seen[2] === 'Tense formative' && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]), 'steps in order: ' + seen.join(','));
+    ok(seen.length >= 4 && seen.length <= 8 && seen[0] === 'Front' && seen[1] === 'Stem' && (seen.includes('Lengthening') || seen[2] === 'Tense formative') && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]) && (seen.includes('Lengthening') ? seen[2] === 'Lengthening' : seen[2] === 'Tense formative'), 'steps in order: ' + seen.join(','));
     ok(/Built:/.test(await p.locator('#view').innerText()), 'the built form is shown, question ' + questions);
     ok(await p.locator('#view table.ctable tbody tr.hi').count() === 1, 'the master chart row is shown at the end, question ' + questions);
     if (questions === 1) await p.screenshot({ path: '/tmp/claude-0/-home-claude/b1495004-32ad-55d3-a59f-a67ee65f4e2d/scratchpad/bf3.png' });

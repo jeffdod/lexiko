@@ -37,8 +37,13 @@ const TAG = /^V-[12]?[PIFARL][AMPEDONQX]?I-([123])([SP])/;
 const cellOf = (m) => { const x = TAG.exec(m || ''); return x ? x[1] + x[2] : null; };
 /** The stem vowel of a contract verb (α, ε or ο), or null. */
 const contractKind = (n) => { const L = D.lexByN.get(n), m = L ? /([αεο])(ω|ομαι)$/.exec(skel(L.head)) : null; return m ? m[1] : null; };
-/** Verbs left out: unknown, -μι, compound, and contract verbs that begin with a vowel (the augment would lengthen it). */
-const contract = (n) => { const L = D.lexByN.get(n); if (!L) return true; const s = skel(L.head); return /μι$/.test(s) || isCompoundLemma(L.head) || (!!contractKind(n) && VOWEL_START.test(s)); };
+/** Verbs left out: unknown, -μι and compound verbs. */
+const contract = (n) => { const L = D.lexByN.get(n); if (!L) return true; return /μι$/.test(skel(L.head)) || isCompoundLemma(L.head); };
+const vowelInitial = (n) => { const L = D.lexByN.get(n); return !!L && VOWEL_START.test(skel(L.head)); };
+/** How the first vowel of a vowel-initial stem lengthens for the augment (the same lengthening is the reduplication of the perfect); longest vowel first. A vowel that is already long shows nothing, so those verbs are left out. */
+const AUG = [['αι', ['ῃ']], ['ει', ['ῃ']], ['οι', ['ῳ']], ['αυ', ['ηυ']], ['ευ', ['ηυ']], ['α', ['η']], ['ε', ['η', 'ει']], ['ο', ['ω']]];
+/** The ways an unaugmented vowel-initial stem can begin once its first vowel lengthens: [{ from, to, pre }] (pre in plain letters). */
+function augmented(S0) { const g = AUG.find(([x]) => S0.startsWith(x)); return g ? g[1].map((to) => ({ from: g[0], to, pre: skel(to) + S0.slice(g[0].length) })) : []; }
 const lengthen = (p) => p.slice(0, -1) + ({ 'α': 'η', 'ε': 'η', 'ο': 'ω' }[p.slice(-1)] || p.slice(-1));
 /** How a contract verb's stem vowel and the first vowel(s) of an uncontracted ending are written together (the endings are those of λύω). */
 const CONTRACTS = { 'α': { ο: 'ω', ω: 'ω', ου: 'ω', ε: 'α', η: 'ᾳ', ει: 'ᾳ' }, 'ε': { ο: 'ου', ω: 'ω', ου: 'ου', ε: 'ει', η: 'ῃ', ει: 'ει' }, 'ο': { ο: 'ου', ω: 'ω', ου: 'ου', ε: 'ου', η: 'οι', ει: 'οι' } };
@@ -54,25 +59,31 @@ export function decompose(id, row) {
   const w = skel(f.w), end = variants(T.E[CELLS.indexOf(cell)]).map((e) => T.F + e).find((suffix) => w.endsWith(suffix) && w.length - suffix.length >= 3);
   if (end == null) return null;
   const E = T.E[CELLS.indexOf(cell)], body = w.slice(0, w.length - end.length), used = variants(E).find((e) => w.endsWith(T.F + e));
-  let A = '', S = body;
-  if (T.A === 'ε') { if (body[0] !== 'ε' || body.length < 3 || VOWEL_START.test(body[1])) return null; A = 'ε'; S = body.slice(1); }
+  let A = '', S = body, aug = null;
+  if (T.A !== '' && vowelInitial(a.s)) {           // the augment (or the perfect's reduplication) is the first vowel lengthening: the stem is shown as it is without it
+    const P0 = presentStem(a.s); if (!P0 || /^(aor2|perf2)/.test(row)) return null;
+    for (const S0 of uniq([P0, contractKind(a.s) ? lengthen(P0) : P0])) for (const c of augmented(S0)) if (body === c.pre) { S = S0; aug = { from: c.from, to: c.to }; }
+    if (!aug) return null;
+  } else if (T.A === 'ε') { if (body[0] !== 'ε' || body.length < 3 || VOWEL_START.test(body[1])) return null; A = 'ε'; S = body.slice(1); }
   else if (T.A === 'RED') { if (body.length < 4 || body[1] !== 'ε' || body[0] !== body[2] || VOWEL_START.test(body[0])) return null; A = body.slice(0, 2); S = body.slice(2); }
   if (S.length < 2) return null;
   // a stem that is only the present stem with sounds dropped or changed (a stop before σ, a σ before θ) would be misleading: those rows must show the verb's own present stem
   // (the second aorist and second perfect are different stems by definition, so they are free)
   const k = contractKind(a.s), P = presentStem(a.s);
   if (/^(aor2|perf2)/.test(row)) { if (k) return null; } else if (!(S === P || (k && S === lengthen(P)))) return null;
-  return { row, cell, A, S, F: T.F, E, used, word: f.w.replace(/­/g, ''), n: a.s, id };
+  return { row, cell, A, S, F: T.F, E, used, word: f.w.replace(/­/g, ''), n: a.s, id, aug };
 }
 
 /** A present or imperfect form of a contract verb: the stem keeps its vowel (ποιε-) and that vowel contracts with the ending: { ..., contract: { k, init, res, rest, head } }. */
 function decomposeContract(id, row, f, a, cell) {
   const T = BUILD[row], k = contractKind(a.s), P = presentStem(a.s), w = skel(f.w), U = T.E[CELLS.indexOf(cell)];
   if (!P || P.length < 3 || P.slice(-1) !== k) return null;
+  const cands = T.A === 'ε' && vowelInitial(a.s) ? augmented(P).filter((c) => P.length > c.from.length).map((c) => ({ A: '', aug: { from: c.from, to: c.to }, head: skel(c.to) + P.slice(c.from.length, -1) }))
+    : [{ A: T.A === 'ε' ? 'ε' : '', aug: null, head: (T.A === 'ε' ? 'ε' : '') + P.slice(0, -1) }];
   for (const u of variants(U)) {
     const init = INITS.find((x) => u.startsWith(x)), res = init && CONTRACTS[k][init]; if (!res) continue;
-    const A = T.A === 'ε' ? 'ε' : '', rest = u.slice(init.length);
-    if (w === A + P.slice(0, -1) + skel(res) + rest) return { row, cell, A, S: P, F: '', E: U, used: u, word: f.w.replace(/­/g, ''), n: a.s, id, contract: { k, init, res, rest, head: P.slice(0, -1) } };
+    const rest = u.slice(init.length);
+    for (const c of cands) if (w === c.head + skel(res) + rest) return { row, cell, A: c.A, S: P, F: '', E: U, used: u, word: f.w.replace(/­/g, ''), n: a.s, id, aug: c.aug, contract: { k, init, res, rest, head: P.slice(0, -1) } };
   }
   return null;
 }
@@ -110,10 +121,12 @@ export function buildQueue(any = false, total = 8) {
 /* ---------- tile options for each slot ---------- */
 const uniq = (xs) => [...new Set(xs)];
 function frontOptions(d) {
-  const red = d.A.length === 2 ? d.A : d.S[0] + 'ε';
-  return [['none', 'no front'], ['ε', 'ε-'], ['red', red + '- (reduplication)']];
+  const red = d.A.length === 2 ? d.A + '- (reduplication)' : VOWEL_START.test(d.S) ? 'reduplication' : d.S[0] + 'ε- (reduplication)';
+  return [['none', 'no front'], ['ε', 'ε-'], ['red', red], ['lengthen', 'first vowel lengthens']];
 }
-const frontAnswer = (d) => (d.A === '' ? 'none' : d.A === 'ε' ? 'ε' : 'red');
+const frontAnswer = (d) => (d.aug ? 'lengthen' : d.A === '' ? 'none' : d.A === 'ε' ? 'ε' : 'red');
+const LENGTHENED = uniq(AUG.flatMap(([, t]) => t));
+const lengthenOptions = (d) => shuffle([d.aug.to, ...shuffle(LENGTHENED.filter((x) => x !== d.aug.to)).slice(0, 3)]).map((x) => [x, x]);
 function stemOptions(d) {
   const others = uniq(formsOfVerb(d.n).flatMap((i) => BUILD_ROWS.map((r) => { const x = D.forms[i].an[0]; return x && cellOf(x.m) ? decompose(i, r) : null; }).filter(Boolean)).map((x) => x.S)).filter((s) => s !== d.S);
   const k = contractKind(d.n), P = k ? presentStem(d.n) : null;
@@ -141,7 +154,9 @@ function contractOptions(d) {
 const isolated = (w) => { const s = w.normalize('NFD'), m = [...s.matchAll(/[\u0300\u0301\u0342]/g)]; if (m.length < 2) return w; const k = m[m.length - 1].index; return (s.slice(0, k) + s.slice(k + 1)).normalize('NFC'); };
 const greek = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
 const pieces = (d, c, upto, mark) => {
-  const tiles = [['Front', d.A === '' ? '—' : d.A + '-'], ['Stem', d.S + '-'], ['Formative', c.F || '—']];
+  const tiles = [['Front', d.aug ? d.aug.from + ' →' : d.A === '' ? '—' : d.A + '-'], ['Stem', d.S + '-']];
+  if (d.aug) tiles.push(['Lengthen', d.aug.to]);
+  tiles.push(['Formative', c.F || '—']);
   if (c.V) tiles.push(['Vowel', c.V]);
   tiles.push(['Ending', c.PE === '–' ? '—' : '-' + c.PE]);
   if (d.contract) tiles.push(['Contract', d.contract.res]);
@@ -172,6 +187,8 @@ export function renderBuild(view, mode) {
     seq.push(['Front', frontOptions(d), frontAnswer(d)]);
     seq.push(['Stem', stemOptions(d), d.S, k && !d.contract ? (d.S === P ? h('span', 'A contract verb’s last stem vowel usually lengthens before σ, θ and κ (ε → η, α → η, ο → ω). Here it stays ', greek(P + '-'), '.')
       : h('span', 'A contract verb’s last stem vowel lengthens before σ, θ and κ: ', greek(P + '- → ' + d.S + '-'), ' (ε → η, α → η, ο → ω).')) : null]);
+    if (d.aug) seq.push(['Lengthening', lengthenOptions(d), d.aug.to, h('span', 'Rule: ', greek(d.aug.from + ' → ' + d.aug.to), '. The first vowel lengthens like this: ', greek('α → η, ε → η, ο → ω, αι → ῃ, οι → ῳ, αυ → ηυ'), '. A few verbs, such as ', greek('ἔχω'), ', have ', greek('ε → ει'), '.'),
+      h('span', 'The stem begins with ', greek(d.aug.from), '. What does the first vowel become?')]);
     seq.push(['Tense formative', formativeOptions(c), c.F]);
     if (c.V) seq.push(['Connecting vowel', vowelOptions(c), c.V]);
     seq.push(['Personal ending', endingOptions(d, c), c.PE]);
@@ -186,6 +203,7 @@ export function renderBuild(view, mode) {
         : [d.A || null, d.S, c.F || null, c.V || null, c.PE === '–' ? null : c.PE].filter(Boolean);
       frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
         h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
+        d.aug ? h('p.muted.small', { style: { margin: 0 } }, 'The first vowel lengthens (', greek(d.aug.from + ' → ' + d.aug.to), '), so the word begins with ', greek(d.aug.to), '.', ROW[d.row].aug === 'RED' ? ' In the perfect this lengthening also does the work of the reduplication.' : '') : null,
         c.changes && !d.contract ? h('p.muted.small', { style: { margin: 0 } }, 'The pieces run together in the spelling: ', greek(final(c.naive) || '—'), ' is written ', greek(c.written), '.') : null,
         h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next'), chartLine(d)], seq.length, -1);
     };
