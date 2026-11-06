@@ -113,12 +113,41 @@ export function chartPieces(d) {
 const MOODS = { sub: { name: 'subjunctive', B: SUBB, split: splitSub }, imp: { name: 'imperative', B: IMPB, split: splitImp }, inf: { name: 'infinitive', B: INFB, split: splitInf } };
 const plainKeep = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[\u0300-\u0344\u0346-\u036f]/g, '').normalize('NFC').toLowerCase();
 const WHO = (code) => { const m = /^V-[12]?[PIFARL][AMPEDONQX]?[ISMNP]-([123])([SP])/.exec(code || ''); return m ? m[1] + m[2] : null; };
+/** How a contract verb's stem vowel and the first vowel of the uncontracted ending are written together, per mood. The subjunctive's long vowel is ω, η or ῃ (with iota subscript);
+    the infinitive's -ειν is a "spurious" ει (ἀγαπᾶν), unlike the genuine ει of the indicative (ἀγαπᾷ); the imperative's ε and the middle 2nd singular's ου. */
+const MOOD_CONTRACTS = {
+  sub: { 'α': { 'ω': 'ω', 'η': 'α', 'ῃ': 'ᾳ' }, 'ε': { 'ω': 'ω', 'η': 'η', 'ῃ': 'ῃ' }, 'ο': { 'ω': 'ω', 'η': 'ω', 'ῃ': 'οι' } },
+  imp: { 'α': { 'ε': 'α', 'ου': 'ω' }, 'ε': { 'ε': 'ει', 'ου': 'ου' }, 'ο': { 'ε': 'ου', 'ου': 'ου' } },
+  inf: { 'α': { 'ει': 'α', 'ε': 'α' }, 'ε': { 'ει': 'ει', 'ε': 'ει' }, 'ο': { 'ει': 'ου', 'ε': 'ου' } },
+};
+/** The uncontracted form of a present subjunctive, imperative or infinitive (the λύω paradigm's): the vowel the stem vowel meets, the rest of the ending, and an example. */
+function uncontracted(mood, key, who) {
+  const r = MOODS[mood].B.get(key); if (!r) return null;
+  if (mood === 'inf') return r.ending === 'ειν' ? { init: 'ει', rest: 'ν', V: '', E: 'ειν', written: '', ex: r.model } : r.ending === 'εσθαι' ? { init: 'ε', rest: 'σθαι', V: '', E: 'εσθαι', written: '', ex: r.model } : null;
+  const f = r.forms[mood === 'sub' ? CELLS.indexOf(who) : ['2S', '3S', '2P', '3P'].indexOf(who)]; if (!f) return null;
+  const sp = MOODS[mood].split(f.replace('(ν)', ''), key); if (!sp) return null;
+  const V = skel(sp.vowel || ''), E = skel(sp.ending || ''), written = plainKeep(sp.vowel || ''), ex = f.replace('(ν)', '');
+  if (mood === 'sub') return { init: written, rest: E, V, E, written, ex };
+  return V ? { init: V, rest: E, V, E, written, ex } : /^ου/.test(E) ? { init: 'ου', rest: E.slice(2), V: '', E, written: '', ex } : null;
+}
+/** A present subjunctive, imperative or infinitive of a contract verb: the stem keeps its vowel (ποιε-) and contracts with the ending. */
+function decomposeMoodContract(mood, x) {
+  const k = contractKind(x.n), P = presentStem(x.n); if (!P || P.length < 3 || P.slice(-1) !== k) return null;
+  const who = mood === 'inf' ? '' : WHO(x.code); if (mood !== 'inf' && !who) return null;
+  const u = uncontracted(mood, x.key, who), res = u && MOOD_CONTRACTS[mood][k][u.init]; if (!res) return null;
+  const w = skel(x.w), head = P.slice(0, -1) + skel(res), nu = (e) => (e === 'σι' ? 'σι(ν)' : e);
+  if (!(u.rest === 'σι' ? ['σι', 'σιν'] : [u.rest]).some((r) => w === head + r)) return null;
+  return { mood, key: x.key, S: P, F: '', V: u.V, E: nu(u.E), vowelWritten: u.written, word: x.w, n: x.n, id: x.id, who, row: null, kind: MOODS[mood].B.get(x.key),
+    contract: { k, init: u.init, initShown: u.init, res, rest: nu(u.rest), head: P.slice(0, -1), ex: u.ex } };
+}
 /** A subjunctive, imperative or infinitive taken apart: { mood, key, S, F, V, E, written, word, n, id, who }, or null. */
 export function decomposeMood(mood, x) {
-  const M = MOODS[mood], r = M.B.get(x.key); if (!r || /^perf/.test(x.key) || contract(x.n) || contractKind(x.n)) return null;
+  const M = MOODS[mood], r = M.B.get(x.key); if (!r || /^perf/.test(x.key) || contract(x.n)) return null;
+  const k = contractKind(x.n);
+  if (k) { if (/^pres/.test(x.key)) return decomposeMoodContract(mood, x); if (/^aor2/.test(x.key)) return null; }
   const sp = M.split(x.w, x.key); if (!sp || sp.merged || sp.liquid) return null;
   const S = sp.stemSkel, P = presentStem(x.n);
-  if (!S || S.length < 2 || (!/^aor2/.test(x.key) && S !== P)) return null;
+  if (!S || S.length < 2 || (!/^aor2/.test(x.key) && !(S === P || (k && S === lengthen(P))))) return null;
   const who = mood === 'inf' ? '' : WHO(x.code); if (mood !== 'inf' && !who) return null;
   const E = skel(sp.ending || '').replace(/^σι$/, 'σι(ν)').replace(/^σιν$/, 'σι(ν)');
   return { mood, key: x.key, S, F: skel(sp.formative || ''), V: skel(sp.vowel || ''), E, vowelWritten: plainKeep(sp.vowel || ''), word: x.w, n: x.n, id: x.id, who, row: null, kind: r };
@@ -133,13 +162,17 @@ function moodEndingOptions(d) {
   const same = own.filter((e) => e !== d.E), other = cross.filter((e) => e !== d.E && !same.includes(e));
   return shuffle(uniq([d.E, ...shuffle(same).slice(0, 2), ...shuffle(other).slice(0, 1), ...shuffle(same).slice(2), ...shuffle(other).slice(1)]).slice(0, 4)).map((e) => [e, e === '' ? 'none' : '-' + shown(e)]);
 }
-function moodStemOptions(d) { return shuffle(uniq([d.S, d.S.slice(0, -1), d.S + 'σ', d.S + 'θ', d.S + 'κ'].filter((s) => s.length >= 2)).slice(0, 4)).map((s) => [s, s + '-']); }
+function moodStemOptions(d) {
+  const P = contractKind(d.n) ? presentStem(d.n) : null, pool = P ? [d.S, P, lengthen(P), P.slice(0, -1), d.S + 'σ'] : [d.S, d.S.slice(0, -1), d.S + 'σ', d.S + 'θ', d.S + 'κ'];
+  return shuffle(uniq(pool.filter((s) => s.length >= 2)).slice(0, 4)).map((s) => [s, s + '-']);
+}
 const moodFormativeOptions = (d) => { const pool = d.mood === 'imp' ? ['σα', 'θη', 'η', ''] : ['σ', 'θ', 'κ', '']; return shuffle(uniq([d.F, ...pool].slice(0, 4))).map((f) => [f, f || 'none']); };
 const moodVowelOptions = (d) => shuffle(uniq([d.V, ...(d.mood === 'sub' ? ['ω', 'η', 'ο', 'ε'] : ['ε', 'ο', 'α', 'η'])]).slice(0, 4)).map((v) => [v, v]);
 /** The tiles and steps of a mood form, in order. */
 function moodTiles(d) {
   const t = [['Stem', d.S + '-']];
   if (d.mood !== 'inf') { t.push(['Formative', d.F || '—']); if (d.V) t.push(['Vowel', d.V]); t.push(['Ending', d.E ? '-' + final(d.E) : '—']); } else t.push(['Ending', '-' + shown(d.E)]);
+  if (d.contract) t.push(['Contract', d.contract.res]);
   return t;
 }
 /** The shape of the first screen text, e.g. "1st aorist active subjunctive, 3rd person singular". */
@@ -194,7 +227,7 @@ function endingOptions(d, c) {
 
 const dispInit = (x) => INIT_SHOWN[x] || x;
 function contractOptions(d) {
-  const { k, init, res } = d.contract, others = uniq([...Object.entries(CONTRACTS[k]).filter(([x]) => x !== init).map(([, r]) => r), ...Object.values(CONTRACTS).map((t) => t[init])].filter((r) => r !== res && skel(r) !== skel(res)));
+  const { k, init, res } = d.contract, T = d.mood ? MOOD_CONTRACTS[d.mood] : CONTRACTS, others = uniq([...Object.entries(T[k]).filter(([x]) => x !== init).map(([, r]) => r), ...Object.values(T).map((t) => t[init]), ...(d.mood ? ['ω', 'ει', 'ου', 'α'] : [])].filter((r) => r && r !== res && skel(r) !== skel(res)));
   return shuffle([res, ...shuffle(others).slice(0, 3)]).map((r) => [r, r]);
 }
 
@@ -214,6 +247,17 @@ const pieces = (d, c, upto, mark) => {
   return h('div', { lang: 'grc', style: { display: 'flex', justifyContent: 'center', gap: '.3rem', flexWrap: 'wrap', margin: '.5rem 0' } },
     ...tiles.map(([label, text], i) => h('div', { style: { minWidth: '3.6rem', textAlign: 'center', padding: '.35rem .45rem', borderRadius: '12px', border: '2px ' + (i < upto ? 'solid' : 'dashed') + ' ' + (i === mark ? 'var(--accent)' : i < upto ? 'var(--good)' : 'var(--line)'), background: i < upto ? 'var(--good-soft)' : 'var(--surface)' } },
       h('small', { style: { display: 'block', font: '700 .6rem var(--ui)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--muted)' } }, label), h('span', { style: { fontFamily: 'var(--greek)', fontSize: '1.3rem' } }, i < upto ? text : ' '))));
+};
+
+/** After the Stem answer for a contract verb outside the present and imperfect: the stem vowel lengthens (or stays). */
+const lengthNote = (d) => { const P = presentStem(d.n);
+  return d.S === P ? h('span', 'A contract verb’s last stem vowel usually lengthens before σ, θ and κ (ε → η, α → η, ο → ω). Here it stays ', greek(P + '-'), '.')
+    : h('span', 'A contract verb’s last stem vowel lengthens before σ, θ and κ: ', greek(P + '- → ' + d.S + '-'), ' (ε → η, α → η, ο → ω).'); };
+/** The Contraction step: options, the answer, the rule shown afterwards and the question; `ex` is the λύω form the uncontracted ending is taken from. */
+const contractEntry = (d, ex) => {
+  const { k, init, res, rest } = d.contract, si = d.contract.initShown || dispInit(init), U = (d.vowelWritten || d.V || '') + d.E;
+  return ['Contraction', contractOptions(d), res, h('span', 'Rule: ', greek(k + ' + ' + si + ' → ' + res), '. So the ending ', greek('-' + shown(U)), ' is written ', greek('-' + final(res + rest)), ' after this stem.'),
+    h('span', 'The stem ends in ', greek(k), '. The uncontracted ending is ', greek('-' + shown(U)), ' (as in ', greek(ex.replace(/[()]/g, '')), '). How are the stem vowel ', greek(k), ' and the ending’s ', greek(si), ' written together?')];
 };
 
 export function renderBuild(view, mode) {
@@ -236,20 +280,15 @@ export function renderBuild(view, mode) {
   const show = () => {
     const d = queue[at];
     if (d.mood) return showMood(d);
-    const c = chartPieces(d), k = contractKind(d.n), P = k ? presentStem(d.n) : null, seq = [];
+    const c = chartPieces(d), k = contractKind(d.n), seq = [];
     seq.push(['Front', frontOptions(d), frontAnswer(d)]);
-    seq.push(['Stem', stemOptions(d), d.S, k && !d.contract ? (d.S === P ? h('span', 'A contract verb’s last stem vowel usually lengthens before σ, θ and κ (ε → η, α → η, ο → ω). Here it stays ', greek(P + '-'), '.')
-      : h('span', 'A contract verb’s last stem vowel lengthens before σ, θ and κ: ', greek(P + '- → ' + d.S + '-'), ' (ε → η, α → η, ο → ω).')) : null]);
+    seq.push(['Stem', stemOptions(d), d.S, k && !d.contract ? lengthNote(d) : null]);
     if (d.aug) seq.push(['Lengthening', lengthenOptions(d), d.aug.to, h('span', 'Rule: ', greek(d.aug.from + ' → ' + d.aug.to), '. The first vowel lengthens like this: ', greek('α → η, ε → η, ο → ω, αι → ῃ, οι → ῳ, αυ → ηυ'), '. A few verbs, such as ', greek('ἔχω'), ', have ', greek('ε → ει'), '.'),
       h('span', 'The stem begins with ', greek(d.aug.from), '. What does the first vowel become?')]);
     seq.push(['Tense formative', formativeOptions(c), c.F]);
     if (c.V) seq.push(['Connecting vowel', vowelOptions(c), c.V]);
     seq.push(['Personal ending', endingOptions(d, c), c.PE]);
-    if (d.contract) {
-      const { init, res, rest } = d.contract, ex = ENDING_TABLE[ROW[d.row].ends][CELLS.indexOf(d.cell)][1];
-      seq.push(['Contraction', contractOptions(d), res, h('span', 'Rule: ', greek(k + ' + ' + dispInit(init) + ' → ' + res), '. So the ending ', greek('-' + shown(d.E)), ' is written ', greek('-' + final(res + rest)), ' after this stem.'),
-        h('span', 'The stem ends in ', greek(k), '. The uncontracted ending is ', greek('-' + shown(d.E)), ' (as in ', greek(ex.replace(/[()]/g, '')), '). How are the stem vowel ', greek(k), ' and the ending’s ', greek(dispInit(init)), ' written together?')]);
-    }
+    if (d.contract) seq.push(contractEntry(d, ENDING_TABLE[ROW[d.row].ends][CELLS.indexOf(d.cell)][1]));
     const step = (i) => {
       if (i < seq.length) { const [title, opts, right, note, prompt] = seq[i]; frame(d, choose(d, i, title, opts, right, () => step(i + 1), note, prompt), i, i); return; }
       const parts = d.contract ? [d.A || null, d.contract.head, '(' + d.contract.k + ' + ' + dispInit(d.contract.init) + ' → ' + d.contract.res + ')', d.contract.rest ? final(d.contract.rest) : null].filter(Boolean)
@@ -264,12 +303,13 @@ export function renderBuild(view, mode) {
   };
   // a subjunctive, imperative or infinitive: stem, formative, connecting vowel, ending (an infinitive: stem and ending)
   const showMood = (d) => {
-    const seq = [['Stem', moodStemOptions(d), d.S]];
+    const seq = [['Stem', moodStemOptions(d), d.S, contractKind(d.n) && !d.contract ? lengthNote(d) : null]];
     if (d.mood !== 'inf') { seq.push(['Tense formative', moodFormativeOptions(d), d.F]); if (d.V) seq.push(['Connecting vowel', moodVowelOptions(d), d.V]); seq.push(['Personal ending', moodEndingOptions(d), d.E]); }
     else seq.push(['Ending', moodEndingOptions(d), d.E]);
+    if (d.contract) seq.push(contractEntry(d, d.contract.ex));
     const step = (i) => {
-      if (i < seq.length) { const [title, opts, right] = seq[i]; frame(d, choose(d, i, title, opts, right, () => step(i + 1)), i, i); return; }
-      const parts = [d.S, d.F || null, d.V || null, d.E ? final(d.E) : null].filter(Boolean), subscript = /[\u0345]/.test(d.vowelWritten.normalize('NFD'));
+      if (i < seq.length) { const [title, opts, right, note, prompt] = seq[i]; frame(d, choose(d, i, title, opts, right, () => step(i + 1), note, prompt), i, i); return; }
+      const parts = d.contract ? [d.contract.head, '(' + d.contract.k + ' + ' + d.contract.initShown + ' → ' + d.contract.res + ')', d.contract.rest ? final(d.contract.rest) : null].filter(Boolean) : [d.S, d.F || null, d.V || null, d.E ? final(d.E) : null].filter(Boolean), subscript = !d.contract && /[\u0345]/.test(d.vowelWritten.normalize('NFD'));
       frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
         h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
         subscript ? h('p.muted.small', { style: { margin: 0 } }, 'The vowel ', greek(d.V), ' is written ', greek(d.vowelWritten), ', with an iota subscript, in this form.') : null,
