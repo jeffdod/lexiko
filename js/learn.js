@@ -266,8 +266,8 @@ export function renderLearn(view, params) {
     h('div.stack',
       startButton(next),
       h('div.topics', ['words', 'parse'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)), tileNext(up, k) ? h('p.small.tilenext', icon('clock', 13), ' ' + tileNext(up, k)) : null))),
-      h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Verbs ›'), h('p', verbsInProgress() ? verbsInProgress() + (verbsInProgress() === 1 ? ' verb' : ' verbs') + ' in progress' : 'Verbs you are learning')),
-      h('a.tile', { href: '#/learn/charts' }, h('h3', 'Charts ›'), h('p', (() => { const c = chartCounts(); return c.due ? c.due + ' squares due' : c.started ? 'Verb chart: ' + c.known + ' of ' + c.total + ' squares known' : 'Learn the master verb chart'; })())),
+      h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Your verbs ›'), h('p', verbsInProgress() ? verbsInProgress() + (verbsInProgress() === 1 ? ' verb' : ' verbs') + ' in progress' : 'Verbs you are learning')),
+      h('a.tile', { href: '#/learn/charts' }, h('h3', 'Verb charts ›'), h('p', (() => { const c = chartCounts(); return c.due ? c.due + ' squares due' : c.started ? 'Verb chart: ' + c.known + ' of ' + c.total + ' squares known' : 'Learn the master verb chart'; })())),
       miniGoalCard(() => renderLearn(view, params)),
       comingUp(up)));
 }
