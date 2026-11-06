@@ -22,14 +22,14 @@ const { chromium } = require('playwright');
   ok(w.weakTense.tense / (w.weakTense.tense + w.weakTense.voice) > w.none.tense / (w.none.tense + w.none.voice) + 0.1, 'weak tense: more tense pairs: ' + JSON.stringify(w));
   ok(w.weakVoice.voice / (w.weakVoice.tense + w.weakVoice.voice) > w.none.voice / (w.none.tense + w.none.voice) + 0.1, 'weak voice: more voice pairs: ' + JSON.stringify(w));
   ok(w.weakTense.reasons > 0 && w.none.reasons === 0 && /30%/.test(w.pw.reason || ''), 'a reason is given only when you are clearly weak: ' + JSON.stringify(w.pw));
-    // every row can turn up: over many sessions the later rows (perfect, aorist passive) appear too
+  // every row can turn up: over many sessions the later rows (perfect, aorist passive) appear too
   const rows = await p.evaluate(async () => { const C = await import('/lexiko/js/cluehunt.js'); const s = new Set(); for (let i = 0; i < 60; i++) for (const x of C.clueQueue(true, 10)) if (x.type === 'hunt') s.add(x.key); return [...s]; });
   ok(rows.includes('perf1-act') && rows.includes('perf-mp') && rows.includes('aor1-pas') && rows.length >= 15, 'all rows come up over time: ' + rows.length + ' rows');
   // missed forms come up more often: give one form of a row a history of lapses and it should be asked far more often than its row-mates
   const m = await p.evaluate(async () => { const C = await import('/lexiko/js/cluehunt.js'), K = await import('/lexiko/js/know.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js');
     const pool = P.rowPool('aor1-act', { gated: true, anyVerb: true }).sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 40), target = pool[pool.length - 1];
     const count = () => { let n = 0, missed = 0; for (let i = 0; i < 150; i++) for (const x of C.clueQueue(true, 10).filter((y) => y.type === 'hunt')) if (x.id === target) { n++; if (x.missed) missed++; } return { n, missed }; };
-  const before = count(); K.K.cards.set(K.parseId(D.forms[target]), { lapses: 4, difficulty: 8, state: 'review' }); const after = count(); K.K.cards.delete(K.parseId(D.forms[target])); return { before, after, pool: pool.length }; });
+    const before = count(); K.K.cards.set(K.parseId(D.forms[target]), { lapses: 4, difficulty: 8, state: 'review' }); const after = count(); K.K.cards.delete(K.parseId(D.forms[target])); return { before, after, pool: pool.length }; });
   ok(m.after.n > m.before.n * 2 && m.after.missed === m.after.n && m.before.missed === 0, 'a missed form comes up more often and says so: ' + JSON.stringify(m));
   const before = await p.evaluate(async () => (await import('/lexiko/js/know.js')).K.cards.size);
   await p.evaluate(() => { location.hash = '#/parse/run/clues/any'; }); await p.waitForTimeout(900);
