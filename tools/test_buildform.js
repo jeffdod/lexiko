@@ -36,11 +36,11 @@ const { chromium } = require('playwright');
   // the other moods: subjunctive, imperative, infinitive (no front; plain splits only), gated like the indicative
   const mo = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js');
     const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const out = {};
-    for (const m of ['sub', 'imp', 'inf']) { let ok = 0, bad = 0; const keys = new Set();
-      for (const x of P.moodPool(m, { anyVerb: true })) { const d = B.decomposeMood(m, x); if (!d) continue; ok++; keys.add(x.key); const w = sk(d.word), a = d.S + d.F + d.V + d.E.replace('(ν)', ''), b2 = d.S + d.F + d.V + d.E.replace('(ν)', 'ν'); if (sk(a) !== w && sk(b2) !== w) bad++; }
-      out[m] = { ok, bad, kinds: keys.size }; }
+    for (const m of ['sub', 'imp', 'inf']) { let ok = 0, bad = 0, con = 0; const keys = new Set();
+      for (const x of P.moodPool(m, { anyVerb: true })) { const d = B.decomposeMood(m, x); if (!d) continue; ok++; keys.add(x.key); const w = sk(d.word); let a = d.S + d.F + d.V + d.E.replace('(ν)', ''), b2 = d.S + d.F + d.V + d.E.replace('(ν)', 'ν'); if (d.contract) { a = d.contract.head + sk(d.contract.res) + d.contract.rest.replace('(ν)', ''); b2 = d.contract.head + sk(d.contract.res) + d.contract.rest.replace('(ν)', 'ν'); con++; } if (sk(a) !== w && sk(b2) !== w) bad++; }
+      out[m] = { ok, bad, con, kinds: keys.size }; }
     return out; });
-  ok(mo.sub.ok > 100 && mo.imp.ok > 80 && mo.inf.ok > 80 && mo.sub.bad + mo.imp.bad + mo.inf.bad === 0 && mo.sub.kinds >= 6 && mo.inf.kinds >= 6, 'moods add up: ' + JSON.stringify(mo));
+  ok(mo.sub.ok > 100 && mo.imp.ok > 80 && mo.inf.ok > 80 && mo.sub.bad + mo.imp.bad + mo.inf.bad === 0 && mo.sub.kinds >= 6 && mo.inf.kinds >= 6 && mo.sub.con > 10 && mo.imp.con > 10 && mo.inf.con > 10, 'moods add up: ' + JSON.stringify(mo));
   const gated = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), P = await import('/lexiko/js/parse.js'); const was = K.K.settings.formLevel; K.K.settings.formLevel = 1; const n = P.moodPool('sub', { anyVerb: true }).length + P.moodPool('imp', { anyVerb: true }).length + P.moodPool('inf', { anyVerb: true }).length; K.K.settings.formLevel = was; return n; });
   ok(gated === 0, 'moods wait for their level: ' + gated);
   // every form that is offered adds up, and every offered row/cell is consistent
@@ -68,7 +68,7 @@ const { chromium } = require('playwright');
       seen.push(await p.locator('#view p b').first().innerText()); await p.locator('.opt').first().click(); await p.waitForTimeout(1450); const cont = p.getByRole('button', { name: 'Continue' }); if (await cont.count()) { seen.noted = (seen.noted || 0) + 1; await cont.click(); await p.waitForTimeout(200); }
     }
     const indic = seen[0] === 'Front', mood = seen[0] === 'Stem';
-    ok(seen.length >= 2 && seen.length <= 8 && (indic ? seen[1] === 'Stem' && (seen.includes('Lengthening') ? seen[2] === 'Lengthening' : seen[2] === 'Tense formative') && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]) : mood && (seen[1] === 'Ending' ? seen.length === 2 : seen[1] === 'Tense formative' && seen[seen.length - 1] === 'Personal ending')), 'steps in order: ' + seen.join(','));
+    ok(seen.length >= 2 && seen.length <= 8 && (indic ? seen[1] === 'Stem' && (seen.includes('Lengthening') ? seen[2] === 'Lengthening' : seen[2] === 'Tense formative') && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]) : mood && (seen[1] === 'Ending' ? (seen.length === 2 || (seen.length === 3 && seen[2] === 'Contraction')) : seen[1] === 'Tense formative' && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]))), 'steps in order: ' + seen.join(','));
     ok(/Built:/.test(await p.locator('#view').innerText()), 'the built form is shown, question ' + questions);
     ok(await p.locator('#view table.ctable tbody tr.hi').count() === 1 || /From the paradigm/.test(await p.locator('#view').innerText()), 'the chart row or paradigm is shown at the end, question ' + questions);
     if (questions === 1) await p.screenshot({ path: '/tmp/claude-0/-home-claude/b1495004-32ad-55d3-a59f-a67ee65f4e2d/scratchpad/bf3.png' });
