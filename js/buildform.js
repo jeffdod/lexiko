@@ -134,7 +134,7 @@ export function renderBuild(view, mode) {
   const chartLine = (d) => h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the master verb chart:'), masterRowTable(d.row));
   const choose = (d, i, title, options, right, onRight) => {
     const box = h('div.opts.two'); let locked = false;
-    for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!box.parentNode.querySelector('.cscroll')) box.after(chartLine(d)); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
+    for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
     return [h('p', h('b', title)), box];
   };
   const show = () => {
