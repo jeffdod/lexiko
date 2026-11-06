@@ -5,7 +5,10 @@
 // built too: in the present and imperfect the stem vowel contracts with the ending (a Contraction step); elsewhere the stem vowel lengthens (ποιε- → ποιη-).
 import { D, notParsed } from './data.js';
 import { ROWS, say } from './chartdrill.js';
-import { rowPool } from './parse.js';
+import { rowPool, moodPool } from './parse.js';
+import { SUBB, splitSub } from './subdata.js';
+import { IMPB, splitImp } from './impdata.js';
+import { INFB, INF, splitInf } from './infdata.js';
 import { h, clear, shuffle, backHead, backLinks } from './util.js';
 import { rowOfTag } from './families.js';
 import { isCompoundLemma } from './cluehunt.js';
@@ -104,16 +107,62 @@ export function chartPieces(d) {
   return { F: r.form, V, PE, naive, written: final(written), changes: norm(naive) !== norm(written) };
 }
 
+/* ---------- the other moods: subjunctive, imperative, infinitive ----------
+   They have no augment, so there is no Front step. The pieces are the ones each kind's chart uses: stem, formative (σ, θ, σα, θη, η), connecting vowel (the long ω/η of the subjunctive, the ε of the imperative) and ending.
+   A form is only offered when the split is plain (no contract, liquid, ψ/ξ-merged or perfect forms) and the stem is the verb's own present stem (second aorists are free). */
+const MOODS = { sub: { name: 'subjunctive', B: SUBB, split: splitSub }, imp: { name: 'imperative', B: IMPB, split: splitImp }, inf: { name: 'infinitive', B: INFB, split: splitInf } };
+const plainKeep = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[\u0300-\u0344\u0346-\u036f]/g, '').normalize('NFC').toLowerCase();
+const WHO = (code) => { const m = /^V-[12]?[PIFARL][AMPEDONQX]?[ISMNP]-([123])([SP])/.exec(code || ''); return m ? m[1] + m[2] : null; };
+/** A subjunctive, imperative or infinitive taken apart: { mood, key, S, F, V, E, written, word, n, id, who }, or null. */
+export function decomposeMood(mood, x) {
+  const M = MOODS[mood], r = M.B.get(x.key); if (!r || /^perf/.test(x.key) || contract(x.n) || contractKind(x.n)) return null;
+  const sp = M.split(x.w, x.key); if (!sp || sp.merged || sp.liquid) return null;
+  const S = sp.stemSkel, P = presentStem(x.n);
+  if (!S || S.length < 2 || (!/^aor2/.test(x.key) && S !== P)) return null;
+  const who = mood === 'inf' ? '' : WHO(x.code); if (mood !== 'inf' && !who) return null;
+  const E = skel(sp.ending || '').replace(/^σι$/, 'σι(ν)').replace(/^σιν$/, 'σι(ν)');
+  return { mood, key: x.key, S, F: skel(sp.formative || ''), V: skel(sp.vowel || ''), E, vowelWritten: plainKeep(sp.vowel || ''), word: x.w, n: x.n, id: x.id, who, row: null, kind: r };
+}
+const MOOD_KEYS = { sub: [...SUBB.keys()], imp: [...IMPB.keys()], inf: INF.map((r) => r.key).filter((k) => !/^perf/.test(k)) };
+const endingPool = (d) => { const { mood, key } = d, split = MOODS[mood].split, B = MOODS[mood].B;
+  if (mood === 'inf') return uniq(INF.filter((r) => !/^perf/.test(r.key)).map((r) => r.ending));
+  const of = (k) => B.get(k).forms.map((f) => { const sp = split(f.replace('(ν)', ''), k); return sp ? skel(sp.ending || '').replace(/^σι$/, 'σι(ν)') : null; }).filter((e) => e !== null);
+  return { own: uniq(of(key)), cross: uniq(MOOD_KEYS[mood].filter((k) => k !== key).flatMap(of)) }; };
+function moodEndingOptions(d) {
+  const pool = endingPool(d), own = Array.isArray(pool) ? pool : pool.own, cross = Array.isArray(pool) ? [] : pool.cross;
+  const same = own.filter((e) => e !== d.E), other = cross.filter((e) => e !== d.E && !same.includes(e));
+  return shuffle(uniq([d.E, ...shuffle(same).slice(0, 2), ...shuffle(other).slice(0, 1), ...shuffle(same).slice(2), ...shuffle(other).slice(1)]).slice(0, 4)).map((e) => [e, e === '' ? 'none' : '-' + shown(e)]);
+}
+function moodStemOptions(d) { return shuffle(uniq([d.S, d.S.slice(0, -1), d.S + 'σ', d.S + 'θ', d.S + 'κ'].filter((s) => s.length >= 2)).slice(0, 4)).map((s) => [s, s + '-']); }
+const moodFormativeOptions = (d) => { const pool = d.mood === 'imp' ? ['σα', 'θη', 'η', ''] : ['σ', 'θ', 'κ', '']; return shuffle(uniq([d.F, ...pool].slice(0, 4))).map((f) => [f, f || 'none']); };
+const moodVowelOptions = (d) => shuffle(uniq([d.V, ...(d.mood === 'sub' ? ['ω', 'η', 'ο', 'ε'] : ['ε', 'ο', 'α', 'η'])]).slice(0, 4)).map((v) => [v, v]);
+/** The tiles and steps of a mood form, in order. */
+function moodTiles(d) {
+  const t = [['Stem', d.S + '-']];
+  if (d.mood !== 'inf') { t.push(['Formative', d.F || '—']); if (d.V) t.push(['Vowel', d.V]); t.push(['Ending', d.E ? '-' + final(d.E) : '—']); } else t.push(['Ending', '-' + shown(d.E)]);
+  return t;
+}
+/** The shape of the first screen text, e.g. "1st aorist active subjunctive, 3rd person singular". */
+const moodHeading = (d) => d.kind.name + ' ' + MOODS[d.mood].name + (d.who ? ', ' + CELL_NAME[d.who] : '');
+
 /* ---------- the pool and the session ---------- */
 let byVerb = null;
 const formsOfVerb = (n) => { if (!byVerb) { byVerb = new Map(); D.forms.forEach((f, i) => { const a = f.an[0]; if (a && !notParsed(a)) { if (!byVerb.has(a.s)) byVerb.set(a.s, []); byVerb.get(a.s).push(i); } }); } return byVerb.get(n) || []; };
 /** Forms of one row that can be built, from verbs you know or any verb; only forms whose level is open (gated like the daily quiz). */
 export function buildPool(row, any = false) { return rowPool(row, { gated: true, anyVerb: any }).map((id) => decompose(id, row)).filter(Boolean); }
+const dense = (xs) => xs.sort((a, c) => D.forms[c.id].count - D.forms[a.id].count).slice(0, 30);
+/** Forms of the other moods (subjunctive, imperative, infinitive), one list per kind. */
+export function buildMoodLists(mood, any = false) {
+  const by = new Map();
+  for (const x of moodPool(mood, { anyVerb: any })) { const d = decomposeMood(mood, x); if (d) { if (!by.has(x.key)) by.set(x.key, []); by.get(x.key).push(d); } }
+  return [...by.values()].map((l) => shuffle(dense(l)));
+}
 export function buildQueue(any = false, total = 8) {
-  const lists = shuffle(BUILD_ROWS.map((r) => shuffle(buildPool(r, any).sort((a, b) => D.forms[b.id].count - D.forms[a.id].count).slice(0, 30)))).filter((l) => l.length), out = [], seen = new Set();
-  for (let i = 0; lists.length && out.length < total; i++) {
-    const l = lists[i % lists.length], d = l.find((x) => !seen.has(x.id));
-    if (d) { seen.add(d.id); out.push(d); } else if (lists.every((q) => q.every((x) => seen.has(x.id)))) break;
+  const groups = shuffle([BUILD_ROWS.map((r) => shuffle(dense(buildPool(r, any)))).filter((l) => l.length), ...['sub', 'imp', 'inf'].map((m) => buildMoodLists(m, any))].filter((g) => g.length));
+  const at = groups.map(() => 0), out = [], seen = new Set();
+  for (let step = 0; groups.length && out.length < total && step < 500; step++) {
+    const gi = step % groups.length, g = groups[gi];
+    for (let t = 0; t < g.length; t++) { const d = g[at[gi]++ % g.length].find((x) => !seen.has(x.id)); if (d) { seen.add(d.id); out.push(d); break; } }
   }
   return out;
 }
@@ -154,12 +203,14 @@ function contractOptions(d) {
 const isolated = (w) => { const s = w.normalize('NFD'), m = [...s.matchAll(/[\u0300\u0301\u0342]/g)]; if (m.length < 2) return w; const k = m[m.length - 1].index; return (s.slice(0, k) + s.slice(k + 1)).normalize('NFC'); };
 const greek = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
 const pieces = (d, c, upto, mark) => {
-  const tiles = [['Front', d.aug ? d.aug.from + ' →' : d.A === '' ? '—' : d.A + '-'], ['Stem', d.S + '-']];
-  if (d.aug) tiles.push(['Lengthen', d.aug.to]);
-  tiles.push(['Formative', c.F || '—']);
-  if (c.V) tiles.push(['Vowel', c.V]);
-  tiles.push(['Ending', c.PE === '–' ? '—' : '-' + c.PE]);
-  if (d.contract) tiles.push(['Contract', d.contract.res]);
+  const tiles = d.mood ? moodTiles(d) : [['Front', d.aug ? d.aug.from + ' →' : d.A === '' ? '—' : d.A + '-'], ['Stem', d.S + '-']];
+  if (!d.mood) {
+    if (d.aug) tiles.push(['Lengthen', d.aug.to]);
+    tiles.push(['Formative', c.F || '—']);
+    if (c.V) tiles.push(['Vowel', c.V]);
+    tiles.push(['Ending', c.PE === '–' ? '—' : '-' + c.PE]);
+    if (d.contract) tiles.push(['Contract', d.contract.res]);
+  }
   return h('div', { lang: 'grc', style: { display: 'flex', justifyContent: 'center', gap: '.3rem', flexWrap: 'wrap', margin: '.5rem 0' } },
     ...tiles.map(([label, text], i) => h('div', { style: { minWidth: '3.6rem', textAlign: 'center', padding: '.35rem .45rem', borderRadius: '12px', border: '2px ' + (i < upto ? 'solid' : 'dashed') + ' ' + (i === mark ? 'var(--accent)' : i < upto ? 'var(--good)' : 'var(--line)'), background: i < upto ? 'var(--good-soft)' : 'var(--surface)' } },
       h('small', { style: { display: 'block', font: '700 .6rem var(--ui)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--muted)' } }, label), h('span', { style: { fontFamily: 'var(--greek)', fontSize: '1.3rem' } }, i < upto ? text : ' '))));
@@ -172,18 +223,20 @@ export function renderBuild(view, mode) {
   const done = () => clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.card.stack', h('h2', 'Practice complete'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
     h('div.kpis', h('div.kpi', h('b', tally[0] + ' / ' + tally[1]), h('span', 'pieces right'))), Object.keys(missed).length ? h('p', 'You missed the ', h('b', Object.entries(missed).sort((a, b) => b[1] - a[1])[0][0].toLowerCase()), ' most often.') : h('p', 'You got every piece.'),
     h('div.row.wrap', h('button.btn.primary', { onclick: () => renderBuild(view, mode) }, 'Practice more'), ...backLinks(...back))));
-  const frame = (d, body, upto, mark) => { const L = D.lexByN.get(d.n), r = ROW[d.row]; clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.stack', h('div.card.stack',
+  const frame = (d, body, upto, mark) => { const L = D.lexByN.get(d.n), r = d.mood ? null : ROW[d.row]; clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.stack', h('div.card.stack',
     h('div.row.between', h('b', 'Build the form'), h('span.chip', (at + 1) + ' / ' + queue.length)),
-    h('div.card.small', { style: { background: 'var(--accent-soft)', border: 'none' } }, h('b', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative, ' + CELL_NAME[d.cell].replace('person ', '')), h('div', { style: { color: 'var(--ink-2)' } }, 'of ', greek(L.head), ' · ', L.brief)),
-    pieces(d, chartPieces(d), upto, mark), ...body))); };
-  const chartLine = (d) => h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the master verb chart:'), masterRowTable(d.row));
+    h('div.card.small', { style: { background: 'var(--accent-soft)', border: 'none' } }, h('b', (d.mood ? moodHeading(d).replace(/^./, (c) => c.toUpperCase()).replace('person ', '') : say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative, ' + CELL_NAME[d.cell].replace('person ', ''))), h('div', { style: { color: 'var(--ink-2)' } }, 'of ', greek(L.head), ' · ', L.brief)),
+    pieces(d, d.mood ? null : chartPieces(d), upto, mark), ...body))); };
+  const chartLine = (d) => d.mood ? h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the paradigm:'), h('p', { lang: 'grc', style: { margin: 0, fontFamily: 'var(--greek)', fontSize: '1.1rem' } }, d.kind.forms ? d.kind.forms.join(', ') : d.kind.model + ' (' + d.kind.gloss + ')')) : h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the master verb chart:'), masterRowTable(d.row));
   const choose = (d, i, title, options, right, onRight, note = null, prompt = null) => {
     const box = h('div.opts.two'); let locked = false;
     for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); if (note) { box.after(h('div.card.small.stack', { style: { background: 'var(--accent-soft)', border: 'none' } }, note, h('div', h('button.btn.primary.sm', { onclick: onRight }, 'Continue')))); } else setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
     return [h('p', h('b', title)), prompt ? h('p.muted.small', { style: { margin: 0 } }, prompt) : null, box];
   };
   const show = () => {
-    const d = queue[at], c = chartPieces(d), k = contractKind(d.n), P = k ? presentStem(d.n) : null, seq = [];
+    const d = queue[at];
+    if (d.mood) return showMood(d);
+    const c = chartPieces(d), k = contractKind(d.n), P = k ? presentStem(d.n) : null, seq = [];
     seq.push(['Front', frontOptions(d), frontAnswer(d)]);
     seq.push(['Stem', stemOptions(d), d.S, k && !d.contract ? (d.S === P ? h('span', 'A contract verb’s last stem vowel usually lengthens before σ, θ and κ (ε → η, α → η, ο → ω). Here it stays ', greek(P + '-'), '.')
       : h('span', 'A contract verb’s last stem vowel lengthens before σ, θ and κ: ', greek(P + '- → ' + d.S + '-'), ' (ε → η, α → η, ο → ω).')) : null]);
@@ -205,6 +258,21 @@ export function renderBuild(view, mode) {
         h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
         d.aug ? h('p.muted.small', { style: { margin: 0 } }, 'The first vowel lengthens (', greek(d.aug.from + ' → ' + d.aug.to), '), so the word begins with ', greek(d.aug.to), '.', ROW[d.row].aug === 'RED' ? ' In the perfect this lengthening also does the work of the reduplication.' : '') : null,
         c.changes && !d.contract ? h('p.muted.small', { style: { margin: 0 } }, 'The pieces run together in the spelling: ', greek(final(c.naive) || '—'), ' is written ', greek(c.written), '.') : null,
+        h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next'), chartLine(d)], seq.length, -1);
+    };
+    step(0);
+  };
+  // a subjunctive, imperative or infinitive: stem, formative, connecting vowel, ending (an infinitive: stem and ending)
+  const showMood = (d) => {
+    const seq = [['Stem', moodStemOptions(d), d.S]];
+    if (d.mood !== 'inf') { seq.push(['Tense formative', moodFormativeOptions(d), d.F]); if (d.V) seq.push(['Connecting vowel', moodVowelOptions(d), d.V]); seq.push(['Personal ending', moodEndingOptions(d), d.E]); }
+    else seq.push(['Ending', moodEndingOptions(d), d.E]);
+    const step = (i) => {
+      if (i < seq.length) { const [title, opts, right] = seq[i]; frame(d, choose(d, i, title, opts, right, () => step(i + 1)), i, i); return; }
+      const parts = [d.S, d.F || null, d.V || null, d.E ? final(d.E) : null].filter(Boolean), subscript = /[\u0345]/.test(d.vowelWritten.normalize('NFD'));
+      frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
+        h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
+        subscript ? h('p.muted.small', { style: { margin: 0 } }, 'The vowel ', greek(d.V), ' is written ', greek(d.vowelWritten), ', with an iota subscript, in this form.') : null,
         h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next'), chartLine(d)], seq.length, -1);
     };
     step(0);
