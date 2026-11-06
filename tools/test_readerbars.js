@@ -58,11 +58,6 @@ const { chromium } = require('playwright');
   // the bottom of the chapter keeps them up too
   await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(300); await wheel(p, 120, 4); s = await state(p); ok(s.hidden, 'hidden mid-chapter before heading to the end');
   await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(2300); s = await state(p); ok(!s.hidden, 'at the bottom they come up and stay: ' + JSON.stringify(s));
-  // the diagnostics strip follows the setting at once
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setSetting('barsDebug', true); }); await p.waitForTimeout(100);
-  await p.evaluate(() => scrollBy(0, -300)); await p.waitForTimeout(300);
-  ok(await p.evaluate(() => !!document.getElementById('bardbg')), 'the strip appears once the setting is on (without reopening the chapter)');
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setSetting('barsDebug', false); });
   // leaving the reader clears it
   await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(300); await wheel(p, 120, 8); s = await state(p); ok(s.hidden, 'hidden before leaving');
   await p.evaluate(() => { location.hash = '#/learn'; }); await p.waitForTimeout(800); s = await state(p); ok(!s.hidden && s.nav, 'leaving the reader shows the navigation');
