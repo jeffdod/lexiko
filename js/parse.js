@@ -20,6 +20,7 @@ import { requiredStems } from './stems.js';
 import { currentGoal, goalWords, formLevel, chartAllowsAny, miHeld, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
 import { levelOfTag, NLEVELS, levelName, isLiquidVerb } from './families.js';
 import { store } from './store.js';
+import { renderClues } from './cluehunt.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
 /** Answer codes that have no button of their own, and the button that stands for them. */
@@ -157,11 +158,11 @@ export function buildParseSession(opts) {
 /** Forms of one chart row, from verbs you know: the pool for "Parse forms like this". The liquid rows are the regular row's forms from liquid verbs (λ, μ, ν, ρ), and the regular rows leave those out. */
 const LIQ_PARENT = { 'fut-liq-act': 'fut-act', 'fut-liq-mid': 'fut-mid', 'aor-liq-act': 'aor1-act' };
 const HAS_LIQ = new Set(['fut-act', 'fut-mid', 'aor1-act']);
-export function rowPool(key, { ignoreLevel = false, anyVerb = false } = {}) {
+export function rowPool(key, { ignoreLevel = false, anyVerb = false, gated = false } = {}) {
   ensureIndex();
   const want = LIQ_PARENT[key] || key, liqRow = key in LIQ_PARENT, out = [];
   for (const id of members.keys()) {
-    const it = ignoreLevel ? rawItem(id) : itemOf(id);
+    const it = gated ? autoItemOf(id) : ignoreLevel ? rawItem(id) : itemOf(id);
     if (!it || it.group !== 'V' || (!anyVerb && status(it.strongs) !== 'known')) continue;
     if (!it.valid.some((v) => chartRowForSlots(v.slots) === want)) continue;
     const liq = isLiquidVerb(it.strongs);
@@ -542,6 +543,7 @@ export function renderParse(view, params) {
       if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practice yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
+    if (rest[0] === 'clues') return renderClues(view, rest[1] === 'any' ? 'any' : 'known');
     if (rest[0] === 'rows') {                                     // from the chart picker: forms of several rows, practice only
       const keys = (rest[1] || '').split(',').filter((k) => ROWS.some((x) => x.key === k)), any = rest[2] === 'any';
       if (!keys.length) { location.hash = '#/learn/charts/pick'; return; }
@@ -666,7 +668,7 @@ async function landing(view) {
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots'), chartsButton()),
       h('div.card.stack', h('h2', 'Practice by form'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
-        h('div.pracgrid', [['Parse from the chart', '#/learn/charts/pick', 'Pick rows of the master verb chart'], ['Master verb chart', '#/learn/charts/run', 'Drill the chart squares'], ['Participles', '#/learn/charts/participles', 'Tell the kinds apart'], ['Infinitives', '#/learn/charts/infinitives', 'The ten kinds'], ['Subjunctive', '#/learn/charts/subjunctive', 'The eight kinds'], ['Imperative', '#/learn/charts/imperative', 'The eight kinds'], ['Verbs in -μι', '#/learn/charts/mi', 'Roots and reduplication']].map(([t, href, d]) => h('a.tile', { href }, h('h3', t), h('p', d))))),
+        h('div.pracgrid', [['Clue hunt', '#/parse/run/clues/known', 'Find the clues, then name the form'], ['Parse from the chart', '#/learn/charts/pick', 'Pick rows of the master verb chart'], ['Master verb chart', '#/learn/charts/run', 'Drill the chart squares'], ['Participles', '#/learn/charts/participles', 'Tell the kinds apart'], ['Infinitives', '#/learn/charts/infinitives', 'The ten kinds'], ['Subjunctive', '#/learn/charts/subjunctive', 'The eight kinds'], ['Imperative', '#/learn/charts/imperative', 'The eight kinds'], ['Verbs in -μι', '#/learn/charts/mi', 'Roots and reduplication']].map(([t, href, d]) => h('a.tile', { href }, h('h3', t), h('p', d))))),
       miniGoalCard(() => landing(view)),
       levelsCard(() => landing(view)),
       Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
