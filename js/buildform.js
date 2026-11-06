@@ -108,6 +108,8 @@ function endingOptions(d, c) {
 }
 
 /* ---------- the screens ---------- */
+/** A word shown on its own: an accent that only comes from a following enclitic (πέποιθάς τε) is dropped, so it never shows two accents. */
+const isolated = (w) => { const s = w.normalize('NFD'), m = [...s.matchAll(/[\u0300\u0301\u0342]/g)]; if (m.length < 2) return w; const k = m[m.length - 1].index; return (s.slice(0, k) + s.slice(k + 1)).normalize('NFC'); };
 const greek = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
 const pieces = (d, c, upto, mark) => {
   const tiles = [['Front', d.A === '' ? '—' : d.A + '-'], ['Stem', d.S + '-'], ['Formative', c.F || '—']];
@@ -142,9 +144,9 @@ export function renderBuild(view, mode) {
       else if (i === 3 && c.V) frame(d, choose(d, 3, 'Connecting vowel', vowelOptions(c), c.V, () => step(4)), 3, 3);
       else if (i < 5 && (i === 4 || !c.V)) { const at4 = c.V ? 4 : 3; frame(d, choose(d, at4, 'Personal ending', endingOptions(d, c), c.PE, () => step(5)), at4, at4); }
       else {
-        const parts = [d.A ? d.A + '-' : null, d.S + '-', c.F || null, c.V || null, c.PE === '–' ? null : '-' + c.PE].filter(Boolean);
-        frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, d.word),
-          h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ').replace(/ \+ -/g, ' + -')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
+        const parts = [d.A || null, d.S, c.F || null, c.V || null, c.PE === '–' ? null : c.PE].filter(Boolean);
+        frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
+          h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
           c.changes ? h('p.muted.small', { style: { margin: 0 } }, 'The pieces run together in the spelling: ', greek(final(c.naive) || '—'), ' is written ', greek(c.written), '.') : null,
           h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next')], last, -1);
       }
