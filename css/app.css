@@ -65,6 +65,10 @@ button { font: inherit; color: inherit; }
 .pickrow input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
 .pickrow .pn { flex: 1; font-weight: 600; } .pickrow.off { opacity: .5; cursor: default; }
 .pickbar { position: sticky; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + .5rem); }
+.pracgrid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.pracgrid .tile { min-height: 4.2rem; padding: .6rem .7rem; }
+.pracgrid .tile h3 { font-size: .95rem; }
+.pracgrid .tile p { font-size: .8rem; }
 #nav a[aria-current='page'] { color: var(--accent); }
 #nav a[aria-current='page'] svg { stroke-width: 2.2; }
 #nav .brand { display: none; }

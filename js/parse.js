@@ -665,6 +665,8 @@ async function landing(view) {
       startButton(sm),
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots'), chartsButton()),
+      h('div.card.stack', h('h2', 'Practice by form'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
+        h('div.pracgrid', [['Parse from the chart', '#/learn/charts/pick', 'Pick rows of the master verb chart'], ['Master verb chart', '#/learn/charts/run', 'Drill the chart squares'], ['Participles', '#/learn/charts/participles', 'Tell the kinds apart'], ['Infinitives', '#/learn/charts/infinitives', 'The ten kinds'], ['Subjunctive', '#/learn/charts/subjunctive', 'The eight kinds'], ['Imperative', '#/learn/charts/imperative', 'The eight kinds'], ['Verbs in -μι', '#/learn/charts/mi', 'Roots and reduplication']].map(([t, href, d]) => h('a.tile', { href }, h('h3', t), h('p', d))))),
       miniGoalCard(() => landing(view)),
       levelsCard(() => landing(view)),
       Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
