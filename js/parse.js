@@ -157,12 +157,12 @@ export function buildParseSession(opts) {
 /** Forms of one chart row, from verbs you know: the pool for "Parse forms like this". The liquid rows are the regular row's forms from liquid verbs (λ, μ, ν, ρ), and the regular rows leave those out. */
 const LIQ_PARENT = { 'fut-liq-act': 'fut-act', 'fut-liq-mid': 'fut-mid', 'aor-liq-act': 'aor1-act' };
 const HAS_LIQ = new Set(['fut-act', 'fut-mid', 'aor1-act']);
-export function rowPool(key, { ignoreLevel = false } = {}) {
+export function rowPool(key, { ignoreLevel = false, anyVerb = false } = {}) {
   ensureIndex();
   const want = LIQ_PARENT[key] || key, liqRow = key in LIQ_PARENT, out = [];
   for (const id of members.keys()) {
     const it = ignoreLevel ? rawItem(id) : itemOf(id);
-    if (!it || it.group !== 'V' || status(it.strongs) !== 'known') continue;
+    if (!it || it.group !== 'V' || (!anyVerb && status(it.strongs) !== 'known')) continue;
     if (!it.valid.some((v) => chartRowForSlots(v.slots) === want)) continue;
     const liq = isLiquidVerb(it.strongs);
     if (liqRow ? !liq : HAS_LIQ.has(key) && liq) continue;
@@ -227,6 +227,21 @@ export function imperativeForms(key = null, { ignoreLevel = false } = {}) {
   return out;
 }
 /** A round of about a dozen forms of the row, leaning on the commonest. */
+/** Several chart rows at once, for "Parse from the chart": forms of verbs you know (or of any verb), whatever the parsing level. */
+export const rowsLength = (n) => Math.max(8, n);
+export function rowsPools(keys, anyVerb = false) { return keys.map((k) => rowPool(k, { ignoreLevel: true, anyVerb })); }
+/** At least 8 forms, and at least one per row you picked: rows are dealt from in turn so each is represented, with no form twice, and no more than there are. */
+export function rowsQueue(keys, anyVerb = false, pools = rowsPools(keys, anyVerb)) {
+  const lists = pools.map((p) => shuffle(p.slice().sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 40))), at = lists.map(() => 0), seen = new Set(), out = [], total = rowsLength(keys.length);
+  for (let live = true; live && out.length < total;) {
+    live = false;
+    for (let j = 0; j < lists.length && out.length < total; j++) {
+      while (at[j] < lists[j].length && seen.has(lists[j][at[j]])) at[j]++;
+      if (at[j] < lists[j].length) { const id = lists[j][at[j]++]; seen.add(id); out.push(id); live = true; }
+    }
+  }
+  return shuffle(out).map((id) => ({ id, type: 'row' }));
+}
 const rowQueue = (key) => shuffle(rowPool(key).sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 30)).slice(0, 12).map((id) => ({ id, type: 'row' }));
 
 /** Extra practice: never scheduled. 'trouble' = your shakiest forms; 'preview' = a few frequent forms you haven't started. */
@@ -526,6 +541,13 @@ export function renderParse(view, params) {
       const q = buildParseExtra(rest[1] === 'preview' ? 'preview' : rest[1] === 'recent' ? 'recent' : rest[1] === 'review' ? 'review' : 'trouble');
       if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practice yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
+    }
+    if (rest[0] === 'rows') {                                     // from the chart picker: forms of several rows, practice only
+      const keys = (rest[1] || '').split(',').filter((k) => ROWS.some((x) => x.key === k)), any = rest[2] === 'any';
+      if (!keys.length) { location.hash = '#/learn/charts/pick'; return; }
+      const q = rowsQueue(keys, any);
+      if (!q.length) { clear(view).append(backHead('Parse from the chart', '#/learn/charts/pick', 'Back'), h('div.card.stack', h('p', 'There are no forms of these rows in ' + (any ? 'the text' : 'verbs you know yet') + '.'), h('a.btn', { href: '#/learn/charts/pick' }, 'Back to the picker'))); return; }
+      return runSession(view, q, { title: 'Parse from the chart', practice: true, back: ['#/learn/charts/pick', 'Back to the picker'], restart: () => renderParse(view, params) });
     }
     if (rest[0] === 'row') {                                      // from the charts: forms of one row, practice only
       const r = ROWS.find((x) => x.key === rest[1]); if (!r) { location.hash = '#/learn/charts'; return; }
