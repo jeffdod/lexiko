@@ -543,7 +543,7 @@ export function renderParse(view, params) {
       if (!q.length) { clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack', h('p', rest[1] === 'preview' ? 'No new forms to preview right now.' : rest[1] === 'recent' ? 'You haven’t started any words in the last few days, so there are no forms to practice yet.' : rest[1] === 'review' ? 'You haven’t studied any forms yet.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the forms you’ve studied.'), ...backLinks('#/parse', 'Back'))); return; }
       return runSession(view, q, { title: 'Strengthen weak spots', practice: true, restart: () => renderParse(view, params) });
     }
-    if (rest[0] === 'clues') return renderClues(view, rest[1] === 'any' ? 'any' : 'known');
+    if (rest[0] === 'clues') return rest[1] === 'form' ? renderClues(view, 'known', { formIdx: +rest[2], an: +rest[3] || 0 }) : renderClues(view, rest[1] === 'any' ? 'any' : 'known');
     if (rest[0] === 'rows') {                                     // from the chart picker: forms of several rows, practice only
       const keys = (rest[1] || '').split(',').filter((k) => ROWS.some((x) => x.key === k)), any = rest[2] === 'any';
       if (!keys.length) { location.hash = '#/learn/charts/pick'; return; }
