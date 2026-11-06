@@ -65,7 +65,7 @@ const { chromium } = require('playwright');
     return { n, a: sp('ἔμεινεν', 'aor-liq-act'), b: sp('ἔσπειρεν', 'aor-liq-act'), c: sp('κρινεῖ', 'fut-liq-act'), d: sp('κρινῶ', 'fut-liq-act'), e: sp('ἔφθασεν', 'aor-liq-act'), g: sp('ἤγειραν', 'aor-liq-act') }; });
   ok(lq.a === 'ε|μειν||ε(ν)' && lq.b === 'ε|σπειρ||ε(ν)' && lq.c === '|κριν||ει' && lq.d === '|κριν||ω' && lq.e === null && lq.g === '|εγειρ||αν' && lq.n['aor-liq-act'] > 15 && lq.n['fut-liq-act'] > 8, 'liquid verbs: ' + JSON.stringify(lq));
   // a contract participle, a liquid aorist and a perfect participle walk through every step to "Built:" (forced queues, no random picking)
-  for (const spec of [{ w: 'ποιοῦντες' }, { w: 'ἔμειναν', row: 'aor-liq-act' }, { w: 'λελυμένον' }]) {
+  for (const spec of [{ w: 'ποιοῦντες' }, { w: 'ἔμειναν', row: 'aor-liq-act' }, { w: 'λελυμένον' }, { w: 'ἔγραψα', row: 'aor1-act' }, { w: 'ἤκουσαν', row: 'aor1-act' }]) {
     const found = await p.evaluate(async (spec) => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js'); let d = null;
       if (spec.row) { for (const id of P.rowPool(spec.row, { ignoreLevel: true, anyVerb: true })) if (D.forms[id].w.replace(/­/g, '') === spec.w) d = B.decompose(id, spec.row); } else for (const x of P.ptcPool({ anyVerb: true })) if (x.w === spec.w) { d = B.decomposePtc(x); if (d) break; }
       if (d) B.renderBuild(document.querySelector('#view'), 'any', [d]); return !!d; }, spec);
@@ -80,6 +80,16 @@ const { chromium } = require('playwright');
     for (const row of B.BUILD_ROWS) for (const id of P.rowPool(row, { ignoreLevel: true, anyVerb: true })) { const x = B.decompose(id, row); if (!x) continue; n++; rows.add(row); const core = x.sound ? x.sound.joined : x.S + x.F; const pre = x.prefix ? x.prefix.shown : '', lead = pre + (x.aug ? sk(x.aug.to) + core.slice(x.aug.from.length, x.contract ? -1 : undefined) : x.contract ? x.A + x.contract.head : x.A + core); const want = x.perfSound ? pre + (x.aug ? sk(x.aug.to) + x.perfSound.joined.slice(x.aug.from.length) : x.A + x.perfSound.joined) : x.contract ? lead + sk(x.contract.res) + x.contract.rest : lead + x.used; if (x.perfSound) ps++; if (x.sound) snd++; if (x.aug) { aug++; pairs.add(x.aug.from + '>' + x.aug.to); } if (sk(D.forms[id].w) !== want) { bad++; (globalThis.__bad = globalThis.__bad || []).push(D.forms[id].w + ' ' + row); } if (x.contract) con++; }
     return { ps, snd, n, bad, badlist: (globalThis.__bad || []).slice(0, 5), rows: rows.size, con, aug, pairs: [...pairs].sort().join(' ') }; });
   ok(all.n > 800 && all.ps >= 10 && all.bad === 0 && all.rows >= 14 && all.con > 100 && all.aug > 100 && ['α>η', 'ε>η', 'ο>ω', 'αι>ῃ'].every((x) => all.pairs.includes(x)), 'all offered forms add up exactly: ' + JSON.stringify(all));
+  // the word built in place: after the last step the word so far is exactly the word, and a Sound step is offered where the pieces side by side are not
+  const inplace = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'); const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ').normalize('NFC'); const out = { n: 0, bad: [], sound: 0, order: 0 };
+    const rank = { Stem: 0, Front: 1, 'Front (lengthening)': 1, Prefix: 2, 'Tense formative': 3, 'Connecting vowel': 4, 'Personal ending': 5, Ending: 5, 'Sound change': 6, Contraction: 7 };
+    const run = (d) => { const s = d.mood ? B.moodSteps(d) : B.indicSteps(d); out.n++; let st = ''; for (const e of s.seq) st = e[5](st); const T = sk(d.word); if (!(st === T || st + 'ν' === T || st === T + 'ν')) out.bad.push(d.word + ' ' + st); if (s.seq.some((e) => e[0] === 'Sound change')) out.sound++; if (s.seq.every((e, k) => k === 0 ? e[0] === 'Stem' : rank[e[0]] > rank[s.seq[k - 1][0]])) out.order++;
+      const sc = s.seq.find((e) => e[0] === 'Sound change'); if (sc && (sc[1].length < 3 || !sc[1].some((o) => o[0] === sc[2]))) out.bad.push('options ' + d.word); };
+    for (const row of B.BUILD_ROWS) for (const id of P.rowPool(row, { ignoreLevel: true, anyVerb: true })) { const d = B.decompose(id, row); if (d) run(d); }
+    for (const m of ['sub', 'imp', 'inf']) for (const x of P.moodPool(m, { anyVerb: true })) { const d = B.decomposeMood(m, x); if (d) run(d); }
+    for (const x of P.ptcPool({ anyVerb: true })) { const d = B.decomposePtc(x); if (d) run(d); }
+    return out; });
+  ok(inplace.n > 2000 && inplace.bad.length === 0 && inplace.sound > 300 && inplace.order === inplace.n, 'the word is built in place for every form: ' + JSON.stringify(inplace).slice(0, 400));
   // the model paradigms: the table reproduces the six forms of λύω in each of its rows
   const para = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), PD = await import('/lexiko/js/paradigms.js'); const sk = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const bad = [];
     for (const row of B.BUILD_ROWS) { const pr = PD.paradigm(row); if (!pr || pr.head !== 'λύω') continue; const T = B.BUILD[row];
@@ -98,9 +108,8 @@ const { chromium } = require('playwright');
       await p.waitForFunction(() => document.querySelector('#view .opts'), null, { timeout: 4000 }).catch(() => ok(false, 'a step shows'));
       seen.push(await p.locator('#view p b').first().innerText()); await p.locator('.opt').first().click(); await p.waitForTimeout(1450); const cont = p.getByRole('button', { name: 'Continue' }); if (await cont.count()) { seen.noted = (seen.noted || 0) + 1; await cont.click(); await p.waitForTimeout(200); }
     }
-    if (seen[0] === 'Prefix') seen.shift();
-    const ptcPerf = seen[0] === 'Front' && seen[seen.length - 1] === 'Ending' && !seen.includes('Personal ending'), indic = seen[0] === 'Front' && !ptcPerf, mood = seen[0] === 'Stem';
-    ok(seen.length >= 2 && seen.length <= 8 && (ptcPerf ? seen[1] === 'Stem' && seen.includes('Tense formative') : indic ? seen[1] === 'Stem' && (seen.includes('Lengthening') ? seen[2] === 'Lengthening' : seen[2] === 'Tense formative') && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]) : mood && (seen[1] === 'Ending' ? (seen.length === 2 || (seen.length === 3 && seen[2] === 'Contraction')) : seen[1] === 'Tense formative' && ['Personal ending', 'Contraction', 'Ending'].includes(seen[seen.length - 1]))), 'steps in order: ' + seen.join(','));
+    const RANK = { 'Stem': 0, 'Front': 1, 'Front (lengthening)': 1, 'Prefix': 2, 'Tense formative': 3, 'Connecting vowel': 4, 'Personal ending': 5, 'Ending': 5, 'Sound change': 6, 'Contraction': 7 };
+    ok(seen[0] === 'Stem' && seen.length >= 2 && seen.length <= 9 && seen.every((t, k) => t in RANK && (k === 0 || RANK[t] > RANK[seen[k - 1]])), 'steps in word order, stem first: ' + seen.join(','));
     ok(/Built:/.test(await p.locator('#view').innerText()), 'the built form is shown, question ' + questions);
     ok(await p.locator('#view table.ctable tbody tr.hi').count() === 1 || /From the paradigm/.test(await p.locator('#view').innerText()), 'the chart row or paradigm is shown at the end, question ' + questions);
     if (questions === 1) await p.screenshot({ path: '/tmp/claude-0/-home-claude/b1495004-32ad-55d3-a59f-a67ee65f4e2d/scratchpad/bf3.png' });
