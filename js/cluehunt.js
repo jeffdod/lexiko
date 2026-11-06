@@ -4,6 +4,8 @@ import { D } from './data.js';
 import { ROWS, say, summary } from './chartdrill.js';
 import { rowPool } from './parse.js';
 import { h, clear, shuffle, backHead, backLinks } from './util.js';
+import { rowOfTag } from './families.js';
+import { clueRef } from './clueref.js';
 
 const ROW = Object.fromEntries(ROWS.map((r) => [r.key, r]));
 const KEYS = ROWS.map((r) => r.key);
@@ -55,26 +57,57 @@ export function clueQueue(any, total = 10) {
   return out;
 }
 
+
+/* ---------- compound verbs: the augment (or reduplication) comes after the preposition ---------- */
+const PREPS = { ανα: ['ανα', 'αν'], αντι: ['αντι', 'αντ', 'ανθ'], απο: ['απο', 'απ', 'αφ'], αμφι: ['αμφι', 'αμφ'], δια: ['δια', 'δι'], εισ: ['εισ'], εκ: ['εκ', 'εξ'], εν: ['εν', 'εμ', 'εγ'], επι: ['επι', 'επ', 'εφ'], κατα: ['κατα', 'κατ', 'καθ'], μετα: ['μετα', 'μετ', 'μεθ'], παρα: ['παρα', 'παρ'], περι: ['περι'], προσ: ['προσ'], προ: ['προ', 'πρ'], συν: ['συν', 'συμ', 'συγ', 'συλ', 'συ'], υπερ: ['υπερ'], υπο: ['υπο', 'υπ', 'υφ'] };
+const PREP_KEYS = Object.keys(PREPS).sort((a, b) => b.length - a.length);
+const skeleton = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
+const letters = (w) => { const out = []; for (const c of w.replace(/­/g, '').normalize('NFD')) { if (/[̀-ͯ]/.test(c) && out.length) out[out.length - 1].text += c; else out.push({ ch: c.toLowerCase().replace('ς', 'σ'), text: c }); } return out; };
+/** A compound verb's form in three pieces [preposition, augment or reduplication, the rest], or null. The lexeme must begin with a preposition; the form must show the augment right after it. */
+export function splitCompound(word, head, row) {
+  if (!row || !(row.aug === 'ε' || row.aug === 'RED')) return null;
+  const lem = skeleton(head), u = letters(word), join = (a, b) => u.slice(a, b).map((x) => x.text).join('').normalize('NFC');
+  for (const key of PREP_KEYS) {
+    if (!lem.startsWith(key) || lem.length < key.length + 3) continue;
+    for (const v of PREPS[key]) {
+      const n = v.length; if (u.slice(0, n).map((x) => x.ch).join('') !== v) continue;
+      const k = u.length - n;
+      if (row.aug === 'ε' && k >= 3 && (u[n].ch === 'ε' || u[n].ch === 'η')) return [join(0, n), join(n, n + 1), join(n + 1)];
+      if (row.aug === 'RED' && k >= 4 && u[n + 1].ch === 'ε') return [join(0, n), join(n, n + 2), join(n + 2)];
+    }
+  }
+  return null;
+}
+const splitView = (p) => h('span', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '1.15rem' } }, p[0], h('span.sep', ' · '), h('b', { style: { color: 'var(--accent)' } }, p[1]), h('span.sep', ' · '), p[2]);
+
 /* ---------- the screens ---------- */
 const greek = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
-const bigWord = (w) => h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.4rem', textAlign: 'center', margin: '.3rem 0' } }, w);
+const bigWord = (w) => h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.4rem', textAlign: 'center', margin: '.3rem 0' } }, w.replace(/\u00ad/g, ''));
 const note = (kids, cls = '') => h('div.card.small' + cls, { style: { background: 'var(--accent-soft)', border: 'none' } }, ...kids);
 
-export function renderClues(view, mode) {
-  const any = mode === 'any', queue = clueQueue(any), back = ['#/parse', 'Back to Parsing'];
-  if (!queue.length) { clear(view).append(backHead('Clue hunt', '#/parse', 'Parsing'), h('div.card.stack', h('p', 'There are no forms to hunt yet' + (any ? '' : ' in verbs you know') + '. Forms open up as you learn the chart rows and the verbs.'), h('a.btn', { href: '#/parse/run/clues/any' }, 'Try with any verb'), ...backLinks(...back))); return; }
+export function renderClues(view, mode, single = null) {
+  const an = single ? D.forms[single.formIdx].an[single.an] : null, row = an ? rowOfTag(an.m, an.s) : null;
+  const any = mode === 'any', queue = single ? (row ? [{ type: 'hunt', id: single.formIdx, key: row, an: single.an }] : []) : clueQueue(any);
+  const home = single && clueRef.back ? clueRef.back : '#/parse', homeName = single && clueRef.back ? 'Reading' : 'Parsing', back = [home, 'Back to ' + homeName.toLowerCase()];
+  if (!queue.length && single) { clear(view).append(backHead('Clue hunt', home, homeName), h('div.card.stack', h('p', 'Clue hunt covers the indicative forms of verbs, the ones on the master verb chart. This form is another mood.'), ...backLinks(...back))); return; }
+  if (!queue.length) { clear(view).append(backHead('Clue hunt', home, homeName), h('div.card.stack', h('p', 'There are no forms to hunt yet' + (any ? '' : ' in verbs you know') + '. Forms open up as you learn the chart rows and the verbs.'), h('a.btn', { href: '#/parse/run/clues/any' }, 'Try with any verb'), ...backLinks(...back))); return; }
   const tally = { clue: [0, 0], name: [0, 0], pair: [0, 0] }, missedClue = {};
   let at = 0;
 
   const done = () => {
     const worst = Object.entries(missedClue).sort((a, b) => b[1] - a[1])[0];
-    clear(view).append(backHead('Clue hunt', '#/parse', 'Parsing'), h('div.card.stack', h('h2', 'Practice complete'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
+    clear(view).append(backHead('Clue hunt', home, homeName), h('div.card.stack', h('h2', 'Practice complete'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
       h('div.kpis', h('div.kpi', h('b', tally.clue[0] + ' / ' + tally.clue[1]), h('span', 'clues found')), h('div.kpi', h('b', tally.name[0] + ' / ' + tally.name[1]), h('span', 'forms named')), tally.pair[1] ? h('div.kpi', h('b', tally.pair[0] + ' / ' + tally.pair[1]), h('span', 'pairs told apart')) : null),
       worst ? h('p', 'You missed the clue about the ', h('b', worst[0].toLowerCase()), ' most often.') : h('p', 'You found every clue.'),
       h('div.row.wrap', h('button.btn.primary', { onclick: () => renderClues(view, mode) }, 'Practice more'), ...backLinks(...back))));
   };
-  const frame = (title, body) => clear(view).append(backHead('Clue hunt', '#/parse', 'Parsing'), h('div.stack', h('div.card.stack', h('div.row.between', h('b', title), h('span.chip', (at + 1) + ' / ' + queue.length)), ...body)));
-  const next = (label = 'Next') => h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, label);
+  const context = (word) => {
+    const w = word.replace(/\u00ad/g, '');
+    if (!single || !clueRef.verse) return null; const i = clueRef.verse.indexOf(w); if (i < 0) return null;
+    return h('p.muted.small', { lang: 'grc', style: { margin: 0, fontFamily: 'var(--greek)', fontSize: '1.05rem', lineHeight: 1.6 } }, clueRef.verse.slice(0, i), h('b', { style: { color: 'var(--accent)' } }, clueRef.verse.slice(i, i + w.length)), clueRef.verse.slice(i + w.length));
+  };
+  const frame = (title, body) => clear(view).append(backHead('Clue hunt', home, homeName), h('div.stack', h('div.card.stack', h('div.row.between', h('b', title), single ? null : h('span.chip', (at + 1) + ' / ' + queue.length)), context(D.forms[queue[at].id ? queue[at].id : queue[at].ida].w), ...body)));
+  const next = (label = 'Next') => h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : single ? (location.hash = home) : done(); } }, label);
 
   /** Multiple choice; `onPick(value)` runs once. */
   const choices = (options, right, onPick, greekLabels = false) => {
@@ -87,9 +120,9 @@ export function renderClues(view, mode) {
   };
 
   const hunt = (q) => {
-    const r = ROW[q.key], w = D.forms[q.id].w, steps = [], res = [];
+    const r = ROW[q.key], w = D.forms[q.id].w, steps = [], res = [], L0 = D.lexByN.get(D.forms[q.id].an[q.an || 0].s), split = L0 ? splitCompound(w, L0.head, r) : null;
     const draw = (i, picked) => {
-      const doneSteps = CLUES.slice(0, i).map((c, j) => h('div.row', { style: { gap: '.6rem', padding: '.35rem 0', borderTop: '1px solid var(--line)' } }, h('span', { style: { color: res[j] ? 'var(--good)' : 'var(--warn)', fontWeight: 800 } }, res[j] ? '✓' : '•'), h('span', h('b', c.name + ': '), c.say(r))));
+      const doneSteps = CLUES.slice(0, i).map((c, j) => h('div.row', { style: { gap: '.6rem', padding: '.35rem 0', borderTop: '1px solid var(--line)' } }, h('span', { style: { color: res[j] ? 'var(--good)' : 'var(--warn)', fontWeight: 800 } }, res[j] ? '✓' : '•'), h('span', h('b', c.name + ': '), c.say(r), j === 0 && split ? [' · ', splitView(split)] : null)));
       if (i < CLUES.length) {
         const c = CLUES[i];
         frame('Find the clues', [bigWord(w), h('p.muted.small', { style: { margin: 0 } }, 'Look for the clues before you name the form. Practice only.'), ...doneSteps, h('p', { style: { marginBottom: c.hint ? '.2rem' : undefined } }, h('b', c.ask)), c.hint ? h('p.muted.small', { lang: 'en' }, c.hint) : null,
@@ -100,7 +133,7 @@ export function renderClues(view, mode) {
       } else {
         const wrong = picked !== r.key ? ROW[picked] : null, why = wrong ? differ(r, wrong) : [];
         const noteKids = wrong ? [h('b', 'It is the ' + nice(r) + '. '), why.length ? 'What distinguishes it from the ' + nice(wrong) + ': ' + why.map((c) => c.name.toLowerCase() + ' (' + c.say(r) + ' here, ' + c.say(wrong) + ' there)').join('; ') + '.' : 'The clues are the same for both; check the tense stem and the voice.'] : [h('b', 'Right: the ' + nice(r) + '. '), 'Clues: ' + CLUES.map((c) => c.say(r)).join(', ') + '.'];
-        frame('Clue hunt', [bigWord(w), note(noteKids), h('p.muted.small', { style: { margin: 0 } }, summary(r)), next()]);
+        frame('Clue hunt', [bigWord(w), note(noteKids), split ? h('p', { style: { margin: 0 } }, h('b', 'Compound verb: '), splitView(split), h('span.muted.small', ' (preposition · augment or reduplication · the rest)')) : null, h('p.muted.small', { style: { margin: 0 } }, summary(r)), next(single ? 'Back to the reading' : 'Next')]);
       }
     };
     draw(0);

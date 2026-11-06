@@ -4,6 +4,8 @@ import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal } from './know.js';
 import { partsGrid } from './partforms.js';
 import { barTracker } from './readbars.js';
+import { clueRef } from './clueref.js';
+import { rowOfTag } from './families.js';
 import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -66,6 +68,12 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
       if (status(L.n) !== 'known' || !K.cards.has('w:' + L.n)) {
         act.append(...knowButtons(L, markKnown, onStatus));
       }
+      if (L.verb && rowOfTag(a.m, a.s)) act.append(h('button.btn.sm', { onclick: () => {
+        const vs = popAnchor && popAnchor.isConnected ? popAnchor.closest('.verse') : null;
+        clueRef.back = location.hash; clueRef.verse = null;
+        if (vs) { const c = vs.cloneNode(true); c.querySelectorAll('.vn, .gl').forEach((e) => e.remove()); clueRef.verse = c.textContent.replace(/\u00ad/g, '').replace(/\s+/g, ' ').trim(); }
+        location.hash = '#/parse/run/clues/form/' + (token >> 4) + '/' + f.an.indexOf(a);
+      } }, 'Find the clues'));
       if (status(L.n) === 'known') act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to words to review'); onStatus && onStatus(); } }, '↺ Review this'));
       else act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to your learning list'); onStatus && onStatus(); } }, '+ Learn this'));
       block.append(act);
