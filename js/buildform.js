@@ -46,6 +46,15 @@ const vowelInitial = (n) => { const L = D.lexByN.get(n); return !!L && VOWEL_STA
 /** How the first vowel of a vowel-initial stem lengthens for the augment (the same lengthening is the reduplication of the perfect); longest vowel first. A vowel that is already long shows nothing, so those verbs are left out. */
 const AUG = [['αι', ['ῃ']], ['ει', ['ῃ']], ['οι', ['ῳ']], ['αυ', ['ηυ']], ['ευ', ['ηυ']], ['α', ['η']], ['ε', ['η', 'ει']], ['ο', ['ω']]];
 /** The ways an unaugmented vowel-initial stem can begin once its first vowel lengthens: [{ from, to, pre }] (pre in plain letters). */
+/** A vowel-initial verb's second aorist: the stem is the one in the verb's printed principal part (ἔρχομαι: ἦλθον → ἐλθ-), found the same way in the word and in the part, so the augment's lengthening can be undone without guessing. */
+function secondStem(n, row, body, P0) {
+  const g = AUG.find(([x]) => P0.startsWith(x)), e = D.parts && D.parts.get(n); if (!g || !e) return null;
+  const end = row === 'aor2-act' ? 'ον' : row === 'aor2-mid' ? 'ομην' : row === 'aor2-pas' ? 'ην' : null, pt = e.parts[row === 'aor2-pas' ? 5 : 2] ? skel(e.parts[row === 'aor2-pas' ? 5 : 2]) : '';
+  if (!end || !pt.endsWith(end) || (row === 'aor2-pas' && pt.endsWith('θην'))) return null;
+  const pbody = pt.slice(0, -end.length);
+  for (const to of g[1]) { const t = skel(to); if (body.startsWith(t) && pbody.startsWith(t) && body.slice(t.length) === pbody.slice(t.length)) return { S: g[0] + body.slice(t.length), aug: { from: g[0], to } }; }
+  return null;
+}
 function augmented(S0) { const g = AUG.find(([x]) => S0.startsWith(x)); return g ? g[1].map((to) => ({ from: g[0], to, pre: skel(to) + S0.slice(g[0].length) })) : []; }
 const lengthen = (p) => p.slice(0, -1) + ({ 'α': 'η', 'ε': 'η', 'ο': 'ω' }[p.slice(-1)] || p.slice(-1));
 /** How a contract verb's stem vowel and the first vowel(s) of an uncontracted ending are written together (the endings are those of λύω). */
@@ -64,8 +73,9 @@ export function decompose(id, row) {
   const E = T.E[CELLS.indexOf(cell)], body = w.slice(0, w.length - end.length), used = variants(E).find((e) => w.endsWith(T.F + e));
   let A = '', S = body, aug = null;
   if (T.A !== '' && vowelInitial(a.s)) {           // the augment (or the perfect's reduplication) is the first vowel lengthening: the stem is shown as it is without it
-    const P0 = presentStem(a.s); if (!P0 || /^(aor2|perf2)/.test(row)) return null;
-    for (const S0 of uniq([P0, contractKind(a.s) ? lengthen(P0) : P0])) for (const c of augmented(S0)) if (body === c.pre) { S = S0; aug = { from: c.from, to: c.to }; }
+    const P0 = presentStem(a.s); if (!P0 || /^perf2/.test(row)) return null;
+    if (/^aor2/.test(row)) { const s2 = secondStem(a.s, row, body, P0); if (s2) { S = s2.S; aug = s2.aug; } }
+    else for (const S0 of uniq([P0, contractKind(a.s) ? lengthen(P0) : P0])) for (const c of augmented(S0)) if (body === c.pre) { S = S0; aug = { from: c.from, to: c.to }; }
     if (!aug) return null;
   } else if (T.A === 'ε') { if (body[0] !== 'ε' || body.length < 3 || VOWEL_START.test(body[1])) return null; A = 'ε'; S = body.slice(1); }
   else if (T.A === 'RED') { if (body.length < 4 || body[1] !== 'ε' || body[0] !== body[2] || VOWEL_START.test(body[0])) return null; A = body.slice(0, 2); S = body.slice(2); }

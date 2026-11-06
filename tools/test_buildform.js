@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
       contract: sp('ἠγάπησεν', 'aor1-act'), compound: sp('προσεκύνει', 'impf-act'), compound2: sp('ἐκβάλλει', 'pres-act'), mi: sp('ἔδωκεν', 'aor1-act'), vowel: sp('ἦλθον', 'aor2-act'), wrongrow: sp('πιστεύει', 'impf-act') }; });
   ok(d.a === 'ε|πιστευ|σ|αν|3P', 'ἐπίστευσαν: ' + d.a); ok(d.b === 'ε|λαβ||ον|3P' || d.b === 'ε|λαβ||ον|1S', 'ἔλαβον: ' + d.b); ok(d.c === '|πιστευ|σ|ει|3S', 'πιστεύσει: ' + d.c);
   ok(d.d === 'ε|πιστευ|σ|αμεν|1P', 'ἐπιστεύσαμεν: ' + d.d); ok(d.e === '|πιστευ||ει|3S', 'πιστεύει: ' + d.e); ok(d.f === 'ε|πιστευ||ετε|2P', 'ἐπιστεύετε: ' + d.f);
-  ok(d.compound === null && d.compound2 === null && d.mi === null && d.vowel === null && d.wrongrow === null, 'contract, compound, -μι, vowel-initial and wrong-row forms are left out: ' + JSON.stringify(d));
+  ok(d.compound === null && d.compound2 === null && d.mi === null && d.wrongrow === null, 'compound, -μι and wrong-row forms are left out: ' + JSON.stringify(d));
   // the chart's own pieces: formative κα / σα / θη, connecting vowel only on thematic rows, personal ending
   const cp = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), { D } = await import('/lexiko/js/data.js');
     const at = (w) => D.forms.findIndex((f) => f.w.replace(/­/g, '') === w), cp = (w, row) => { const i = at(w); if (i < 0) return 'missing'; const x = B.decompose(i, row); if (!x) return null; const c = B.chartPieces(x); return [c.F, c.V, c.PE, c.changes].join('|'); };
@@ -30,9 +30,9 @@ const { chromium } = require('playwright');
   // vowel-initial verbs: the first vowel lengthens (the stem is shown without the augment); second aorists and long vowels are left out
   const av = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), { D } = await import('/lexiko/js/data.js');
     const at = (w) => D.forms.findIndex((f) => f.w.replace(/­/g, '') === w), sp = (w, row) => { const i = at(w); if (i < 0) return 'missing'; const x = B.decompose(i, row); return x ? (x.aug ? x.aug.from + '>' + x.aug.to : '-') + ' ' + x.S : null; };
-    return { a: sp('ἠγάπησεν', 'aor1-act'), b: sp('ἤκουσεν', 'aor1-act'), c: sp('εἶχον', 'impf-act'), d: sp('ἤρχοντο', 'impf-mp'), e: sp('ἦλθον', 'aor2-act'), f: sp('ἠγάπων', 'impf-act'), g: sp('ᾐτήσατο', 'aor1-mid'), h: sp('ἤλπισεν', 'aor1-act') }; });
+    return { a: sp('ἠγάπησεν', 'aor1-act'), b: sp('ἤκουσεν', 'aor1-act'), c: sp('εἶχον', 'impf-act'), d: sp('ἤρχοντο', 'impf-mp'), e: sp('ἦλθον', 'aor2-act'), f: sp('ἠγάπων', 'impf-act'), g: sp('ᾐτήσατο', 'aor1-mid'), i: sp('ἤγαγον', 'aor2-act'), h: sp('ἤλπισεν', 'aor1-act') }; });
   ok(av.a === 'α>η αγαπη', 'ἠγάπησεν: ' + av.a); ok(av.b === 'α>η ακου', 'ἤκουσεν: ' + av.b); ok(av.c === 'missing' || av.c === 'ε>ει εχ', 'εἶχον: ' + av.c); ok(av.d === 'missing' || av.d === 'ε>η ερχ', 'ἤρχοντο: ' + av.d);
-  ok(av.e === null, 'ἦλθον (second aorist) stays out: ' + av.e); ok(av.f === 'missing' || av.f === 'α>η αγαπα', 'ἠγάπων: ' + av.f); ok(av.g === 'missing' || av.g === 'αι>ῃ αιτη', 'ᾐτήσατο: ' + av.g); ok(av.h === 'missing' || av.h === null, 'ἤλπισεν (dental stem) stays out: ' + av.h);
+  ok(av.e === 'missing' || av.e === 'ε>η ελθ', 'ἦλθον: the stem from the printed part: ' + av.e); ok(av.i === 'missing' || av.i === 'α>η αγαγ', 'ἤγαγον: ' + av.i); ok(av.f === 'missing' || av.f === 'α>η αγαπα', 'ἠγάπων: ' + av.f); ok(av.g === 'missing' || av.g === 'αι>ῃ αιτη', 'ᾐτήσατο: ' + av.g); ok(av.h === 'missing' || av.h === null, 'ἤλπισεν (dental stem) stays out: ' + av.h);
   // the other moods: subjunctive, imperative, infinitive (no front; plain splits only), gated like the indicative
   const mo = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js');
     const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const out = {};
