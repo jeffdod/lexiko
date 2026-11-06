@@ -78,6 +78,16 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
       stemsHaveIt: shown.some((w) => /^δε[ιῖ]$/.test(w.replace(/[\u00ad]/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())), stems: !!rs, word: D.lexByN.get(1163).verb !== false }; });
   ok(dei.plain.length >= 2 && dei.plainItems, 'the form δεῖ is never a parsing item', JSON.stringify(dei));
   ok(dei.rest >= 4 && dei.restItems && dei.stems && !dei.stemsHaveIt, 'ἔδει, δεῖν, δέῃ and δέον are parsed as verbs, and δεῖ is not among the verb forms to learn', JSON.stringify(dei));
+  // ---- ἰδού, ἴδε and δεῖ are learned as plain vocabulary: one 'I know this' button, no verb notice; a regular verb keeps the verb buttons
+  const vo = await p.evaluate(async () => { const u = await import('./js/util.js'), { D } = await import('./js/data.js'), k = await import('./js/know.js');
+    const ids = [2400, 2396, 1163], lu = D.lex.find((L) => L.head === 'λύω');
+    return { flags: ids.map((n) => D.lexByN.get(n).verb), tags: ids.map((n) => D.lexByN.get(n).pos), buttons: ids.map((n) => u.knowButtons(D.lexByN.get(n), () => {}, () => {}).length),
+      regular: lu.verb === true && u.knowButtons(lu, () => {}, () => {}).length === 2,
+      started: (() => { const mk = (n) => k.K.cards.set('w:' + n, { id: 'w:' + n, state: 'review', stability: 20, reps: 4, due: Date.now() + 1e9, src: 'manual' });
+        for (const n of [1163, 2400, lu.n]) mk(n); const sv = k.startedVerbs(); const r = { dei: sv.includes(1163), idou: sv.includes(2400), lu: sv.includes(lu.n) };
+        for (const n of [1163, 2400, lu.n]) k.K.cards.delete('w:' + n); return r; })() }; });
+  ok(vo.started.dei === false && vo.started.idou === false && vo.started.lu === true, 'a started δεῖ or ἰδού is not counted among the verbs you are learning; a regular verb is', JSON.stringify(vo));
+  ok(vo.flags.every((f) => f === false) && vo.tags.every((t) => t === 'V') && vo.buttons.every((n) => n === 1) && vo.regular, 'ἰδού, ἴδε and δεῖ have one "I know this" button; a regular verb has two', JSON.stringify(vo));
   // ---- old principal-part cards are purged on load
   await p.evaluate(async () => { const { store: s } = await import('./js/store.js'); await s.putCards([{ id: 'p:1:2', state: 'review', due: 1 }]); });
   await p.reload(); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });
