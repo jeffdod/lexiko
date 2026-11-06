@@ -57,10 +57,10 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
       h('div.muted.small', 'Occurs ' + fmt(L.freq) + '× in the text · frequency rank ' + fmt(L.rank)),
     );
     if (L.full) block.append(h('details', h('summary', 'Fuller definition'), h('div', L.full)));
-    const pe = L.pos === 'V' ? D.parts.get(L.n) : null;
+    const pe = L.verb ? D.parts.get(L.n) : null;
     if (pe && pe.parts.slice(1).some(Boolean)) {
       block.append(h('details.pparts', h('summary', 'Principal parts'), partsGrid(L.n, pe, PART_NAMES)));
-    } else if (L.pos === 'V') block.append(h('div.muted.small', 'This verb doesn’t have principal parts.'));
+    } else if (L.verb) block.append(h('div.muted.small', 'This verb doesn’t have principal parts.'));
     {
       const act = h('div.row.wrap', { style: { marginTop: '.6rem' } });
       if (status(L.n) !== 'known' || !K.cards.has('w:' + L.n)) {

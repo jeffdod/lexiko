@@ -1,11 +1,11 @@
 // "Which verb is this?": the right verb and three look-alikes, all real headwords from the lexicon.
-import { D, NOT_PARSED } from './data.js';
+import { D } from './data.js';
 import { shuffle } from './util.js';
 
 const skel = (s) => s.normalize('NFD').replace(/[̀-ͯͅ­]/g, '').toLowerCase().replace(/ς/g, 'σ');
 const commonLen = (a, b) => { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; };
 let pool = null;
-const verbs = () => pool || (pool = D.lex.filter((L) => L.pos === 'V' && !NOT_PARSED.has(L.n) && !L.senses && L.freq >= 3).map((L) => ({ L, k: skel(L.head) })));
+const verbs = () => pool || (pool = D.lex.filter((L) => L.verb && !L.senses && L.freq >= 3).map((L) => ({ L, k: skel(L.head) })));
 
 /** Four lexicon entries for a verb question: the verb itself and three that look like it (same opening letters or ending), leaning to verbs you might really meet. */
 export function verbChoices(n) {

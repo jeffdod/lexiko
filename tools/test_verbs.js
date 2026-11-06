@@ -64,11 +64,19 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(vr.status && vr.learned && vr.notLearned && vr.started, 'learned needs every chosen form known and 90% of the last 10 answers', JSON.stringify(vr));
   ok(vr.braked && vr.free, 'the brake comes on under 75% right and is off when answers are good', JSON.stringify(vr));
   ok(vr.quota && vr.noneWhenBraked, 'about one new verb per four other words, none while braked', JSON.stringify(vr));
-  // ---- ἰδού and ἴδε are tagged as verbs but are interjections: vocabulary only
-  const idou = await p.evaluate(async () => { const st = await import('./js/stems.js'), pm = await import('./js/parse-model.js'), k = await import('./js/know.js'), { D } = await import('./js/data.js');
-    const rows = D.forms.filter((f) => f.an[0] && (f.an[0].s === 2400 || f.an[0].s === 2396));
-    return { rows: rows.length, stems: st.requiredStems(2400) === null && st.requiredStems(2396) === null, items: rows.every((f) => pm.buildItem(f) === null), word: !!D.lexByN.get(2400), other: !!pm.buildItem(D.forms.find((f) => f.an[0] && f.an[0].m.startsWith('V-PAI') && f.an[0].s !== 2400)) }; });
-  ok(idou.rows >= 4 && idou.stems && idou.items && idou.word && idou.other, 'ἰδού and ἴδε are never parsing items or verb stems, but stay vocabulary words', JSON.stringify(idou));
+  // ---- ἰδού, ἴδε and δεῖ are tagged as verbs but are learned as plain vocabulary: no parsing, no verb stems, no verb buttons
+  const plain = await p.evaluate(async () => { const st = await import('./js/stems.js'), pm = await import('./js/parse-model.js'), u = await import('./js/util.js'), { D } = await import('./js/data.js');
+    const ids = [2400, 2396, 1163], out = {};
+    out.rows = ids.map((n) => D.forms.filter((f) => f.an[0] && f.an[0].s === n).length);
+    out.stems = ids.every((n) => st.requiredStems(n) === null);
+    out.items = ids.every((n) => D.forms.filter((f) => f.an[0] && f.an[0].s === n).every((f) => pm.buildItem(f) === null));
+    out.words = ids.every((n) => !!D.lexByN.get(n) && D.lexByN.get(n).verb === false && D.lexByN.get(n).pos === 'V');
+    out.buttons = ids.map((n) => u.knowButtons(D.lexByN.get(n), () => {}, () => {}).length);
+    const lu = D.lex.find((L) => L.head === 'λύω'); out.regular = !!lu && lu.verb === true && u.knowButtons(lu, () => {}, () => {}).length === 2;
+    out.other = !!pm.buildItem(D.forms.find((f) => f.an[0] && f.an[0].m.startsWith('V-') && !ids.includes(f.an[0].s) && f.count > 100));
+    return out; });
+  ok(plain.rows.every((n) => n >= 1) && plain.rows[0] >= 4 && plain.stems && plain.items && plain.words && plain.other, 'ἰδού, ἴδε and δεῖ are never parsing items or verb stems, but stay vocabulary words', JSON.stringify(plain));
+  ok(plain.buttons.every((n) => n === 1) && plain.regular, 'they get one "I know this" button, a regular verb gets the two verb buttons', JSON.stringify(plain));
   // ---- old principal-part cards are purged on load
   await p.evaluate(async () => { const { store: s } = await import('./js/store.js'); await s.putCards([{ id: 'p:1:2', state: 'review', due: 1 }]); });
   await p.reload(); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });
