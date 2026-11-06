@@ -314,7 +314,7 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
 export const LEARNED_ACC = 0.9, LEARNED_WINDOW = 10;          // a verb's forms are learned at 90% right over your last 10 answers (and each chosen form known)
 export const BRAKE_ACC = 0.75, BRAKE_WINDOW = 20, BRAKE_MIN = 15, UNLEARNED_MAX = 5;   // new verbs pause under 75% right over the last 20 verb-form answers, or when more than 5 verbs are unlearned
 export const VERB_SHARE = 4;                                  // about one new verb for every four other new words
-const isVerb = (n) => { const L = D.lexByN.get(n); return !!L && L.pos === 'V' && !NOT_PARSED.has(n); };
+const isVerb = (n) => { const L = D.lexByN.get(n); return !!L && L.verb; };
 const cardKnown = (c) => !!c && c.state === 'review' && ((c.stability || 0) >= 7 || (c.reps || 0) >= 2);       // the word-card rule
 const formKnown = (rows) => rows.some((i) => cardKnown(K.cards.get(parseId(D.forms[i]))));
 const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
