@@ -69,6 +69,15 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     const rows = D.forms.filter((f) => f.an[0] && (f.an[0].s === 2400 || f.an[0].s === 2396));
     return { rows: rows.length, stems: st.requiredStems(2400) === null && st.requiredStems(2396) === null, items: rows.every((f) => pm.buildItem(f) === null), word: !!D.lexByN.get(2400), other: !!pm.buildItem(D.forms.find((f) => f.an[0] && f.an[0].m.startsWith('V-PAI') && f.an[0].s !== 2400)) }; });
   ok(idou.rows >= 4 && idou.stems && idou.items && idou.word && idou.other, 'ἰδού and ἴδε are never parsing items or verb stems, but stay vocabulary words', JSON.stringify(idou));
+  // ---- δεῖ itself is vocabulary; the other forms of δεῖ are still parsed as verbs
+  const dei = await p.evaluate(async () => { const st = await import('./js/stems.js'), pm = await import('./js/parse-model.js'), { D } = await import('./js/data.js');
+    const of = (f) => D.forms.filter((x) => x.an[0] && x.an[0].s === 1163 && f(x));
+    const plain = of((x) => x.an[0].m === 'V-PAI-3S'), rest = of((x) => x.an[0].m !== 'V-PAI-3S');
+    const rs = st.requiredStems(1163), shown = rs ? rs.stems.flatMap((s) => s.forms.map((f) => f.w)) : [];
+    return { plain: plain.map((x) => x.w.replace(/[\u00ad]/g, '')), plainItems: plain.every((x) => pm.buildItem(x) === null), rest: rest.length, restItems: rest.every((x) => pm.buildItem(x) !== null),
+      stemsHaveIt: shown.some((w) => /^δε[ιῖ]$/.test(w.replace(/[\u00ad]/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())), stems: !!rs, word: D.lexByN.get(1163).verb !== false }; });
+  ok(dei.plain.length >= 2 && dei.plainItems, 'the form δεῖ is never a parsing item', JSON.stringify(dei));
+  ok(dei.rest >= 4 && dei.restItems && dei.stems && !dei.stemsHaveIt, 'ἔδει, δεῖν, δέῃ and δέον are parsed as verbs, and δεῖ is not among the verb forms to learn', JSON.stringify(dei));
   // ---- old principal-part cards are purged on load
   await p.evaluate(async () => { const { store: s } = await import('./js/store.js'); await s.putCards([{ id: 'p:1:2', state: 'review', due: 1 }]); });
   await p.reload(); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });

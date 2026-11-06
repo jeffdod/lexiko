@@ -2,7 +2,7 @@
 // Slots are always asked in a fixed order. Verbs: tense → voice → mood → person → number
 // (infinitive stops after mood; participles continue with case → number → gender).
 // Everything else: case → number → gender (personal/reflexive/possessive pronouns add person first).
-import { NOT_PARSED } from './data.js';
+import { notParsed } from './data.js';
 import { decode, CASE, NUM, GEN, TENSE, MOOD } from './morph.js';
 
 export const SLOT_TITLE = { verb: 'Verb', tense: 'Tense', voice: 'Voice', mood: 'Mood', person: 'Person', number: 'Number', case: 'Case', gender: 'Gender', possessorNumber: 'Possessor number' };
@@ -111,7 +111,7 @@ export function mergeForms(forms, ids) {
  * A form can have alternate parsings (e.g. N-NSF and N-VSF); all with the same lexeme and shape are accepted.
  */
 export function buildItem(form) {
-  const first = form.an[0]; if (!first || NOT_PARSED.has(first.s)) return null;
+  const first = form.an[0]; if (!first || notParsed(first)) return null;
   const d0 = decode(first.m), group = groupOf(d0);
   if (!group) return null;
   const valid = [];
