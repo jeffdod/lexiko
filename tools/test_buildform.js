@@ -45,12 +45,28 @@ const { chromium } = require('playwright');
   ok(gated === 0, 'moods wait for their level: ' + gated);
   // participles: stem · formative · ending (marker + case ending); perfects also show the reduplication
   const pt = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), K = await import('/lexiko/js/know.js');
-    const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const out = { ok: 0, bad: 0, red: 0, snd: 0, aug: 0, keys: new Set() };
+    const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const out = { ok: 0, bad: 0, red: 0, snd: 0, aug: 0, con: 0, liq: 0, keys: new Set() };
     for (const x of P.ptcPool({ anyVerb: true })) { const d = B.decomposePtc(x); if (!d) continue; out.ok++; out.keys.add(d.key); if (d.A) out.red++; if (d.sound) out.snd++; if (d.aug) out.aug++;
-      const core = d.sound ? d.sound.joined + (d.F + d.E).slice(1) : d.S + d.F + d.E; if (!d.aug && sk(d.A + core) !== sk(d.word)) out.bad++; }
+      const core = d.sound ? d.sound.joined + (d.F + d.E).slice(1) : d.S + d.F + d.E; if (d.contract) { out.con++; if (sk(d.contract.head + d.contract.res + d.contract.rest) !== sk(d.word)) out.bad++; } else if (!d.aug && sk(d.A + core) !== sk(d.word)) out.bad++; if (d.liquid) out.liq++; }
     const was = K.K.settings.formLevel; K.K.settings.formLevel = 1; const gated = P.ptcPool({ anyVerb: true }).length; K.K.settings.formLevel = was;
-    return { ok: out.ok, bad: out.bad, red: out.red, snd: out.snd, keys: out.keys.size, aug: out.aug, gated }; });
-  ok(pt.ok > 100 && pt.bad === 0 && pt.keys >= 8 && pt.red > 2 && pt.snd > 5 && pt.gated === 0, 'participles add up: ' + JSON.stringify(pt));
+    return { ok: out.ok, bad: out.bad, red: out.red, snd: out.snd, keys: out.keys.size, aug: out.aug, con: out.con, liq: out.liq, gated }; });
+  ok(pt.ok > 100 && pt.bad === 0 && pt.keys >= 8 && pt.con > 200 && pt.liq > 3 && pt.red > 2 && pt.snd > 5 && pt.gated === 0, 'participles add up: ' + JSON.stringify(pt));
+  // liquid verbs: the future and aorist have no σ; the stem is the verb's printed one (μένω: ἔμεινα, μενῶ); φθάνω and ἁμαρτάνω keep a σ and are left out
+  const lq = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js');
+    const at = (w) => D.forms.findIndex((f) => f.w.replace(/­/g, '') === w), sp = (w, row) => { const i = at(w); if (i < 0) return 'missing'; const x = B.decompose(i, row); return x ? [x.A, x.S, x.F, x.E].join('|') : null; };
+    const n = {}; for (const row of ['aor-liq-act', 'fut-liq-act', 'fut-liq-mid']) { n[row] = 0; for (const id of P.rowPool(row, { ignoreLevel: true, anyVerb: true })) if (B.decompose(id, row)) n[row]++; }
+    return { n, a: sp('ἔμεινεν', 'aor-liq-act'), b: sp('ἔσπειρεν', 'aor-liq-act'), c: sp('κρινεῖ', 'fut-liq-act'), d: sp('κρινῶ', 'fut-liq-act'), e: sp('ἔφθασεν', 'aor-liq-act'), g: sp('ἤγειραν', 'aor-liq-act') }; });
+  ok(lq.a === 'ε|μειν||ε(ν)' && lq.b === 'ε|σπειρ||ε(ν)' && lq.c === '|κριν||ει' && lq.d === '|κριν||ω' && lq.e === null && lq.g === '|εγειρ||αν' && lq.n['aor-liq-act'] > 15 && lq.n['fut-liq-act'] > 8, 'liquid verbs: ' + JSON.stringify(lq));
+  // a contract participle, a liquid aorist and a perfect participle walk through every step to "Built:" (forced queues, no random picking)
+  for (const spec of [{ w: 'ποιοῦντες' }, { w: 'ἔμειναν', row: 'aor-liq-act' }, { w: 'λελυμένον' }]) {
+    const found = await p.evaluate(async (spec) => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js'); let d = null;
+      if (spec.row) { for (const id of P.rowPool(spec.row, { ignoreLevel: true, anyVerb: true })) if (D.forms[id].w.replace(/­/g, '') === spec.w) d = B.decompose(id, spec.row); } else for (const x of P.ptcPool({ anyVerb: true })) if (x.w === spec.w) { d = B.decomposePtc(x); if (d) break; }
+      if (d) B.renderBuild(document.querySelector('#view'), 'any', [d]); return !!d; }, spec);
+    ok(found, 'forced form is buildable: ' + spec.w); if (!found) continue;
+    let reached = false; for (let st = 0; st < 8 && !reached; st++) { await p.waitForTimeout(250); if (/Built:/.test(await p.locator('#view').innerText())) { reached = true; break; }
+      await p.waitForFunction(() => document.querySelector('#view .opts'), null, { timeout: 4000 }).catch(() => {}); await p.locator('.opt').first().click(); await p.waitForTimeout(1450); const c = p.getByRole('button', { name: 'Continue' }); if (await c.count()) { await c.click(); await p.waitForTimeout(200); } }
+    ok(reached || /Built:/.test(await p.locator('#view').innerText()), 'steps run through to Built for ' + spec.w);
+  }
   // every form that is offered adds up, and every offered row/cell is consistent
   const all = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js'); let n = 0, bad = 0, con = 0, aug = 0, snd = 0; const pairs = new Set(); const rows = new Set();
     const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
