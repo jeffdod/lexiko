@@ -16,6 +16,12 @@ const { chromium } = require('playwright');
     K.K.settings.formLevel = 1; const out = []; for (let i = 0; i < 6; i++) out.push(...C.clueQueue(true, 12)); K.K.settings.formLevel = F.NLEVELS;
     const lv = (id) => Math.max(...D.forms[id].an.slice(0, 1).map((a) => F.levelOfTag(a.m))); return { n: out.length, bad: out.filter((x) => x.type === 'hunt' && lv(x.id) > 1).length + out.filter((x) => x.type === 'pair' && (lv(x.ida) > 1 || lv(x.idb) > 1)).length }; });
   ok(g.n > 0 && g.bad === 0, 'gated: nothing from a level that is not open yet: ' + JSON.stringify(g));
+  // weak spots: when tense is the weak slot, pairs that differ in the tense come up more often than pairs that differ only in the voice, and the reason is shown
+  const w = await p.evaluate(async () => { const C = await import('/lexiko/js/cluehunt.js'); const run = (st) => { let tense = 0, voice = 0, reasons = 0; for (let i = 0; i < 80; i++) for (const x of C.clueQueue(true, 10, st).filter((y) => y.type === 'pair')) { const t = x.a.split('-')[0].replace(/\d/, '') !== x.b.split('-')[0].replace(/\d/, ''); t ? tense++ : voice++; if (x.reason) reasons++; } return { tense, voice, reasons }; };
+    return { none: run(null), weakTense: run({ slots: { tense: [30, 100], voice: [98, 100] } }), weakVoice: run({ slots: { tense: [98, 100], voice: [30, 100] } }), pw: C.pairWeight('pres-act', 'impf-act', { slots: { tense: [30, 100] } }) }; });
+  ok(w.weakTense.tense / (w.weakTense.tense + w.weakTense.voice) > w.none.tense / (w.none.tense + w.none.voice) + 0.1, 'weak tense: more tense pairs: ' + JSON.stringify(w));
+  ok(w.weakVoice.voice / (w.weakVoice.tense + w.weakVoice.voice) > w.none.voice / (w.none.tense + w.none.voice) + 0.1, 'weak voice: more voice pairs: ' + JSON.stringify(w));
+  ok(w.weakTense.reasons > 0 && w.none.reasons === 0 && /30%/.test(w.pw.reason || ''), 'a reason is given only when you are clearly weak: ' + JSON.stringify(w.pw));
   const before = await p.evaluate(async () => (await import('/lexiko/js/know.js')).K.cards.size);
   await p.evaluate(() => { location.hash = '#/parse/run/clues/any'; }); await p.waitForTimeout(900);
   let hunts = 0, pairs = 0, text = '';

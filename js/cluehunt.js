@@ -5,6 +5,7 @@ import { ROWS, say, summary } from './chartdrill.js';
 import { rowPool } from './parse.js';
 import { h, clear, shuffle, backHead, backLinks } from './util.js';
 import { rowOfTag } from './families.js';
+import { getParseStats } from './know.js';
 import { clueRef } from './clueref.js';
 
 const ROW = Object.fromEntries(ROWS.map((r) => [r.key, r]));
@@ -35,7 +36,22 @@ function nameOptions(r) {
 }
 
 /** Pairs that are easy to confuse. */
-const PAIRS = [['pres-act', 'impf-act'], ['pres-mp', 'impf-mp'], ['impf-act', 'aor2-act'], ['pres-act', 'fut-act'], ['aor1-act', 'aor1-mid'], ['aor1-act', 'aor1-pas'], ['aor1-act', 'perf1-act'], ['pres-mp', 'fut-mid'], ['aor2-act', 'aor2-mid'], ['fut-act', 'aor1-act'], ['impf-mp', 'aor2-mid'], ['fut-pas1', 'aor1-pas']];
+const PAIRS = [['pres-act', 'impf-act'], ['pres-mp', 'impf-mp'], ['impf-act', 'aor2-act'], ['pres-act', 'fut-act'], ['aor1-act', 'aor1-mid'], ['aor1-act', 'aor1-pas'], ['aor1-act', 'perf1-act'], ['pres-mp', 'fut-mid'], ['aor2-act', 'aor2-mid'], ['fut-act', 'aor1-act'], ['impf-mp', 'aor2-mid'], ['fut-pas1', 'aor1-pas'], ['pres-act', 'pres-mp'], ['impf-act', 'impf-mp'], ['fut-act', 'fut-mid'], ['aor1-mid', 'aor1-pas']];
+
+/** The tense and the voice a chart row stands for, to see which Parsing slot a pair tests. */
+const tenseOfRow = (k) => (/^(pres|impf|fut|aor|perf)/.exec(k) || [])[1];
+const voiceOfRow = (k) => (/-act$/.test(k) ? 'act' : /-mp$/.test(k) ? 'mp' : /-mid$/.test(k) ? 'mid' : 'pas');
+/** How weak you are in a Parsing slot, 0 (always right) to 1 (never), from your answers so far; with few answers it stays near the middle. */
+const weakness = (st, slot) => { const s = st && st.slots && st.slots[slot]; return s ? 1 - (s[0] + 2) / (s[1] + 4) : 0.5; };
+const accuracy = (st, slot) => { const s = st && st.slots && st.slots[slot]; return s && s[1] >= 10 ? s[0] / s[1] : null; };
+/** A pair is more likely the weaker you are in the slots it tests (tense, voice); returns its weight and, when you are clearly weak in one, the reason. */
+export function pairWeight(a, b, st) {
+  const diff = [];
+  if (tenseOfRow(a) !== tenseOfRow(b)) diff.push('tense');
+  if (voiceOfRow(a) !== voiceOfRow(b)) diff.push('voice');
+  const weak = diff.map((s) => [s, weakness(st, s), accuracy(st, s)]).sort((x, y) => y[1] - x[1])[0];
+  return { w: 0.1 + diff.reduce((n, s) => n + weakness(st, s), 0), reason: weak && weak[2] != null && weak[2] < 0.85 ? 'You get the ' + weak[0] + ' right ' + Math.round(weak[2] * 100) + '% of the time in Parsing, so here is a pair that differs in the ' + weak[0] + '.' : null };
+}
 
 /** Forms of one verb in each of two rows: [{ a: id, b: id, n }]. */
 function pairsFor(keyA, keyB, any, cache) {
@@ -46,12 +62,16 @@ function pairsFor(keyA, keyB, any, cache) {
 }
 
 /** The session: forms to hunt clues in, with a contrast pair every third question. */
-export function clueQueue(any, total = 10) {
+export function clueQueue(any, total = 10, st = null) {
   const cache = new Map(), hunts = [], pairs = [];
   const pools = KEYS.filter((k) => !/-liq-/.test(k)).map((k) => [k, rowPool(k, { gated: true, anyVerb: any })]).filter(([, p]) => p.length);
   const lists = pools.map(([k, p]) => [k, shuffle(p.slice().sort((x, y) => D.forms[y].count - D.forms[x].count).slice(0, 40))]), seen = new Set();
   for (let i = 0; lists.length && hunts.length < total; i++) { const [k, l] = lists[i % lists.length]; const id = l.find((x) => !seen.has(x)); if (id != null) { seen.add(id); hunts.push({ type: 'hunt', id, key: k }); } else if (lists.every(([, q]) => q.every((x) => seen.has(x)))) break; }
-  for (const [a, b] of shuffle(PAIRS.slice())) { const f = pairsFor(a, b, any, cache); if (f.length) { const p = shuffle(f)[0]; pairs.push({ type: 'pair', a, b, ida: p.a, idb: p.b, n: p.n }); } if (pairs.length >= Math.floor(total / 3)) break; }
+  const avail = PAIRS.map(([a, b]) => ({ a, b, f: pairsFor(a, b, any, cache), ...pairWeight(a, b, st) })).filter((x) => x.f.length);
+  while (avail.length && pairs.length < Math.floor(total / 3)) {                  // weighted draw without replacement: weaker slots come up more often
+    let r = Math.random() * avail.reduce((n, x) => n + x.w, 0), i = 0; while (i < avail.length - 1 && (r -= avail[i].w) > 0) i++;
+    const x = avail.splice(i, 1)[0], p = shuffle(x.f)[0]; pairs.push({ type: 'pair', a: x.a, b: x.b, ida: p.a, idb: p.b, n: p.n, reason: x.reason });
+  }
   const out = []; let hi = 0, pi = 0;
   while (out.length < total && (hi < hunts.length || pi < pairs.length)) { if (out.length % 3 === 2 && pi < pairs.length) out.push(pairs[pi++]); else if (hi < hunts.length) out.push(hunts[hi++]); else out.push(pairs[pi++]); }
   return out;
@@ -85,9 +105,10 @@ const greek = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
 const bigWord = (w) => h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.4rem', textAlign: 'center', margin: '.3rem 0' } }, w.replace(/\u00ad/g, ''));
 const note = (kids, cls = '') => h('div.card.small' + cls, { style: { background: 'var(--accent-soft)', border: 'none' } }, ...kids);
 
-export function renderClues(view, mode, single = null) {
+export async function renderClues(view, mode, single = null) {
+  const st = single ? null : await getParseStats().catch(() => null);
   const an = single ? D.forms[single.formIdx].an[single.an] : null, row = an ? rowOfTag(an.m, an.s) : null;
-  const any = mode === 'any', queue = single ? (row ? [{ type: 'hunt', id: single.formIdx, key: row, an: single.an }] : []) : clueQueue(any);
+  const any = mode === 'any', queue = single ? (row ? [{ type: 'hunt', id: single.formIdx, key: row, an: single.an }] : []) : clueQueue(any, 10, st);
   const home = single && clueRef.back ? clueRef.back : '#/parse', homeName = single && clueRef.back ? 'Reading' : 'Parsing', back = [home, 'Back to ' + homeName.toLowerCase()];
   if (!queue.length && single) { clear(view).append(backHead('Clue hunt', home, homeName), h('div.card.stack', h('p', 'Clue hunt covers the indicative forms of verbs, the ones on the master verb chart. This form is another mood.'), ...backLinks(...back))); return; }
   if (!queue.length) { clear(view).append(backHead('Clue hunt', home, homeName), h('div.card.stack', h('p', 'There are no forms to hunt yet' + (any ? '' : ' in verbs you know') + '. Forms open up as you learn the chart rows and the verbs.'), h('a.btn', { href: '#/parse/run/clues/any' }, 'Try with any verb'), ...backLinks(...back))); return; }
@@ -142,7 +163,7 @@ export function renderClues(view, mode, single = null) {
   const pair = (q) => {
     const A = ROW[q.a], B = ROW[q.b], askA = Math.random() < 0.5, target = askA ? A : B, other = askA ? B : A, wa = D.forms[q.ida].w, wb = D.forms[q.idb].w;
     const L = D.lexByN.get(q.n), order = shuffle([['a', wa], ['b', wb]]), right = target === A ? 'a' : 'b';
-    frame('What’s the difference?', [h('p.muted.small', { style: { margin: 0 } }, 'Two forms of ', L ? greek(L.head) : 'one verb', '. Practice only.'), h('p', h('b', 'Which one is the ' + nice(target) + '?')),
+    frame('What’s the difference?', [h('p.muted.small', { style: { margin: 0 } }, 'Two forms of ', L ? greek(L.head) : 'one verb', '. Practice only.'), q.reason ? h('p.small', { style: { margin: 0, color: 'var(--ink-2)' } }, q.reason) : null, h('p', h('b', 'Which one is the ' + nice(target) + '?')),
       choices(order, right, (v, ok) => {
         tally.pair[1]++; if (ok) tally.pair[0]++;
         const why = differ(target, other);
