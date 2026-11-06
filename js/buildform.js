@@ -7,6 +7,7 @@ import { D, notParsed } from './data.js';
 import { ROWS, say } from './chartdrill.js';
 import { rowPool, moodPool, ptcPool } from './parse.js';
 import { PTCB, PTC, split as splitPtc, MORPHEME_MEANING } from './ptcdata.js';
+import { isLiquidVerb } from './families.js';
 import { SUBB, splitSub } from './subdata.js';
 import { IMPB, splitImp } from './impdata.js';
 import { INFB, INF, splitInf } from './infdata.js';
@@ -29,6 +30,7 @@ export const BUILD = {
   'fut-act': { A: '', F: 'σ', E: PRES_ACT }, 'fut-mid': { A: '', F: 'σ', E: MP_PRIM }, 'fut-pas1': { A: '', F: 'θησ', E: MP_PRIM }, 'fut-pas2': { A: '', F: 'ησ', E: MP_PRIM },
   'aor1-act': { A: 'ε', F: 'σ', E: A_ACT }, 'aor2-act': { A: 'ε', F: '', E: SEC_ACT }, 'aor1-mid': { A: 'ε', F: 'σ', E: ['αμην', 'ω', 'ατο', 'αμεθα', 'ασθε', 'αντο'] }, 'aor2-mid': { A: 'ε', F: '', E: SEC_MP },
   'aor1-pas': { A: 'ε', F: 'θ', E: PAS }, 'aor2-pas': { A: 'ε', F: '', E: PAS },
+  'aor-liq-act': { A: 'ε', F: '', E: A_ACT }, 'fut-liq-act': { A: '', F: '', E: ['ω', 'εις', 'ει', 'ουμεν', 'ετε', 'ουσι(ν)'] }, 'fut-liq-mid': { A: '', F: '', E: ['ουμαι', 'η', 'ειται', 'ουμεθα', 'εισθε', 'ουνται'] },
   'perf1-act': { A: 'RED', F: 'κ', E: ['α', 'ας', 'ε(ν)', 'αμεν', 'ατε', 'ασι(ν)'] }, 'perf2-act': { A: 'RED', F: '', E: ['α', 'ας', 'ε(ν)', 'αμεν', 'ατε', 'ασι(ν)'] }, 'perf-mp': { A: 'RED', F: '', E: ['μαι', 'σαι', 'ται', 'μεθα', 'σθε', 'νται'] },
 };
 for (const T of Object.values(BUILD)) T.E = T.E.map(skel);                 // endings are kept as plain letters (σ everywhere), and shown with ς at the end
@@ -42,7 +44,7 @@ const cellOf = (m) => { const x = TAG.exec(m || ''); return x ? x[1] + x[2] : nu
 /** The stem vowel of a contract verb (α, ε or ο), or null. */
 const contractKind = (n) => { const L = D.lexByN.get(n), m = L ? /([αεο])(ω|ομαι)$/.exec(skel(L.head)) : null; return m ? m[1] : null; };
 /** Verbs left out: unknown, -μι and compound verbs. */
-const contract = (n) => { const L = D.lexByN.get(n); if (!L) return true; return /μι$/.test(skel(L.head)) || isCompoundLemma(L.head); };
+const contract = (n) => { const L = D.lexByN.get(n); if (!L) return true; return /μι$/.test(skel(L.head)) || (isCompoundLemma(L.head) && !/^εγειρ/.test(skel(L.head))); };      // ἐγείρω only looks like ἐγ- + a verb
 const vowelInitial = (n) => { const L = D.lexByN.get(n); return !!L && VOWEL_START.test(skel(L.head)); };
 /** How the first vowel of a vowel-initial stem lengthens for the augment (the same lengthening is the reduplication of the perfect); longest vowel first. A vowel that is already long shows nothing, so those verbs are left out. */
 const AUG = [['αι', ['ῃ']], ['ει', ['ῃ']], ['οι', ['ῳ']], ['αυ', ['ηυ']], ['ευ', ['ηυ']], ['α', ['η']], ['ε', ['η', 'ει']], ['ο', ['ω']]];
@@ -82,10 +84,31 @@ function soundJoin(P, F) {
   }
   return null;
 }
+/** The stem of a liquid verb's future or aorist, read from the verb's printed principal part (μένω: μενῶ, ἔμεινα → μεν-, μειν-); a vowel-initial verb also gives the lengthening (ἐγείρω: ἤγειρα). */
+function liquidStem(n, kind) {
+  const e = D.parts && D.parts.get(n), P = presentStem(n); if (!e || !P || !isLiquidVerb(n) || contractKind(n)) return null;
+  const fut = kind === 'fut', pt = e.parts[fut ? 1 : 2] ? skel(e.parts[fut ? 1 : 2]) : '', end = fut ? ['ουμαι', 'ω'].find((x) => pt.endsWith(x)) : pt.endsWith('α') ? 'α' : null; if (!end) return null;
+  const body = pt.slice(0, -end.length);
+  const liquidEnd = (t) => /[λμνρ]$/.test(t);                                  // φθάνω's ἔφθασα and ἁμαρτάνω's ἁμαρτήσω keep a σ: not liquid futures or aorists
+  if (fut) return body.length >= 2 && liquidEnd(body) ? { S: body, aug: null } : null;
+  if (vowelInitial(n)) { const c = augmented(P).find((c) => c.pre === body && plainKeep(e.parts[2]).startsWith(plainKeep(c.to))); return c && liquidEnd(P) ? { S: P, aug: { from: c.from, to: c.to } } : null; }     // ἦρα (αἴρω) is not αι → ῃ
+  return body[0] === 'ε' && body.length >= 3 && liquidEnd(body) ? { S: body.slice(1), aug: null } : null;
+}
+/** A liquid verb's future (no σ: μεν + ε + ω is written μενῶ) or 1st aorist (no σ, stem vowel lengthened), taken from the printed stem. */
+function decomposeLiquid(id, row, f, a, cell) {
+  const T = BUILD[row], ls = liquidStem(a.s, /^aor/.test(row) ? 'aor' : 'fut'); if (!ls) return null;
+  const w = skel(f.w), E = T.E[CELLS.indexOf(cell)], P = presentStem(a.s);
+  for (const e of variants(E)) {
+    const want = ls.aug ? skel(ls.aug.to) + ls.S.slice(ls.aug.from.length) + e : T.A + ls.S + e;
+    if (w === want) return { row, cell, A: ls.aug ? '' : T.A, S: ls.S, F: '', E, used: e, word: f.w.replace(/­/g, ''), n: a.s, id, aug: ls.aug, liquid: { from: P } };
+  }
+  return null;
+}
 /** A form taken apart: { row, cell, A, S, F, E, word, n } or null when it does not add up exactly. */
 export function decompose(id, row) {
   const f = D.forms[id], a = f.an[0], T = BUILD[row]; if (!a || !T || notParsed(a)) return null;
   const cell = cellOf(a.m); if (!cell || contract(a.s) || rowOfTag(a.m, a.s) !== row) return null;
+  if (/-liq-|^aor-liq/.test(row)) return decomposeLiquid(id, row, f, a, cell);
   if (contractKind(a.s) && /^(pres|impf)-/.test(row)) return decomposeContract(id, row, f, a, cell);
   const w = skel(f.w), E = T.E[CELLS.indexOf(cell)], k = contractKind(a.s), P = presentStem(a.s), sj = P && !k && !/^(aor2|perf2)/.test(row) ? soundJoin(P, T.F) : null;
   // the word either ends with formative + ending, or (ψ and ξ) the formative is absorbed into the stem and only the ending follows
@@ -179,10 +202,11 @@ export function decomposeMood(mood, x) {
   const M = MOODS[mood], r = M.B.get(x.key); if (!r || /^perf/.test(x.key) || contract(x.n)) return null;
   const k = contractKind(x.n);
   if (k) { if (/^pres/.test(x.key)) return decomposeMoodContract(mood, x); if (/^aor2/.test(x.key)) return null; }
-  const sp = M.split(x.w, x.key); if (!sp || sp.liquid) return null;
-  let S = sp.stemSkel; const P = presentStem(x.n), F = skel(sp.formative || ''), V = skel(sp.vowel || ''), E0 = skel(sp.ending || ''); let sound = null;
+  const sp = M.split(x.w, x.key, !k && isLiquidVerb(x.n) && /^aor1-(act|mid)$/.test(x.key) ? { liquid: true } : undefined); if (!sp) return null;
+  let S = sp.stemSkel, liquid = null; const P = presentStem(x.n), F = skel(sp.formative || ''), V = skel(sp.vowel || ''), E0 = skel(sp.ending || ''); let sound = null;
   if (!S || S.length < 2 && !sp.merged) return null;
-  if (!/^aor2/.test(x.key)) {
+  if (sp.liquid) { const ls = liquidStem(x.n, 'aor'); if (!ls || ls.S !== S) return null; liquid = { from: P }; }
+  else if (!/^aor2/.test(x.key)) {
     if (sp.merged) {                                  // ψ or ξ: the stem as printed lacks the stop (subjunctive) or is the full stem with the σ split off (imperative, infinitive)
       const sj = soundJoin(P, 'σ');
       if (!(sj && sj.merged && (S === P || (P.slice(0, -1) === S && sj.joined === skel(S + sp.formative))))) return null;
@@ -196,16 +220,18 @@ export function decomposeMood(mood, x) {
   if (S.length < 2) return null;
   const who = mood === 'inf' ? '' : WHO(x.code); if (mood !== 'inf' && !who) return null;
   const E = E0.replace(/^σι$/, 'σι(ν)').replace(/^σιν$/, 'σι(ν)'), tail = F + V + E, real = sound ? sound.joined + tail.slice(1) : S + tail;
-  return { mood, key: x.key, S, F, V, E, vowelWritten: plainKeep(sp.vowel || ''), word: x.w, n: x.n, id: x.id, who, row: null, kind: r, sound, real };
+  if (liquid && skel(real.replace('(ν)', '')) !== skel(x.w) && skel(real.replace('(ν)', 'ν')) !== skel(x.w)) return null;
+  return { mood, key: x.key, S, F, V, E, vowelWritten: plainKeep(sp.vowel || ''), word: x.w, n: x.n, id: x.id, who, row: null, kind: r, sound, real, liquid };
 }
 /* ---------- participles: front (perfects) · stem · formative · ending (marker + case ending) ---------- */
 const CASE_N = { N: 'nominative', G: 'genitive', D: 'dative', A: 'accusative', V: 'vocative' }, NUM_N = { S: 'singular', P: 'plural' }, GEN_N = { M: 'masculine', F: 'feminine', N: 'neuter' };
 const DEASP = { 'φ': 'π', 'θ': 'τ', 'χ': 'κ' };
 /** A participle taken apart, or null when it does not add up exactly: contract, liquid, -μι and compound verbs, second perfects and anything whose stem is not the verb's own are left out. */
 export function decomposePtc(x) {
-  const r = PTCB.get(x.key); if (!r || contract(x.n) || contractKind(x.n) || /^perf2/.test(x.key)) return null;
-  const sp = splitPtc(x.w, x.key); if (!sp || sp.liquid) return null;
-  const P = presentStem(x.n); if (!P || P.length < 2) return null;
+  const r = PTCB.get(x.key); if (!r || contract(x.n) || /^perf2/.test(x.key)) return null;
+  const k = contractKind(x.n), P = presentStem(x.n); if (!P || P.length < 2) return null;
+  if (k && /^pres/.test(x.key)) return decomposePtcContract(x, r, k, P);
+  const lq = !k && isLiquidVerb(x.n) && /^aor1-(act|mid)$/.test(x.key), sp = splitPtc(x.w, x.key, { liquid: lq }); if (!sp) return null;
   const perf = /^perf/.test(x.key), sec = /^aor2/.test(x.key), vi = vowelInitial(x.n), word = skel(x.w);
   const rest = skel(sp.rest || ''); let F = skel(sp.formative || ''); if (sp.merged) F = 'σ' + F.slice(1);
   let body = sp.stemSkel, A = '', aug = null, S1;
@@ -215,7 +241,10 @@ export function decomposePtc(x) {
   } else S1 = body;
   if (S1.length < 2 && !sp.merged) return null;
   let S = null, sound = null;
-  if (sec) {                                           // the stem is the one in the printed principal part
+  let liquid = null;
+  if (sp.liquid) { const ls = liquidStem(x.n, 'aor'); if (!ls || ls.S !== S1) return null; liquid = { from: P }; S = S1; }
+  else if (k && sec) return null;
+  else if (sec) {                                           // the stem is the one in the printed principal part
     if (vi) return null;
     const e = D.parts && D.parts.get(x.n), pt = e && e.parts[x.key === 'aor2-pas' ? 5 : 2] ? skel(e.parts[x.key === 'aor2-pas' ? 5 : 2]) : '';
     const end = x.key === 'aor2-act' ? 'ον' : x.key === 'aor2-mid' ? 'ομην' : 'ην';
@@ -223,19 +252,29 @@ export function decomposePtc(x) {
     if (!(pb === S1 || pb === 'ε' + S1)) return null; S = S1;
   } else if (x.key.startsWith('pres')) { if (S1 !== P) return null; S = P; }
   else if (sp.merged) { const sj = soundJoin(P, 'σ'); if (!(sj && sj.merged && S1 === P.slice(0, -1))) return null; sound = sj; S = P; }
-  else if (S1 === P) S = P;
+  else if (S1 === P || (k && S1 === lengthen(P))) S = S1;
   else { const t0 = (F + rest)[0], sj = F ? soundJoin(P, t0) : null; if (!(sj && !sj.merged && !aug && S1 + t0 === sj.joined)) return null; sound = sj; S = P; }
   const tail = F + rest, real = aug ? augmented(P).find((c) => c.pre === body).pre + tail : A + (sound ? sound.joined + tail.slice(1) : S + tail);
   if (real !== word) return null;
   const who = null, label = CASE_N[x.case] + ' ' + NUM_N[x.number] + ' ' + GEN_N[x.gender];
-  return { mood: 'ptc', key: x.key, S, F, V: '', E: rest, A, aug, word: x.w, n: x.n, id: x.id, who, row: null, kind: r, sound, real, label, case: x.case, number: x.number, vowelWritten: '' };
+  return { mood: 'ptc', key: x.key, S, F, V: '', E: rest, A, aug, word: x.w, n: x.n, id: x.id, who, row: null, kind: r, sound, real, label, case: x.case, number: x.number, vowelWritten: '', liquid };
+}
+/** A present participle of a contract verb: the stem keeps its vowel (ποιε-) and contracts with the formative of the model form (ε + ο → ου: ποιοῦντες). */
+function decomposePtcContract(x, r, k, P) {
+  if (P.length < 3 || P.slice(-1) !== k || x.case === 'V') return null;
+  const gi = 'MFN'.indexOf(x.gender), ci = 'NGDA'.indexOf(x.case); if (gi < 0 || ci < 0) return null;
+  const model = r.forms[(x.number === 'P' ? 4 : 0) + ci][gi], sp = splitPtc(model.replace('(ν)', ''), x.key); if (!sp) return null;
+  const init = skel(sp.formative), rest = skel(sp.rest), res = CONTRACTS[k][init]; if (!res) return null;
+  const w = skel(x.w), head = P.slice(0, -1) + skel(res), used = (rest === 'σι' ? ['σι', 'σιν'] : [rest]).find((e) => w === head + e); if (used === undefined) return null;
+  return { mood: 'ptc', key: x.key, S: P, F: init, V: '', E: used, A: '', aug: null, word: x.w, n: x.n, id: x.id, who: null, row: null, kind: r, sound: null, real: head + used, label: CASE_N[x.case] + ' ' + NUM_N[x.number] + ' ' + GEN_N[x.gender], case: x.case, number: x.number, vowelWritten: '',
+    contract: { k, init, initShown: init, res, rest: used, head: P.slice(0, -1), ex: model.replace('(ν)', '') } };
 }
 const ptcRests = (r) => { if (r._rests) return r._rests; const o = new Set(); for (const c of r.forms) for (const f of c) for (const v of (f.includes('(ν)') ? [f.replace('(ν)', ''), f.replace('(ν)', 'ν')] : [f])) { const sp = splitPtc(v, r.key); if (sp) o.add(skel(sp.rest)); } return (r._rests = [...o]); };
 function ptcEndingOptions(d) {
   const same = ptcRests(d.kind).filter((e) => e !== d.E), other = uniq(PTC.filter((r) => r.key !== d.key).flatMap(ptcRests)).filter((e) => e !== d.E && !same.includes(e));
   return shuffle(uniq([d.E, ...shuffle(same).slice(0, 2), ...shuffle(other).slice(0, 1), ...shuffle(same).slice(2), ...shuffle(other).slice(1)]).slice(0, 4)).map((e) => [e, e === '' ? 'none' : '-' + final(e)]);
 }
-const ptcFormativeOptions = (d) => shuffle(uniq([d.F, ...shuffle(['ο', 'ου', 'ω', 'σα', 'θε', 'ε', 'κ', ''].filter((f) => f !== d.F)).slice(0, 3)])).map((f) => [f, f || 'none']);
+const ptcFormativeOptions = (d) => shuffle(uniq([d.F, ...shuffle(['ο', 'ου', 'ω', 'σα', 'α', 'θε', 'ε', 'κ', ''].filter((f) => f !== d.F)).slice(0, 3)])).map((f) => [f, f || 'none']);
 const MOOD_KEYS = { sub: [...SUBB.keys()], imp: [...IMPB.keys()], inf: INF.map((r) => r.key).filter((k) => !/^perf/.test(k)) };
 const endingPool = (d) => { const { mood, key } = d, split = MOODS[mood].split, B = MOODS[mood].B;
   if (mood === 'inf') return uniq(INF.filter((r) => !/^perf/.test(r.key)).map((r) => r.ending));
@@ -247,14 +286,14 @@ function moodEndingOptions(d) {
   return shuffle(uniq([d.E, ...shuffle(same).slice(0, 2), ...shuffle(other).slice(0, 1), ...shuffle(same).slice(2), ...shuffle(other).slice(1)]).slice(0, 4)).map((e) => [e, e === '' ? 'none' : '-' + shown(e)]);
 }
 function moodStemOptions(d) {
-  const P = contractKind(d.n) ? presentStem(d.n) : null, pool = P ? [d.S, P, lengthen(P), P.slice(0, -1), d.S + 'σ'] : [d.S, ...(d.sound ? [d.sound.joined, d.sound.joined.slice(0, -1)] : []), d.S.slice(0, -1), d.S + 'σ', d.S + 'θ', d.S + 'κ'];
+  const P = contractKind(d.n) ? presentStem(d.n) : null, pool = P ? [d.S, P, lengthen(P), P.slice(0, -1), d.S + 'σ'] : [d.S, ...(d.liquid ? [d.liquid.from] : []), ...(d.sound ? [d.sound.joined, d.sound.joined.slice(0, -1)] : []), d.S.slice(0, -1), d.S + 'σ', d.S + 'θ', d.S + 'κ'];
   return shuffle(uniq(pool.filter((s) => s.length >= 2)).slice(0, 4)).map((s) => [s, s + '-']);
 }
 const moodFormativeOptions = (d) => { const pool = d.mood === 'imp' ? ['σα', 'θη', 'η', ''] : ['σ', 'θ', 'κ', '']; return shuffle(uniq([d.F, ...pool].slice(0, 4))).map((f) => [f, f || 'none']); };
 const moodVowelOptions = (d) => shuffle(uniq([d.V, ...(d.mood === 'sub' ? ['ω', 'η', 'ο', 'ε'] : ['ε', 'ο', 'α', 'η'])]).slice(0, 4)).map((v) => [v, v]);
 /** The tiles and steps of a mood form, in order. */
 function moodTiles(d) {
-  if (d.mood === 'ptc') { const t = []; if (/^perf/.test(d.key)) t.push(['Front', d.aug ? d.aug.from + ' →' : d.A + '-']); t.push(['Stem', d.S + '-']); if (d.aug) t.push(['Lengthen', d.aug.to]); t.push(['Formative', d.F || '—'], ['Ending', d.E ? '-' + final(d.E) : '—']); return t; }
+  if (d.mood === 'ptc') { const t = []; if (/^perf/.test(d.key)) t.push(['Front', d.aug ? d.aug.from + ' →' : d.A + '-']); t.push(['Stem', d.S + '-']); if (d.aug) t.push(['Lengthen', d.aug.to]); t.push(['Formative', d.F || '—'], ['Ending', d.E ? '-' + final(d.E) : '—']); if (d.contract) t.push(['Contract', d.contract.res]); return t; }
   const t = [['Stem', d.S + '-']];
   if (d.mood !== 'inf') { t.push(['Formative', d.F || '—']); if (d.V) t.push(['Vowel', d.V]); t.push(['Ending', d.E ? '-' + final(d.E) : '—']); } else t.push(['Ending', '-' + shown(d.E)]);
   if (d.contract) t.push(['Contract', d.contract.res]);
@@ -276,7 +315,7 @@ export function buildMoodLists(mood, any = false) {
   return [...by.values()].map((l) => shuffle(dense(l)));
 }
 export function buildQueue(any = false, total = 8) {
-  const groups = shuffle([BUILD_ROWS.map((r) => shuffle(dense(buildPool(r, any)))).filter((l) => l.length), ...['sub', 'imp', 'inf', 'ptc'].map((m) => buildMoodLists(m, any))].filter((g) => g.length));
+  const groups = shuffle([shuffle(BUILD_ROWS.map((r) => shuffle(dense(buildPool(r, any)))).filter((l) => l.length)), ...['sub', 'imp', 'inf', 'ptc'].map((m) => buildMoodLists(m, any))].filter((g) => g.length));
   const at = groups.map(() => 0), out = [], seen = new Set();
   for (let step = 0; groups.length && out.length < total && step < 500; step++) {
     const gi = step % groups.length, g = groups[gi];
@@ -312,7 +351,7 @@ function endingOptions(d, c) {
 
 const dispInit = (x) => INIT_SHOWN[x] || x;
 function contractOptions(d) {
-  const { k, init, res } = d.contract, T = d.mood ? MOOD_CONTRACTS[d.mood] : CONTRACTS, others = uniq([...Object.entries(T[k]).filter(([x]) => x !== init).map(([, r]) => r), ...Object.values(T).map((t) => t[init]), ...(d.mood ? ['ω', 'ει', 'ου', 'α'] : [])].filter((r) => r && r !== res && skel(r) !== skel(res)));
+  const { k, init, res } = d.contract, T = d.mood && d.mood !== 'ptc' ? MOOD_CONTRACTS[d.mood] : CONTRACTS, others = uniq([...Object.entries(T[k]).filter(([x]) => x !== init).map(([, r]) => r), ...Object.values(T).map((t) => t[init]), ...(d.mood && d.mood !== 'ptc' ? ['ω', 'ει', 'ου', 'α'] : [])].filter((r) => r && r !== res && skel(r) !== skel(res)));
   return shuffle([res, ...shuffle(others).slice(0, 3)]).map((r) => [r, r]);
 }
 
@@ -340,17 +379,20 @@ const lengthNote = (d) => { const P = presentStem(d.n);
     : h('span', 'A contract verb’s last stem vowel lengthens before σ, θ and κ: ', greek(P + '- → ' + d.S + '-'), ' (ε → η, α → η, ο → ω).'); };
 /** The Contraction step: options, the answer, the rule shown afterwards and the question; `ex` is the λύω form the uncontracted ending is taken from. */
 const contractEntry = (d, ex) => {
-  const { k, init, res, rest } = d.contract, si = d.contract.initShown || dispInit(init), U = (d.vowelWritten || d.V || '') + d.E;
+  const { k, init, res, rest } = d.contract, si = d.contract.initShown || dispInit(init), U = d.mood === 'ptc' ? d.F + d.E : (d.vowelWritten || d.V || '') + d.E;
   return ['Contraction', contractOptions(d), res, h('span', 'Rule: ', greek(k + ' + ' + si + ' → ' + res), '. So the ending ', greek('-' + shown(U)), ' is written ', greek('-' + final(res + rest)), ' after this stem.'),
     h('span', 'The stem ends in ', greek(k), '. The uncontracted ending is ', greek('-' + shown(U)), ' (as in ', greek(ex.replace(/[()]/g, '')), '). How are the stem vowel ', greek(k), ' and the ending’s ', greek(si), ' written together?')];
 };
 
+/** The line shown after the Stem answer: a contract verb's lengthened vowel, or a liquid verb's own future or aorist stem. */
+const stemNote = (d) => d.liquid ? h('span', 'A liquid verb (stem in λ, μ, ν or ρ) has no σ' + (/^fut/.test(d.row || d.key) ? ' in the future, where ε + the ending contract (μεν + ε + ω is written μενῶ). ' : ' in the 1st aorist, and its stem vowel is usually lengthened. '), d.S === presentStem(d.n) ? 'Here the stem is the present stem ' : 'Here the stem is printed in the principal parts as ', greek(d.S + '-'), '.')
+  : contractKind(d.n) && !d.contract ? lengthNote(d) : null;
 /** The Lengthening step of a vowel-initial verb. */
 const lengthEntry = (d) => ['Lengthening', lengthenOptions(d), d.aug.to, h('span', 'Rule: ', greek(d.aug.from + ' → ' + d.aug.to), '. The first vowel lengthens like this: ', greek('α → η, ε → η, ο → ω, αι → ῃ, οι → ῳ, αυ → ηυ'), '. A few verbs, such as ', greek('ἔχω'), ', have ', greek('ε → ει'), '.'),
       h('span', 'The stem begins with ', greek(d.aug.from), '. What does the first vowel become?')];
 
-export function renderBuild(view, mode) {
-  const any = mode === 'any', queue = buildQueue(any), back = ['#/parse', 'Back to Parsing'];
+export function renderBuild(view, mode, forced = null) {          // `forced`: a ready queue of decomposed forms (for tests and screenshots)
+  const any = mode === 'any', queue = forced || buildQueue(any), back = ['#/parse', 'Back to Parsing'];
   if (!queue.length) { clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.card.stack', h('p', 'There are no forms to build yet' + (any ? '' : ' in verbs you know') + '. Forms open up as you learn the chart rows and the verbs. Verbs with contracted or irregular stems are left out.'), any ? null : h('a.btn', { href: '#/parse/run/build/any' }, 'Try with any verb'), ...backLinks(...back))); return; }
   const tally = [0, 0], missed = {}; let at = 0;
   const done = () => clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.card.stack', h('h2', 'Practice complete'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
@@ -371,7 +413,7 @@ export function renderBuild(view, mode) {
     if (d.mood) return showMood(d);
     const c = chartPieces(d), k = contractKind(d.n), seq = [];
     seq.push(['Front', frontOptions(d), frontAnswer(d)]);
-    seq.push(['Stem', stemOptions(d), d.S, k && !d.contract ? lengthNote(d) : null]);
+    seq.push(['Stem', stemOptions(d), d.S, stemNote(d)]);
     if (d.aug) seq.push(lengthEntry(d));
     seq.push(['Tense formative', formativeOptions(c), c.F]);
     if (c.V) seq.push(['Connecting vowel', vowelOptions(c), c.V]);
@@ -395,16 +437,17 @@ export function renderBuild(view, mode) {
     const seq = [];
     if (d.mood === 'ptc') {
       if (/^perf/.test(d.key)) seq.push(['Front', frontOptions(d), frontAnswer(d)]);
-      seq.push(['Stem', moodStemOptions(d), d.S]);
+      seq.push(['Stem', moodStemOptions(d), d.S, stemNote(d)]);
       if (d.aug) seq.push(lengthEntry(d));
       seq.push(['Tense formative', ptcFormativeOptions(d), d.F], ['Ending', ptcEndingOptions(d), d.E, h('span', 'The ending is the participle marker ', greek('-' + d.kind.morph + '-'), ' and the case ending written together. The marker means: ', MORPHEME_MEANING[d.kind.morph], '.')]);
-    } else seq.push(['Stem', moodStemOptions(d), d.S, contractKind(d.n) && !d.contract ? lengthNote(d) : null]);
+      if (d.contract) seq.push(contractEntry(d, d.contract.ex));
+    } else seq.push(['Stem', moodStemOptions(d), d.S, stemNote(d)]);
     if (d.mood === 'ptc') { /* steps above */ } else if (d.mood !== 'inf') { seq.push(['Tense formative', moodFormativeOptions(d), d.F]); if (d.V) seq.push(['Connecting vowel', moodVowelOptions(d), d.V]); seq.push(['Personal ending', moodEndingOptions(d), d.E]); }
     else seq.push(['Ending', moodEndingOptions(d), d.E]);
     if (d.contract) seq.push(contractEntry(d, d.contract.ex));
     const step = (i) => {
       if (i < seq.length) { const [title, opts, right, note, prompt] = seq[i]; frame(d, choose(d, i, title, opts, right, () => step(i + 1), note, prompt), i, i); return; }
-      const parts = d.mood === 'ptc' ? [d.A || null, d.S, d.F || null, d.E ? final(d.E) : null].filter(Boolean) : d.contract ? [d.contract.head, '(' + d.contract.k + ' + ' + d.contract.initShown + ' → ' + d.contract.res + ')', d.contract.rest ? final(d.contract.rest) : null].filter(Boolean) : [d.S, d.F || null, d.V || null, d.E ? final(d.E) : null].filter(Boolean), subscript = !d.contract && /[\u0345]/.test(d.vowelWritten.normalize('NFD'));
+      const parts = d.contract ? [d.contract.head, '(' + d.contract.k + ' + ' + d.contract.initShown + ' → ' + d.contract.res + ')', d.contract.rest ? final(d.contract.rest) : null].filter(Boolean) : d.mood === 'ptc' ? [d.A || null, d.S, d.F || null, d.E ? final(d.E) : null].filter(Boolean) : [d.S, d.F || null, d.V || null, d.E ? final(d.E) : null].filter(Boolean), subscript = !d.contract && /[\u0345]/.test(d.vowelWritten.normalize('NFD'));
       frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
         h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
         d.aug ? h('p.muted.small', { style: { margin: 0 } }, 'The first vowel lengthens (', greek(d.aug.from + ' → ' + d.aug.to), '), so the word begins with ', greek(d.aug.to), '. In the perfect this lengthening also does the work of the reduplication.') : null,
