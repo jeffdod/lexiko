@@ -8,6 +8,7 @@ import { rowPool } from './parse.js';
 import { h, clear, shuffle, backHead, backLinks } from './util.js';
 import { rowOfTag } from './families.js';
 import { isCompoundLemma } from './cluehunt.js';
+import { PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP } from './charts.js';
 
 const skel = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
 const final = (s) => s.replace(/σ$/, 'ς');
@@ -54,6 +55,22 @@ export function decompose(id, row) {
   return { row, cell, A, S, F: T.F, E, used, word: f.w.replace(/­/g, ''), n: a.s, id };
 }
 
+/* ---------- the chart's own pieces ----------
+   The master chart's columns are: augment, tense stem, tense formative (σα, κα, θη, ...), connecting vowel, personal ending. Those are the pieces you build with.
+   The word as spelled is the realized form checked above; where the pieces run together in the spelling (ο + – is written ω, σα is written σε in the 3rd singular) the feedback says so. */
+const ENDING_TABLE = { 'prim act': PRIMARY_ACT, 'prim mid/pas': PRIMARY_MP, 'sec act': SECOND_ACT, 'sec mid/pas': SECOND_MP };
+/** { F, V, PE, naive, written, changes } for a decomposed form: the chart's formative, connecting vowel and personal ending for its cell. */
+export function chartPieces(d) {
+  const r = ROW[d.row], i = CELLS.indexOf(d.cell), t = ENDING_TABLE[r.ends][i];
+  const V = r.vowel ? t[2] : '';
+  let PE = t[3];
+  if (!r.vowel && r.ends === 'prim act' && i === 5) PE = 'σι(ν)';                      // λελύκασι(ν): κα + σι(ν)
+  if (!r.vowel && r.ends === 'sec act' && i === 5 && /pas$/.test(d.row)) PE = 'σαν';    // ἐλύθησαν: θη + σαν
+  if (!r.vowel && r.ends === 'sec act' && i === 0 && !/pas$/.test(d.row)) PE = '–';    // ἔλυσα: σα + nothing
+  const plain = (x) => (x === '–' ? '' : x), naive = r.form + V + plain(PE), norm = (x) => skel(x).replace('(ν)', ''), written = d.F + d.E;
+  return { F: r.form, V, PE, naive, written: final(written), changes: norm(naive) !== norm(written) };
+}
+
 /* ---------- the pool and the session ---------- */
 let byVerb = null;
 const formsOfVerb = (n) => { if (!byVerb) { byVerb = new Map(); D.forms.forEach((f, i) => { const a = f.an[0]; if (a && !notParsed(a)) { if (!byVerb.has(a.s)) byVerb.set(a.s, []); byVerb.get(a.s).push(i); } }); } return byVerb.get(n) || []; };
@@ -80,18 +97,26 @@ function stemOptions(d) {
   const synthetic = uniq([d.S + 'σ', d.S + 'θ', d.S.slice(0, -1), d.S + 'κ'].filter((s) => s.length >= 2 && s !== d.S));
   return shuffle([d.S, ...shuffle(others).slice(0, 2), ...shuffle(synthetic)].filter((s, i, a) => a.indexOf(s) === i).slice(0, 4)).map((s) => [s, s + '-']);
 }
-const FORMATIVES = uniq(BUILD_ROWS.map((r) => BUILD[r].F));
-function formativeOptions(d) { return shuffle(uniq([d.F, ...shuffle(FORMATIVES.filter((x) => x !== d.F)).slice(0, 3)])).map((f) => [f, f || 'none']); }
-function endingOptions(d) {
-  const T = BUILD[d.row], same = uniq(T.E.filter((e) => e !== d.E)), cross = uniq(BUILD_ROWS.flatMap((r) => BUILD[r].E[CELLS.indexOf(d.cell)]).filter((e) => e !== d.E && !same.includes(e)));
-  return shuffle(uniq([d.E, ...shuffle(same).slice(0, 2), ...shuffle(cross).slice(0, 1), ...shuffle(same).slice(2)]).slice(0, 4)).map((e) => [e, '-' + shown(e)]);
+const FORMATIVES = uniq(BUILD_ROWS.map((r) => ROW[r].form));
+const peLabel = (e) => (e === '–' ? 'none' : '-' + e);
+function formativeOptions(c) { return shuffle(uniq([c.F, ...shuffle(FORMATIVES.filter((x) => x !== c.F)).slice(0, 3)])).map((f) => [f, f || 'none']); }
+const vowelOptions = (c) => ['ο', 'ε', 'α', 'η'].map((v) => [v, v]);
+function endingOptions(d, c) {
+  const r = ROW[d.row], i = CELLS.indexOf(d.cell), tab = ENDING_TABLE[r.ends], same = uniq(tab.map((t) => t[3]).filter((e) => e !== c.PE)),
+    cross = uniq(Object.values(ENDING_TABLE).flatMap((t) => t[i][3]).filter((e) => e !== c.PE && !same.includes(e)));
+  return shuffle(uniq([c.PE, ...shuffle(same).slice(0, 2), ...shuffle(cross).slice(0, 1), ...shuffle(same).slice(2)]).slice(0, 4)).map((e) => [e, peLabel(e)]);
 }
 
 /* ---------- the screens ---------- */
 const greek = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
-const pieces = (d, upto, mark) => h('div', { lang: 'grc', style: { display: 'flex', justifyContent: 'center', gap: '.3rem', flexWrap: 'wrap', margin: '.5rem 0' } },
-  ...[['Front', d.A === '' ? '—' : d.A + '-', 0], ['Stem', d.S + '-', 1], ['Formative', d.F || '—', 2], ['Ending', '-' + shown(d.E), 3]].map(([label, text, i]) => h('div', { style: { minWidth: '4.3rem', textAlign: 'center', padding: '.35rem .5rem', borderRadius: '12px', border: '2px ' + (i < upto ? 'solid' : 'dashed') + ' ' + (i === mark ? 'var(--accent)' : i < upto ? 'var(--good)' : 'var(--line)'), background: i < upto ? 'var(--good-soft)' : 'var(--surface)' } },
-    h('small', { style: { display: 'block', font: '700 .6rem var(--ui)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--muted)' } }, label), h('span', { style: { fontFamily: 'var(--greek)', fontSize: '1.3rem' } }, i < upto ? text : ' '))));
+const pieces = (d, c, upto, mark) => {
+  const tiles = [['Front', d.A === '' ? '—' : d.A + '-'], ['Stem', d.S + '-'], ['Formative', c.F || '—']];
+  if (c.V) tiles.push(['Vowel', c.V]);
+  tiles.push(['Ending', c.PE === '–' ? '—' : '-' + c.PE]);
+  return h('div', { lang: 'grc', style: { display: 'flex', justifyContent: 'center', gap: '.3rem', flexWrap: 'wrap', margin: '.5rem 0' } },
+    ...tiles.map(([label, text], i) => h('div', { style: { minWidth: '3.6rem', textAlign: 'center', padding: '.35rem .45rem', borderRadius: '12px', border: '2px ' + (i < upto ? 'solid' : 'dashed') + ' ' + (i === mark ? 'var(--accent)' : i < upto ? 'var(--good)' : 'var(--line)'), background: i < upto ? 'var(--good-soft)' : 'var(--surface)' } },
+      h('small', { style: { display: 'block', font: '700 .6rem var(--ui)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--muted)' } }, label), h('span', { style: { fontFamily: 'var(--greek)', fontSize: '1.3rem' } }, i < upto ? text : ' '))));
+};
 
 export function renderBuild(view, mode) {
   const any = mode === 'any', queue = buildQueue(any), back = ['#/parse', 'Back to Parsing'];
@@ -103,24 +128,25 @@ export function renderBuild(view, mode) {
   const frame = (d, body, upto, mark) => { const L = D.lexByN.get(d.n), r = ROW[d.row]; clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.stack', h('div.card.stack',
     h('div.row.between', h('b', 'Build the form'), h('span.chip', (at + 1) + ' / ' + queue.length)),
     h('div.card.small', { style: { background: 'var(--accent-soft)', border: 'none' } }, h('b', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative, ' + CELL_NAME[d.cell].replace('person ', '')), h('div', { style: { color: 'var(--ink-2)' } }, 'of ', greek(L.head), ' · ', L.brief)),
-    pieces(d, upto, mark), ...body))); };
+    pieces(d, chartPieces(d), upto, mark), ...body))); };
   const choose = (d, i, title, options, right, onRight) => {
     const box = h('div.opts.two'); let locked = false;
     for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
     return [h('p', h('b', title)), box];
   };
   const show = () => {
-    const d = queue[at], step = (i) => {
+    const d = queue[at], c = chartPieces(d), last = c.V ? 5 : 4, step = (i) => {
       if (i === 0) frame(d, choose(d, 0, 'Front', frontOptions(d), frontAnswer(d), () => step(1)), 0, 0);
       else if (i === 1) frame(d, choose(d, 1, 'Stem', stemOptions(d), d.S, () => step(2)), 1, 1);
-      else if (i === 2) frame(d, choose(d, 2, 'Tense formative', formativeOptions(d), d.F, () => step(3)), 2, 2);
-      else if (i === 3) frame(d, choose(d, 3, 'Ending', endingOptions(d), d.E, () => step(4)), 3, 3);
+      else if (i === 2) frame(d, choose(d, 2, 'Tense formative', formativeOptions(c), c.F, () => step(3)), 2, 2);
+      else if (i === 3 && c.V) frame(d, choose(d, 3, 'Connecting vowel', vowelOptions(c), c.V, () => step(4)), 3, 3);
+      else if (i < 5 && (i === 4 || !c.V)) { const at4 = c.V ? 4 : 3; frame(d, choose(d, at4, 'Personal ending', endingOptions(d, c), c.PE, () => step(5)), at4, at4); }
       else {
-        const r = ROW[d.row], chartF = r.form, changed = chartF && chartF !== d.F && /[αη]$/.test(chartF);
+        const parts = [d.A ? d.A + '-' : null, d.S + '-', c.F || null, c.V || null, c.PE === '–' ? null : '-' + c.PE].filter(Boolean);
         frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, d.word),
-          h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), (d.A ? d.A + '- ' : 'no front, ') + d.S + '- + ' + (d.F ? d.F + ' + ' : 'no formative, ') + '-' + shown(d.E) + '.', ' ', h('span.muted.small', 'Accents are not part of this exercise.')),
-          changed ? h('p.muted.small', { style: { margin: 0 } }, 'The chart writes this formative as ', greek(chartF), '. Here the final vowel goes with the ending, because it changes: in the 3rd singular, for example, it is ', greek('ε'), '.') : null,
-          h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next')], 4, -1);
+          h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ').replace(/ \+ -/g, ' + -')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
+          c.changes ? h('p.muted.small', { style: { margin: 0 } }, 'The pieces run together in the spelling: ', greek(final(c.naive) || '—'), ' is written ', greek(c.written), '.') : null,
+          h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next')], last, -1);
       }
     };
     step(0);

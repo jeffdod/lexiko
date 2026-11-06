@@ -14,6 +14,12 @@ const { chromium } = require('playwright');
   ok(d.a === 'ε|πιστευ|σ|αν|3P', 'ἐπίστευσαν: ' + d.a); ok(d.b === 'ε|λαβ||ον|3P' || d.b === 'ε|λαβ||ον|1S', 'ἔλαβον: ' + d.b); ok(d.c === '|πιστευ|σ|ει|3S', 'πιστεύσει: ' + d.c);
   ok(d.d === 'ε|πιστευ|σ|αμεν|1P', 'ἐπιστεύσαμεν: ' + d.d); ok(d.e === '|πιστευ||ει|3S', 'πιστεύει: ' + d.e); ok(d.f === 'ε|πιστευ||ετε|2P', 'ἐπιστεύετε: ' + d.f);
   ok(d.contract === null && d.compound === null && d.compound2 === null && d.mi === null && d.vowel === null && d.wrongrow === null, 'contract, compound, -μι, vowel-initial and wrong-row forms are left out: ' + JSON.stringify(d));
+  // the chart's own pieces: formative κα / σα / θη, connecting vowel only on thematic rows, personal ending
+  const cp = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), { D } = await import('/lexiko/js/data.js');
+    const at = (w) => D.forms.findIndex((f) => f.w.replace(/­/g, '') === w), cp = (w, row) => { const i = at(w); if (i < 0) return 'missing'; const x = B.decompose(i, row); if (!x) return null; const c = B.chartPieces(x); return [c.F, c.V, c.PE, c.changes].join('|'); };
+    return { perf: cp('πεπιστεύκατε', 'perf1-act'), aor: cp('ἐπιστεύσαμεν', 'aor1-act'), aor3: cp('ἐπίστευσεν', 'aor1-act'), pres3p: cp('πιστεύουσιν', 'pres-act'), pres: cp('πιστεύει', 'pres-act') }; });
+  ok(d.d && cp.perf === 'κα||τε|false', 'πεπιστεύκατε: κα + τε, ' + cp.perf); ok(cp.aor === 'σα||μεν|false', 'ἐπιστεύσαμεν: σα + μεν, ' + cp.aor);
+  ok(cp.aor3 === 'σα||–|true', 'ἐπίστευσεν: σα written σε, ' + cp.aor3); ok(cp.pres3p === '|ο|νσι(ν)|true', 'πιστεύουσιν: ο + νσι(ν) runs together, ' + cp.pres3p); ok(cp.pres === '|ε|ι|false', 'πιστεύει: ε + ι, ' + cp.pres);
   // every form that is offered adds up, and every offered row/cell is consistent
   const all = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js'); let n = 0, bad = 0; const rows = new Set();
     const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
@@ -32,10 +38,13 @@ const { chromium } = require('playwright');
   let questions = 0;
   for (let i = 0; i < 12; i++) {
     let text = await p.locator('#view').innerText(); if (/Practice complete/.test(text)) break; questions++;
-    for (const step of ['Front', 'Stem', 'Tense formative', 'Ending']) {
-      await p.waitForFunction((s) => document.querySelector('#view .opts') && [...document.querySelectorAll('#view p b')].some((b) => b.textContent === s), step, { timeout: 4000 }).catch(() => ok(false, 'step ' + step + ' shows in order'));
-      await p.locator('.opt').first().click(); await p.waitForTimeout(1450);
+    const seen = [];
+    for (let s = 0; s < 6; s++) {
+      await p.waitForTimeout(250); if (/Built:/.test(await p.locator('#view').innerText())) break;
+      await p.waitForFunction(() => document.querySelector('#view .opts'), null, { timeout: 4000 }).catch(() => ok(false, 'a step shows'));
+      seen.push(await p.locator('#view p b').first().innerText()); await p.locator('.opt').first().click(); await p.waitForTimeout(1450);
     }
+    ok(seen.length >= 4 && seen[0] === 'Front' && seen[1] === 'Stem' && seen[2] === 'Tense formative' && seen[seen.length - 1] === 'Personal ending' && (seen.length === 5) === seen.includes('Connecting vowel'), 'steps in order: ' + seen.join(','));
     ok(/Built:/.test(await p.locator('#view').innerText()), 'the built form is shown, question ' + questions);
     await p.getByRole('button', { name: 'Next' }).click(); await p.waitForTimeout(300);
   }
