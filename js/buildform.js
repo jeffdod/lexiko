@@ -8,7 +8,7 @@ import { rowPool } from './parse.js';
 import { h, clear, shuffle, backHead, backLinks } from './util.js';
 import { rowOfTag } from './families.js';
 import { isCompoundLemma } from './cluehunt.js';
-import { PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP } from './charts.js';
+import { PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, masterRowTable } from './charts.js';
 
 const skel = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
 const final = (s) => s.replace(/σ$/, 'ς');
@@ -131,9 +131,10 @@ export function renderBuild(view, mode) {
     h('div.row.between', h('b', 'Build the form'), h('span.chip', (at + 1) + ' / ' + queue.length)),
     h('div.card.small', { style: { background: 'var(--accent-soft)', border: 'none' } }, h('b', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative, ' + CELL_NAME[d.cell].replace('person ', '')), h('div', { style: { color: 'var(--ink-2)' } }, 'of ', greek(L.head), ' · ', L.brief)),
     pieces(d, chartPieces(d), upto, mark), ...body))); };
+  const chartLine = (d) => h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the master verb chart:'), masterRowTable(d.row));
   const choose = (d, i, title, options, right, onRight) => {
     const box = h('div.opts.two'); let locked = false;
-    for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
+    for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!box.parentNode.querySelector('.cscroll')) box.after(chartLine(d)); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
     return [h('p', h('b', title)), box];
   };
   const show = () => {
@@ -148,7 +149,7 @@ export function renderBuild(view, mode) {
         frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
           h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
           c.changes ? h('p.muted.small', { style: { margin: 0 } }, 'The pieces run together in the spelling: ', greek(final(c.naive) || '—'), ' is written ', greek(c.written), '.') : null,
-          h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next')], last, -1);
+          h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next'), chartLine(d)], last, -1);
       }
     };
     step(0);

@@ -46,6 +46,8 @@ const { chromium } = require('playwright');
     }
     ok(seen.length >= 4 && seen[0] === 'Front' && seen[1] === 'Stem' && seen[2] === 'Tense formative' && seen[seen.length - 1] === 'Personal ending' && (seen.length === 5) === seen.includes('Connecting vowel'), 'steps in order: ' + seen.join(','));
     ok(/Built:/.test(await p.locator('#view').innerText()), 'the built form is shown, question ' + questions);
+    ok(await p.locator('#view table.ctable tbody tr.hi').count() === 1, 'the master chart row is shown at the end, question ' + questions);
+    if (questions === 1) await p.screenshot({ path: '/tmp/claude-0/-home-claude/b1495004-32ad-55d3-a59f-a67ee65f4e2d/scratchpad/bf3.png' });
     await p.getByRole('button', { name: 'Next' }).click(); await p.waitForTimeout(300);
   }
   ok(questions >= 6 && /Practice complete/.test(await p.locator('#view').innerText()), 'a session of ' + questions + ' ends with a summary');

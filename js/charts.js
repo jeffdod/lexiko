@@ -38,6 +38,13 @@ export const SECOND_MP = [['1 sg', 'ἐλυόμην', 'ο', 'μην'], ['2 sg', 
 
 const grc = (t) => h('span', { lang: 'grc' }, t);
 
+/** One row of the master chart with its column headings, for showing beside an exercise. */
+export function masterRowTable(key) {
+  const r = MASTER.find((x) => x && x[0] === key); if (!r) return null;
+  const cells = r.slice(1);
+  return h('div.cscroll', h('table.ctable', h('thead', h('tr', MASTER_HEAD.map((t) => h('th', t)))), h('tbody', h('tr.hi', h('th', { scope: 'row' }, cells[0]), ...cells.slice(1).map((x, i) => h('td', i === 5 || i === 0 || i === 2 || i === 3 ? grc(x) : x))))));
+}
+
 function masterTable(hi) {
   const body = h('tbody');
   MASTER.forEach((r) => {
