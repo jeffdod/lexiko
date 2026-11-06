@@ -228,6 +228,19 @@ export function imperativeForms(key = null, { ignoreLevel = false } = {}) {
   }
   return out;
 }
+/** Subjunctives, imperatives or infinitives ('sub' | 'imp' | 'inf') for Build the form: { id, key, code, w, n, head, count }, gated like the indicative (the form level), from verbs you know or any verb. */
+export function moodPool(mood, { anyVerb = false } = {}) {
+  ensureIndex();
+  const keyOf = { sub: subKey, imp: impKey, inf: infKey }[mood], out = [];
+  for (const id of members.keys()) {
+    const it = autoItemOf(id); if (!it || it.group !== 'V' || (!anyVerb && status(it.strongs) !== 'known')) continue;
+    let k = null, code = ''; for (const v of it.valid) { const kk = keyOf(v.slots); if (kk && levelOfTag(v.code) <= formLevel()) { k = kk; code = v.code; break; } }      // the mood's own level must be open, even when the same word is also an open indicative form
+    if (!k) continue;
+    const L = D.lexByN.get(it.strongs);
+    out.push({ id, key: k, code, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', count: D.forms[id].count });
+  }
+  return out;
+}
 /** A round of about a dozen forms of the row, leaning on the commonest. */
 /** Several chart rows at once, for "Parse from the chart": forms of verbs you know (or of any verb), whatever the parsing level. */
 export const rowsLength = (n) => Math.max(8, n);
