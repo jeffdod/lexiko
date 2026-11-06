@@ -60,6 +60,11 @@ button { font: inherit; color: inherit; }
 }
 @media (prefers-reduced-motion: reduce) { .readbar, #nav, body.rd-hide .readbar, body.rd-hide #nav { transition: none; } }
 #bardbg { position: fixed; z-index: 95; left: 6px; right: 6px; top: calc(env(safe-area-inset-top) + 4px); padding: .3rem .5rem; border-radius: 8px; background: rgba(20, 24, 32, .86); color: #d7f5d0; font: 11px/1.35 ui-monospace, Menlo, monospace; white-space: pre; pointer-events: none; }
+.pickgroup h3 { margin: .9rem 0 0; font-size: 1.02rem; } .pickgroup:first-of-type h3 { margin-top: .2rem; }
+.pickrow { display: flex; align-items: center; gap: .7rem; padding: .5rem 0; border-top: 1px solid var(--line); min-height: 44px; cursor: pointer; }
+.pickrow input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+.pickrow .pn { flex: 1; font-weight: 600; } .pickrow.off { opacity: .5; cursor: default; }
+.pickbar { position: sticky; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + .5rem); }
 #nav a[aria-current='page'] { color: var(--accent); }
 #nav a[aria-current='page'] svg { stroke-width: 2.2; }
 #nav .brand { display: none; }
