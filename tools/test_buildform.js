@@ -43,6 +43,14 @@ const { chromium } = require('playwright');
   ok(mo.sub.ok > 100 && mo.imp.ok > 80 && mo.inf.ok > 80 && mo.sub.bad + mo.imp.bad + mo.inf.bad === 0 && mo.sub.kinds >= 6 && mo.inf.kinds >= 6 && mo.sub.con > 10 && mo.imp.con > 10 && mo.inf.con > 10 && mo.sub.snd + mo.imp.snd + mo.inf.snd > 40, 'moods add up: ' + JSON.stringify(mo));
   const gated = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), P = await import('/lexiko/js/parse.js'); const was = K.K.settings.formLevel; K.K.settings.formLevel = 1; const n = P.moodPool('sub', { anyVerb: true }).length + P.moodPool('imp', { anyVerb: true }).length + P.moodPool('inf', { anyVerb: true }).length; K.K.settings.formLevel = was; return n; });
   ok(gated === 0, 'moods wait for their level: ' + gated);
+  // participles: stem · formative · ending (marker + case ending); perfects also show the reduplication
+  const pt = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), K = await import('/lexiko/js/know.js');
+    const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const out = { ok: 0, bad: 0, red: 0, snd: 0, aug: 0, keys: new Set() };
+    for (const x of P.ptcPool({ anyVerb: true })) { const d = B.decomposePtc(x); if (!d) continue; out.ok++; out.keys.add(d.key); if (d.A) out.red++; if (d.sound) out.snd++; if (d.aug) out.aug++;
+      const core = d.sound ? d.sound.joined + (d.F + d.E).slice(1) : d.S + d.F + d.E; if (!d.aug && sk(d.A + core) !== sk(d.word)) out.bad++; }
+    const was = K.K.settings.formLevel; K.K.settings.formLevel = 1; const gated = P.ptcPool({ anyVerb: true }).length; K.K.settings.formLevel = was;
+    return { ok: out.ok, bad: out.bad, red: out.red, snd: out.snd, keys: out.keys.size, aug: out.aug, gated }; });
+  ok(pt.ok > 100 && pt.bad === 0 && pt.keys >= 8 && pt.red > 2 && pt.snd > 5 && pt.gated === 0, 'participles add up: ' + JSON.stringify(pt));
   // every form that is offered adds up, and every offered row/cell is consistent
   const all = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), { D } = await import('/lexiko/js/data.js'); let n = 0, bad = 0, con = 0, aug = 0, snd = 0; const pairs = new Set(); const rows = new Set();
     const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ');
@@ -67,8 +75,8 @@ const { chromium } = require('playwright');
       await p.waitForFunction(() => document.querySelector('#view .opts'), null, { timeout: 4000 }).catch(() => ok(false, 'a step shows'));
       seen.push(await p.locator('#view p b').first().innerText()); await p.locator('.opt').first().click(); await p.waitForTimeout(1450); const cont = p.getByRole('button', { name: 'Continue' }); if (await cont.count()) { seen.noted = (seen.noted || 0) + 1; await cont.click(); await p.waitForTimeout(200); }
     }
-    const indic = seen[0] === 'Front', mood = seen[0] === 'Stem';
-    ok(seen.length >= 2 && seen.length <= 8 && (indic ? seen[1] === 'Stem' && (seen.includes('Lengthening') ? seen[2] === 'Lengthening' : seen[2] === 'Tense formative') && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]) : mood && (seen[1] === 'Ending' ? (seen.length === 2 || (seen.length === 3 && seen[2] === 'Contraction')) : seen[1] === 'Tense formative' && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]))), 'steps in order: ' + seen.join(','));
+    const ptcPerf = seen[0] === 'Front' && seen[seen.length - 1] === 'Ending' && !seen.includes('Personal ending'), indic = seen[0] === 'Front' && !ptcPerf, mood = seen[0] === 'Stem';
+    ok(seen.length >= 2 && seen.length <= 8 && (ptcPerf ? seen[1] === 'Stem' && seen.includes('Tense formative') : indic ? seen[1] === 'Stem' && (seen.includes('Lengthening') ? seen[2] === 'Lengthening' : seen[2] === 'Tense formative') && ['Personal ending', 'Contraction'].includes(seen[seen.length - 1]) : mood && (seen[1] === 'Ending' ? (seen.length === 2 || (seen.length === 3 && seen[2] === 'Contraction')) : seen[1] === 'Tense formative' && ['Personal ending', 'Contraction', 'Ending'].includes(seen[seen.length - 1]))), 'steps in order: ' + seen.join(','));
     ok(/Built:/.test(await p.locator('#view').innerText()), 'the built form is shown, question ' + questions);
     ok(await p.locator('#view table.ctable tbody tr.hi').count() === 1 || /From the paradigm/.test(await p.locator('#view').innerText()), 'the chart row or paradigm is shown at the end, question ' + questions);
     if (questions === 1) await p.screenshot({ path: '/tmp/claude-0/-home-claude/b1495004-32ad-55d3-a59f-a67ee65f4e2d/scratchpad/bf3.png' });

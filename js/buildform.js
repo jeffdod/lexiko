@@ -5,7 +5,8 @@
 // built too: in the present and imperfect the stem vowel contracts with the ending (a Contraction step); elsewhere the stem vowel lengthens (ποιε- → ποιη-).
 import { D, notParsed } from './data.js';
 import { ROWS, say } from './chartdrill.js';
-import { rowPool, moodPool } from './parse.js';
+import { rowPool, moodPool, ptcPool } from './parse.js';
+import { PTCB, PTC, split as splitPtc, MORPHEME_MEANING } from './ptcdata.js';
 import { SUBB, splitSub } from './subdata.js';
 import { IMPB, splitImp } from './impdata.js';
 import { INFB, INF, splitInf } from './infdata.js';
@@ -197,6 +198,44 @@ export function decomposeMood(mood, x) {
   const E = E0.replace(/^σι$/, 'σι(ν)').replace(/^σιν$/, 'σι(ν)'), tail = F + V + E, real = sound ? sound.joined + tail.slice(1) : S + tail;
   return { mood, key: x.key, S, F, V, E, vowelWritten: plainKeep(sp.vowel || ''), word: x.w, n: x.n, id: x.id, who, row: null, kind: r, sound, real };
 }
+/* ---------- participles: front (perfects) · stem · formative · ending (marker + case ending) ---------- */
+const CASE_N = { N: 'nominative', G: 'genitive', D: 'dative', A: 'accusative', V: 'vocative' }, NUM_N = { S: 'singular', P: 'plural' }, GEN_N = { M: 'masculine', F: 'feminine', N: 'neuter' };
+const DEASP = { 'φ': 'π', 'θ': 'τ', 'χ': 'κ' };
+/** A participle taken apart, or null when it does not add up exactly: contract, liquid, -μι and compound verbs, second perfects and anything whose stem is not the verb's own are left out. */
+export function decomposePtc(x) {
+  const r = PTCB.get(x.key); if (!r || contract(x.n) || contractKind(x.n) || /^perf2/.test(x.key)) return null;
+  const sp = splitPtc(x.w, x.key); if (!sp || sp.liquid) return null;
+  const P = presentStem(x.n); if (!P || P.length < 2) return null;
+  const perf = /^perf/.test(x.key), sec = /^aor2/.test(x.key), vi = vowelInitial(x.n), word = skel(x.w);
+  const rest = skel(sp.rest || ''); let F = skel(sp.formative || ''); if (sp.merged) F = 'σ' + F.slice(1);
+  let body = sp.stemSkel, A = '', aug = null, S1;
+  if (perf) {
+    if (vi) { const c = augmented(P).find((c) => c.pre === body); if (!c) return null; aug = { from: c.from, to: c.to }; S1 = P; }
+    else { const red = (DEASP[P[0]] || P[0]) + 'ε'; if (VOWEL_START.test(P[0]) || !body.startsWith(red)) return null; A = red; S1 = body.slice(2); }
+  } else S1 = body;
+  if (S1.length < 2 && !sp.merged) return null;
+  let S = null, sound = null;
+  if (sec) {                                           // the stem is the one in the printed principal part
+    if (vi) return null;
+    const e = D.parts && D.parts.get(x.n), pt = e && e.parts[x.key === 'aor2-pas' ? 5 : 2] ? skel(e.parts[x.key === 'aor2-pas' ? 5 : 2]) : '';
+    const end = x.key === 'aor2-act' ? 'ον' : x.key === 'aor2-mid' ? 'ομην' : 'ην';
+    if (!pt.endsWith(end)) return null; const pb = pt.slice(0, -end.length);
+    if (!(pb === S1 || pb === 'ε' + S1)) return null; S = S1;
+  } else if (x.key.startsWith('pres')) { if (S1 !== P) return null; S = P; }
+  else if (sp.merged) { const sj = soundJoin(P, 'σ'); if (!(sj && sj.merged && S1 === P.slice(0, -1))) return null; sound = sj; S = P; }
+  else if (S1 === P) S = P;
+  else { const t0 = (F + rest)[0], sj = F ? soundJoin(P, t0) : null; if (!(sj && !sj.merged && !aug && S1 + t0 === sj.joined)) return null; sound = sj; S = P; }
+  const tail = F + rest, real = aug ? augmented(P).find((c) => c.pre === body).pre + tail : A + (sound ? sound.joined + tail.slice(1) : S + tail);
+  if (real !== word) return null;
+  const who = null, label = CASE_N[x.case] + ' ' + NUM_N[x.number] + ' ' + GEN_N[x.gender];
+  return { mood: 'ptc', key: x.key, S, F, V: '', E: rest, A, aug, word: x.w, n: x.n, id: x.id, who, row: null, kind: r, sound, real, label, case: x.case, number: x.number, vowelWritten: '' };
+}
+const ptcRests = (r) => { if (r._rests) return r._rests; const o = new Set(); for (const c of r.forms) for (const f of c) for (const v of (f.includes('(ν)') ? [f.replace('(ν)', ''), f.replace('(ν)', 'ν')] : [f])) { const sp = splitPtc(v, r.key); if (sp) o.add(skel(sp.rest)); } return (r._rests = [...o]); };
+function ptcEndingOptions(d) {
+  const same = ptcRests(d.kind).filter((e) => e !== d.E), other = uniq(PTC.filter((r) => r.key !== d.key).flatMap(ptcRests)).filter((e) => e !== d.E && !same.includes(e));
+  return shuffle(uniq([d.E, ...shuffle(same).slice(0, 2), ...shuffle(other).slice(0, 1), ...shuffle(same).slice(2), ...shuffle(other).slice(1)]).slice(0, 4)).map((e) => [e, e === '' ? 'none' : '-' + final(e)]);
+}
+const ptcFormativeOptions = (d) => shuffle(uniq([d.F, ...shuffle(['ο', 'ου', 'ω', 'σα', 'θε', 'ε', 'κ', ''].filter((f) => f !== d.F)).slice(0, 3)])).map((f) => [f, f || 'none']);
 const MOOD_KEYS = { sub: [...SUBB.keys()], imp: [...IMPB.keys()], inf: INF.map((r) => r.key).filter((k) => !/^perf/.test(k)) };
 const endingPool = (d) => { const { mood, key } = d, split = MOODS[mood].split, B = MOODS[mood].B;
   if (mood === 'inf') return uniq(INF.filter((r) => !/^perf/.test(r.key)).map((r) => r.ending));
@@ -215,13 +254,14 @@ const moodFormativeOptions = (d) => { const pool = d.mood === 'imp' ? ['σα', '
 const moodVowelOptions = (d) => shuffle(uniq([d.V, ...(d.mood === 'sub' ? ['ω', 'η', 'ο', 'ε'] : ['ε', 'ο', 'α', 'η'])]).slice(0, 4)).map((v) => [v, v]);
 /** The tiles and steps of a mood form, in order. */
 function moodTiles(d) {
+  if (d.mood === 'ptc') { const t = []; if (/^perf/.test(d.key)) t.push(['Front', d.aug ? d.aug.from + ' →' : d.A + '-']); t.push(['Stem', d.S + '-']); if (d.aug) t.push(['Lengthen', d.aug.to]); t.push(['Formative', d.F || '—'], ['Ending', d.E ? '-' + final(d.E) : '—']); return t; }
   const t = [['Stem', d.S + '-']];
   if (d.mood !== 'inf') { t.push(['Formative', d.F || '—']); if (d.V) t.push(['Vowel', d.V]); t.push(['Ending', d.E ? '-' + final(d.E) : '—']); } else t.push(['Ending', '-' + shown(d.E)]);
   if (d.contract) t.push(['Contract', d.contract.res]);
   return t;
 }
 /** The shape of the first screen text, e.g. "1st aorist active subjunctive, 3rd person singular". */
-const moodHeading = (d) => d.kind.name + ' ' + MOODS[d.mood].name + (d.who ? ', ' + CELL_NAME[d.who] : '');
+const moodHeading = (d) => d.mood === 'ptc' ? d.kind.name + ' participle, ' + d.label : d.kind.name + ' ' + MOODS[d.mood].name + (d.who ? ', ' + CELL_NAME[d.who] : '');
 
 /* ---------- the pool and the session ---------- */
 let byVerb = null;
@@ -232,11 +272,11 @@ const dense = (xs) => xs.sort((a, c) => D.forms[c.id].count - D.forms[a.id].coun
 /** Forms of the other moods (subjunctive, imperative, infinitive), one list per kind. */
 export function buildMoodLists(mood, any = false) {
   const by = new Map();
-  for (const x of moodPool(mood, { anyVerb: any })) { const d = decomposeMood(mood, x); if (d) { if (!by.has(x.key)) by.set(x.key, []); by.get(x.key).push(d); } }
+  for (const x of mood === 'ptc' ? ptcPool({ anyVerb: any }) : moodPool(mood, { anyVerb: any })) { const d = mood === 'ptc' ? decomposePtc(x) : decomposeMood(mood, x); if (d) { if (!by.has(x.key)) by.set(x.key, []); by.get(x.key).push(d); } }
   return [...by.values()].map((l) => shuffle(dense(l)));
 }
 export function buildQueue(any = false, total = 8) {
-  const groups = shuffle([BUILD_ROWS.map((r) => shuffle(dense(buildPool(r, any)))).filter((l) => l.length), ...['sub', 'imp', 'inf'].map((m) => buildMoodLists(m, any))].filter((g) => g.length));
+  const groups = shuffle([BUILD_ROWS.map((r) => shuffle(dense(buildPool(r, any)))).filter((l) => l.length), ...['sub', 'imp', 'inf', 'ptc'].map((m) => buildMoodLists(m, any))].filter((g) => g.length));
   const at = groups.map(() => 0), out = [], seen = new Set();
   for (let step = 0; groups.length && out.length < total && step < 500; step++) {
     const gi = step % groups.length, g = groups[gi];
@@ -305,6 +345,10 @@ const contractEntry = (d, ex) => {
     h('span', 'The stem ends in ', greek(k), '. The uncontracted ending is ', greek('-' + shown(U)), ' (as in ', greek(ex.replace(/[()]/g, '')), '). How are the stem vowel ', greek(k), ' and the ending’s ', greek(si), ' written together?')];
 };
 
+/** The Lengthening step of a vowel-initial verb. */
+const lengthEntry = (d) => ['Lengthening', lengthenOptions(d), d.aug.to, h('span', 'Rule: ', greek(d.aug.from + ' → ' + d.aug.to), '. The first vowel lengthens like this: ', greek('α → η, ε → η, ο → ω, αι → ῃ, οι → ῳ, αυ → ηυ'), '. A few verbs, such as ', greek('ἔχω'), ', have ', greek('ε → ει'), '.'),
+      h('span', 'The stem begins with ', greek(d.aug.from), '. What does the first vowel become?')];
+
 export function renderBuild(view, mode) {
   const any = mode === 'any', queue = buildQueue(any), back = ['#/parse', 'Back to Parsing'];
   if (!queue.length) { clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.card.stack', h('p', 'There are no forms to build yet' + (any ? '' : ' in verbs you know') + '. Forms open up as you learn the chart rows and the verbs. Verbs with contracted or irregular stems are left out.'), any ? null : h('a.btn', { href: '#/parse/run/build/any' }, 'Try with any verb'), ...backLinks(...back))); return; }
@@ -316,7 +360,7 @@ export function renderBuild(view, mode) {
     h('div.row.between', h('b', 'Build the form'), h('span.chip', (at + 1) + ' / ' + queue.length)),
     h('div.card.small', { style: { background: 'var(--accent-soft)', border: 'none' } }, h('b', (d.mood ? moodHeading(d).replace(/^./, (c) => c.toUpperCase()).replace('person ', '') : say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative, ' + CELL_NAME[d.cell].replace('person ', ''))), h('div', { style: { color: 'var(--ink-2)' } }, 'of ', greek(L.head), ' · ', L.brief)),
     pieces(d, d.mood ? null : chartPieces(d), upto, mark), ...body))); };
-  const chartLine = (d) => d.mood ? h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the paradigm:'), h('p', { lang: 'grc', style: { margin: 0, fontFamily: 'var(--greek)', fontSize: '1.1rem' } }, d.kind.forms ? d.kind.forms.join(', ') : d.kind.model + ' (' + d.kind.gloss + ')')) : h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the master verb chart:'), masterRowTable(d.row));
+  const chartLine = (d) => d.mood === 'ptc' ? h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the paradigm (' + d.kind.name.toLowerCase() + ' participle of ' + d.kind.verb + ', ' + CASE_N[d.case] + ' ' + NUM_N[d.number] + '):'), h('p', { lang: 'grc', style: { margin: 0, fontFamily: 'var(--greek)', fontSize: '1.1rem' } }, d.kind.forms[(d.number === 'P' ? 4 : 0) + Math.max(0, 'NGDA'.indexOf(d.case))].join(', '))) : d.mood ? h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the paradigm:'), h('p', { lang: 'grc', style: { margin: 0, fontFamily: 'var(--greek)', fontSize: '1.1rem' } }, d.kind.forms ? d.kind.forms.join(', ') : d.kind.model + ' (' + d.kind.gloss + ')')) : h('div', h('p.muted.small', { style: { margin: '.6rem 0 .2rem' } }, 'From the master verb chart:'), masterRowTable(d.row));
   const choose = (d, i, title, options, right, onRight, note = null, prompt = null) => {
     const box = h('div.opts.two'); let locked = false;
     for (const [v, label] of options) { const b = h('button.opt', { onclick: () => { if (locked) return; locked = true; const ok = v === right; tally[1]++; if (ok) tally[0]++; else missed[title] = (missed[title] || 0) + 1; b.classList.add(ok ? 'right' : 'wrong'); if (!ok) [...box.children].find((x) => x.dataset.v === String(right))?.classList.add('right'); if (note) { box.after(h('div.card.small.stack', { style: { background: 'var(--accent-soft)', border: 'none' } }, note, h('div', h('button.btn.primary.sm', { onclick: onRight }, 'Continue')))); } else setTimeout(onRight, ok ? 450 : 1300); } }, greek(label)); b.dataset.v = String(v); box.append(b); }
@@ -328,8 +372,7 @@ export function renderBuild(view, mode) {
     const c = chartPieces(d), k = contractKind(d.n), seq = [];
     seq.push(['Front', frontOptions(d), frontAnswer(d)]);
     seq.push(['Stem', stemOptions(d), d.S, k && !d.contract ? lengthNote(d) : null]);
-    if (d.aug) seq.push(['Lengthening', lengthenOptions(d), d.aug.to, h('span', 'Rule: ', greek(d.aug.from + ' → ' + d.aug.to), '. The first vowel lengthens like this: ', greek('α → η, ε → η, ο → ω, αι → ῃ, οι → ῳ, αυ → ηυ'), '. A few verbs, such as ', greek('ἔχω'), ', have ', greek('ε → ει'), '.'),
-      h('span', 'The stem begins with ', greek(d.aug.from), '. What does the first vowel become?')]);
+    if (d.aug) seq.push(lengthEntry(d));
     seq.push(['Tense formative', formativeOptions(c), c.F]);
     if (c.V) seq.push(['Connecting vowel', vowelOptions(c), c.V]);
     seq.push(['Personal ending', endingOptions(d, c), c.PE]);
@@ -349,15 +392,22 @@ export function renderBuild(view, mode) {
   };
   // a subjunctive, imperative or infinitive: stem, formative, connecting vowel, ending (an infinitive: stem and ending)
   const showMood = (d) => {
-    const seq = [['Stem', moodStemOptions(d), d.S, contractKind(d.n) && !d.contract ? lengthNote(d) : null]];
-    if (d.mood !== 'inf') { seq.push(['Tense formative', moodFormativeOptions(d), d.F]); if (d.V) seq.push(['Connecting vowel', moodVowelOptions(d), d.V]); seq.push(['Personal ending', moodEndingOptions(d), d.E]); }
+    const seq = [];
+    if (d.mood === 'ptc') {
+      if (/^perf/.test(d.key)) seq.push(['Front', frontOptions(d), frontAnswer(d)]);
+      seq.push(['Stem', moodStemOptions(d), d.S]);
+      if (d.aug) seq.push(lengthEntry(d));
+      seq.push(['Tense formative', ptcFormativeOptions(d), d.F], ['Ending', ptcEndingOptions(d), d.E, h('span', 'The ending is the participle marker ', greek('-' + d.kind.morph + '-'), ' and the case ending written together. The marker means: ', MORPHEME_MEANING[d.kind.morph], '.')]);
+    } else seq.push(['Stem', moodStemOptions(d), d.S, contractKind(d.n) && !d.contract ? lengthNote(d) : null]);
+    if (d.mood === 'ptc') { /* steps above */ } else if (d.mood !== 'inf') { seq.push(['Tense formative', moodFormativeOptions(d), d.F]); if (d.V) seq.push(['Connecting vowel', moodVowelOptions(d), d.V]); seq.push(['Personal ending', moodEndingOptions(d), d.E]); }
     else seq.push(['Ending', moodEndingOptions(d), d.E]);
     if (d.contract) seq.push(contractEntry(d, d.contract.ex));
     const step = (i) => {
       if (i < seq.length) { const [title, opts, right, note, prompt] = seq[i]; frame(d, choose(d, i, title, opts, right, () => step(i + 1), note, prompt), i, i); return; }
-      const parts = d.contract ? [d.contract.head, '(' + d.contract.k + ' + ' + d.contract.initShown + ' → ' + d.contract.res + ')', d.contract.rest ? final(d.contract.rest) : null].filter(Boolean) : [d.S, d.F || null, d.V || null, d.E ? final(d.E) : null].filter(Boolean), subscript = !d.contract && /[\u0345]/.test(d.vowelWritten.normalize('NFD'));
+      const parts = d.mood === 'ptc' ? [d.A || null, d.S, d.F || null, d.E ? final(d.E) : null].filter(Boolean) : d.contract ? [d.contract.head, '(' + d.contract.k + ' + ' + d.contract.initShown + ' → ' + d.contract.res + ')', d.contract.rest ? final(d.contract.rest) : null].filter(Boolean) : [d.S, d.F || null, d.V || null, d.E ? final(d.E) : null].filter(Boolean), subscript = !d.contract && /[\u0345]/.test(d.vowelWritten.normalize('NFD'));
       frame(d, [h('div', { lang: 'grc', style: { fontFamily: 'var(--greek)', fontSize: '2.2rem', textAlign: 'center', margin: '.2rem 0' } }, isolated(d.word)),
         h('div.card.small', { style: { background: 'var(--good-soft)', border: 'none' } }, h('b', 'Built: '), greek(parts.join(' + ')), '. ', h('span.muted.small', 'Accents are not part of this exercise.')),
+        d.aug ? h('p.muted.small', { style: { margin: 0 } }, 'The first vowel lengthens (', greek(d.aug.from + ' → ' + d.aug.to), '), so the word begins with ', greek(d.aug.to), '. In the perfect this lengthening also does the work of the reduplication.') : null,
         d.sound ? h('p.muted.small', { style: { margin: 0 } }, 'Spelling: ', d.sound.note, ' (', greek(d.S + ' + ' + (d.F + d.V + d.E)[0] + ' → ' + d.sound.joined), ').') : null,
         subscript ? h('p.muted.small', { style: { margin: 0 } }, 'The vowel ', greek(d.V), ' is written ', greek(d.vowelWritten), ', with an iota subscript, in this form.') : null,
         h('button.btn.primary', { onclick: () => { at++; at < queue.length ? show() : done(); } }, 'Next'), chartLine(d)], seq.length, -1);

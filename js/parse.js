@@ -241,6 +241,19 @@ export function moodPool(mood, { anyVerb = false } = {}) {
   }
   return out;
 }
+/** Participles for Build the form: the kind (chart row key) and the case, number and gender of each, only where the participle level is open. */
+export function ptcPool({ anyVerb = false } = {}) {
+  ensureIndex();
+  const out = [];
+  for (const id of members.keys()) {
+    const it = autoItemOf(id); if (!it || it.group !== 'V' || (!anyVerb && status(it.strongs) !== 'known')) continue;
+    let hl = null; for (const v of it.valid) { const x = participleHighlight(v.slots); if (x && x.key && levelOfTag(v.code) <= formLevel()) { hl = x; break; } }
+    if (!hl) continue;
+    const L = D.lexByN.get(it.strongs);
+    out.push({ id, key: hl.key, case: hl.case, number: hl.number, gender: hl.gender, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', count: D.forms[id].count });
+  }
+  return out;
+}
 /** A round of about a dozen forms of the row, leaning on the commonest. */
 /** Several chart rows at once, for "Parse from the chart": forms of verbs you know (or of any verb), whatever the parsing level. */
 export const rowsLength = (n) => Math.max(8, n);
