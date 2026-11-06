@@ -5,7 +5,7 @@ import { ROWS, say, summary } from './chartdrill.js';
 import { rowPool } from './parse.js';
 import { h, clear, shuffle, backHead, backLinks } from './util.js';
 import { rowOfTag } from './families.js';
-import { getParseStats } from './know.js';
+import { getParseStats, K, parseId } from './know.js';
 import { clueRef } from './clueref.js';
 
 const ROW = Object.fromEntries(ROWS.map((r) => [r.key, r]));
@@ -34,6 +34,12 @@ function nameOptions(r) {
   const near = shuffle(ROWS.filter((o) => o.key !== r.key && !/^(fut-liq|aor-liq)/.test(o.key))).sort((a, b) => score(b) - score(a)).slice(0, 5);
   return shuffle([r, ...shuffle(near).slice(0, 3)]);
 }
+
+/** How much a form is worth asking: forms you have missed in Parsing, or that are hard for you, come up more often. */
+const formWeight = (id) => { const card = K.cards.get(parseId(D.forms[id])); return card ? Math.min(8, 1 + (card.lapses || 0) * 1.5 + ((card.difficulty || 5) >= 6 ? 1.5 : 0)) : 1; };
+const missedBefore = (id) => { const card = K.cards.get(parseId(D.forms[id])); return !!card && (card.lapses || 0) > 0; };
+/** A random order in which heavier items tend to come first (each item's key is -ln(random) / weight; smallest first). */
+const weightedOrder = (ids) => ids.map((id) => [-Math.log(1 - Math.random()) / formWeight(id), id]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
 
 /** Pairs that are easy to confuse. */
 const PAIRS = [['pres-act', 'impf-act'], ['pres-mp', 'impf-mp'], ['impf-act', 'aor2-act'], ['pres-act', 'fut-act'], ['aor1-act', 'aor1-mid'], ['aor1-act', 'aor1-pas'], ['aor1-act', 'perf1-act'], ['pres-mp', 'fut-mid'], ['aor2-act', 'aor2-mid'], ['fut-act', 'aor1-act'], ['impf-mp', 'aor2-mid'], ['fut-pas1', 'aor1-pas'], ['pres-act', 'pres-mp'], ['impf-act', 'impf-mp'], ['fut-act', 'fut-mid'], ['aor1-mid', 'aor1-pas']];
@@ -65,8 +71,8 @@ function pairsFor(keyA, keyB, any, cache) {
 export function clueQueue(any, total = 10, st = null) {
   const cache = new Map(), hunts = [], pairs = [];
   const pools = KEYS.filter((k) => !/-liq-/.test(k)).map((k) => [k, rowPool(k, { gated: true, anyVerb: any })]).filter(([, p]) => p.length);
-  const lists = pools.map(([k, p]) => [k, shuffle(p.slice().sort((x, y) => D.forms[y].count - D.forms[x].count).slice(0, 40))]), seen = new Set();
-  for (let i = 0; lists.length && hunts.length < total; i++) { const [k, l] = lists[i % lists.length]; const id = l.find((x) => !seen.has(x)); if (id != null) { seen.add(id); hunts.push({ type: 'hunt', id, key: k }); } else if (lists.every(([, q]) => q.every((x) => seen.has(x)))) break; }
+  const lists = shuffle(pools.map(([k, p]) => [k, weightedOrder(p.slice().sort((x, y) => D.forms[y].count - D.forms[x].count).slice(0, 40))])), seen = new Set();   // rows in a random order, so later rows (aorist, perfect) are not always left out
+  for (let i = 0; lists.length && hunts.length < total; i++) { const [k, l] = lists[i % lists.length]; const id = l.find((x) => !seen.has(x)); if (id != null) { seen.add(id); hunts.push({ type: 'hunt', id, key: k, missed: missedBefore(id) }); } else if (lists.every(([, q]) => q.every((x) => seen.has(x)))) break; }
   const avail = PAIRS.map(([a, b]) => ({ a, b, f: pairsFor(a, b, any, cache), ...pairWeight(a, b, st) })).filter((x) => x.f.length);
   while (avail.length && pairs.length < Math.floor(total / 3)) {                  // weighted draw without replacement: weaker slots come up more often
     let r = Math.random() * avail.reduce((n, x) => n + x.w, 0), i = 0; while (i < avail.length - 1 && (r -= avail[i].w) > 0) i++;
@@ -146,7 +152,7 @@ export async function renderClues(view, mode, single = null) {
       const doneSteps = CLUES.slice(0, i).map((c, j) => h('div.row', { style: { gap: '.6rem', padding: '.35rem 0', borderTop: '1px solid var(--line)' } }, h('span', { style: { color: res[j] ? 'var(--good)' : 'var(--warn)', fontWeight: 800 } }, res[j] ? '✓' : '•'), h('span', h('b', c.name + ': '), c.say(r), j === 0 && split ? [' · ', splitView(split)] : null)));
       if (i < CLUES.length) {
         const c = CLUES[i];
-        frame('Find the clues', [bigWord(w), h('p.muted.small', { style: { margin: 0 } }, 'Look for the clues before you name the form. Practice only.'), ...doneSteps, h('p', { style: { marginBottom: c.hint ? '.2rem' : undefined } }, h('b', c.ask)), c.hint ? h('p.muted.small', { lang: 'en' }, c.hint) : null,
+        frame('Find the clues', [bigWord(w), h('p.muted.small', { style: { margin: 0 } }, 'Look for the clues before you name the form. Practice only.' + (q.missed ? ' You have missed this form in Parsing before.' : '')), ...doneSteps, h('p', { style: { marginBottom: c.hint ? '.2rem' : undefined } }, h('b', c.ask)), c.hint ? h('p.muted.small', { lang: 'en' }, c.hint) : null,
           choices(c.options(r), c.answer(r), (v, ok) => { res[i] = ok; tally.clue[1]++; if (ok) tally.clue[0]++; else missedClue[c.name] = (missedClue[c.name] || 0) + 1; setTimeout(() => draw(i + 1), ok ? 450 : 1300); }, c.key === 'form' || c.key === 'ends' ? false : false)]);
       } else if (i === CLUES.length) {
         frame('Name the form', [bigWord(w), ...doneSteps, h('p', h('b', 'Which form is it?')),
