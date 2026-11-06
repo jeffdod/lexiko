@@ -20,6 +20,8 @@ export const D = {
 
 /** Words the text tags as verb forms but which are used as interjections ('Lo! Behold!': ἰδού, ἴδε). They are learned as vocabulary words only: no parsing, and no verb stems. */
 export const NOT_PARSED = new Set([2400, 2396]);
+/** One analysis (form tag) that is not parsed: any form of a NOT_PARSED word, and the form δεῖ itself (G1163, present active indicative 3rd singular), which is just the vocabulary word. The other forms of δεῖ (ἔδει, δεῖν, δέῃ, δέον) are parsed as verbs. */
+export const notParsed = (a) => !!a && (NOT_PARSED.has(a.s) || (a.s === 1163 && a.m === 'V-PAI-3S'));
 export const pack = (bi, ch, vs) => bi * 100000 + ch * 1000 + vs;
 export const unpack = (p) => ({ bi: Math.floor(p / 100000), ch: Math.floor((p % 100000) / 1000), vs: p % 1000 });
 
