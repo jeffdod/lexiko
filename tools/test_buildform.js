@@ -55,3 +55,4 @@ const { chromium } = require('playwright');
   ok(!errs.length, 'page errors: ' + errs.join('|'));
   console.log(process.exitCode ? 'FAILED' : 'ALL OK'); await b.close();
 })();
+
