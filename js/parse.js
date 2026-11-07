@@ -97,7 +97,6 @@ function candidatePool(scope, kinds) {
   const take = (pred) => { for (const id of members.keys()) { const it = autoItemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
   const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]);        // a verb comes in through the forms it requires; its other forms are practiced, never required
   take((f) => (isVerbForm(f.id) ? status(f.an[0].s) !== 'unknown' : status(f.an[0].s) === 'known') && mine(f));        // a noun, adjective or pronoun form is asked only once you know the word's meaning
-  if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400 && mine(f)); }   // nothing known yet: start with the most common words
   return out;
 }
 
