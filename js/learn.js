@@ -7,7 +7,7 @@ import { partsGrid } from './partforms.js';
 import { paceNote } from './pace.js';
 import { verbBrake } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
-import { miniGoalCard } from './goals.js';
+import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore } from './retry.js';
 import { h, clear, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
@@ -114,7 +114,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         missedBlock([...missed].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: L.brief }; }),
           () => runSession(view, [...missed].map((m) => ({ ...m, type: 'practice', seen: false, retry: false })), { title, scope, back, practice: true })),
         h('div.row.wrap', addBtn, scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null,
-          ...backLinks('#/learn', 'Back to Learn', !scope), h('a.btn', { href: '#/progress' }, 'Progress'))));
+          ...backLinks('#/home', 'Back to Home', !scope), h('a.btn', { href: '#/progress' }, 'Progress'))));
   };
 
   const retryQ = [];                                      // missed cards wait here and come back after the last card, in a retry round
@@ -213,7 +213,7 @@ function startFrom(view, kind, scope, title, only = null) {
   if (!items.length) {
     if (!scope) { const alt = smart('words'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }       // caught up: go to something useful instead
     clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? (passageStudy(scope).held + passageStudy(scope).started ? waitNote(passageStudy(scope)) : 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉') : 'You’re all caught up. 🎉'),
-      h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1) }, 'Read it') : null, h('a.btn', { href: '#/learn' }, 'Back'))));
+      h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1) }, 'Read it') : null, h('a.btn', { href: '#/home' }, 'Back'))));
     return;
   }
   runSession(view, items, { title, scope });
@@ -248,7 +248,7 @@ export function renderLearn(view, params) {
       return void runSession(view, shuffle(ns.map((n) => ({ n, type: 'recent' }))), { title: 'Review what I just learned', practice: true });
     }
     const items = shuffle(preview ? previewWords(goal).map((n) => ({ n, type: 'preview' })) : troubleCards('w:', 15).map((c) => ({ n: +c.id.slice(2), type: 'practice' })));      // shuffled: the worst card shouldn't always come first
-    if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Look ahead at new words' : 'Strengthen weak spots')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the words you’ve studied.'), h('a.btn', { href: '#/learn' }, 'Back'))); return; }
+    if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Look ahead at new words' : 'Strengthen weak spots')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the words you’ve studied.'), h('a.btn', { href: '#/home' }, 'Back'))); return; }
     return void runSession(view, items, { title: 'Strengthen weak spots', practice: true });
   }
   if (mode === 'level') {
@@ -257,19 +257,10 @@ export function renderLearn(view, params) {
   }
   if (mode === 'passage') {
     const [book, c1, v1, c2, v2] = rest; const scope = { book, c1: +c1, v1: +v1 || 1, c2: +c2 || +c1, v2: +v2 || 999 };
-    if (!D.bookByCode.has(book)) return void (location.hash = '#/learn');
+    if (!D.bookByCode.has(book)) return void (location.hash = '#/home');
     return void startFrom(view, 'passage', scope, scopeLabel(scope));
   }
-  const next = smartAll(), up = upcoming(), dueAll = up.all.due;
-  clear(view).append(
-    h('div.pagehead', h('h1', 'Learn')),
-    h('div.stack',
-      startButton(next),
-      h('div.topics', ['words', 'parse'].map((k) => h('a.tile', { href: TOPICS[k].page }, h('h3', TOPICS[k].title), h('p', topicNote(k)), tileNext(up, k) ? h('p.small.tilenext', icon('clock', 13), ' ' + tileNext(up, k)) : null))),
-      h('a.tile', { href: '#/learn/verbs' }, h('h3', 'Your verbs ›'), h('p', verbsInProgress() ? verbsInProgress() + (verbsInProgress() === 1 ? ' verb' : ' verbs') + ' in progress' : 'Verbs you are learning')),
-      h('a.tile', { href: '#/learn/charts' }, h('h3', 'Verb charts ›'), h('p', (() => { const c = chartCounts(); return c.due ? c.due + ' squares due' : c.started ? 'Verb chart: ' + c.known + ' of ' + c.total + ' squares known' : 'Learn the master verb chart'; })())),
-      miniGoalCard(() => renderLearn(view, params)),
-      comingUp(up)));
+  location.replace('#/home');                                   // the Learn hub is gone: Home opens the areas
 }
 
 /* ---------- Vocabulary page ---------- */
@@ -284,11 +275,14 @@ function verbHold() {
 function wordsPage(view) {
   const sm = smart('words');
   clear(view).append(
-    backHead('Vocabulary', '#/learn', 'Learn'),
+    backHead('Vocabulary', '#/home', 'Home'),
     h('div.stack',
       startButton(sm),
       paceNote(wordsPace(), 'words'),
       verbHold(),
-      h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.words.preview }, 'Look ahead at new words'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.words.review }, 'Review what I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.words.reinforce }, 'Strengthen weak spots')),
-      miniGoalCard(() => wordsPage(view))));
+      goalDetailCard(() => wordsPage(view)),
+      h('div.sec', 'More practice'),
+      sm.kind === 'review' ? null : h('a.tile', { href: TOPICS.words.review }, h('h3', 'Review what I’ve learned'), h('p', 'Go back over words you already know')),
+      h('a.tile', { href: TOPICS.words.preview }, h('h3', 'Look ahead at new words'), h('p', 'A preview of what is coming')),
+      h('a.tile', { href: TOPICS.words.reinforce }, h('h3', 'Strengthen weak spots'), h('p', 'Words you have missed or find hard'))));
 }

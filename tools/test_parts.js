@@ -163,7 +163,7 @@ process.on('unhandledRejection', () => {});
   }
   const stateAfter = await snap();
   ok(stateBefore === stateAfter, 'extra practice left every card and counter unchanged');
-  await p.goto(URL + '#/learn'); await p.waitForSelector('.start'); await p.screenshot({ path: out + '/learn.png', fullPage: true });
+  await p.goto(URL + '#/learn/words'); await p.waitForSelector('.start'); await p.screenshot({ path: out + '/learn.png', fullPage: true });
   const sw = await p.evaluate(async () => { const k = await import('./js/know.js'), f = await import('./js/fsrs.js'); const o = {}; const saved = new Map(k.K.cards), sd = k.K.daily, sa = k.K.wordsAcc.slice(), spv = k.K.partsVerbs;
     const at = new Date(2026, 5, 10, 19, 0, 0).getTime();               // 7 pm
     const g = f.review(f.newCard('x'), 3, at, 0.9, false); const d = new Date(g.due); o.goodHour = d.getHours(); o.goodDays = Math.round((g.due - at) / 864e5);
@@ -184,7 +184,7 @@ process.on('unhandledRejection', () => {});
   ok(sw.streakParts >= 1 && sw.undoAcc, 'parts-only days keep the streak; undo restores accuracy', JSON.stringify(sw));
   ok(sw.cold1 === 'learn' || sw.cold1 === 'cold', 'cold stage reachable', JSON.stringify(sw));
   ok(!sw.sameDayCold, 'a cold answer on the day it went cold does not count as recalled cold', JSON.stringify(sw));
-  for (const u of ['#/learn', '#/learn/words', '#/parse', '#/parts', '#/home']) { await p.goto(URL + u); await p.waitForSelector('.start'); ok(!/nothing (to do|is due)/i.test(await p.textContent('#view')), 'no dead-end wording on ' + u); }
+  for (const u of ['#/learn/words', '#/parse', '#/parts', '#/home']) { await p.goto(URL + u); await p.waitForSelector(u === '#/home' ? '.area' : '.start'); ok(!/nothing (to do|is due)/i.test(await p.textContent('#view')), 'no dead-end wording on ' + u); }
   ok(errs.length === 0, 'no console/page errors', errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? 'FAILED ' + fails : 'ALL PASSED'); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

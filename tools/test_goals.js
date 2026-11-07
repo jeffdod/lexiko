@@ -55,9 +55,13 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
   const hc = await p.locator('.goalnum').textContent();
   ok(/^\d[\d,]* of \d[\d,]* goal words known · \d+%$/.test(hc), 'Home card headline', hc);
+  await p.goto(URL + '#/learn/words'); await p.waitForSelector('.finrow');
   const ht = await p.locator('#view').textContent();
-  ok(/recognize \d+% of the words in the New Testament/.test(ht) && /words? to go · about/.test(ht), 'Home card: reading share and finish estimate');
+  ok(/words? to go · about/.test(ht) && /Goal/.test(ht) && !/goal words known/.test(ht), 'Vocabulary goal card: the goal and the finish estimate only');
   await p.screenshot({ path: out + '/home-freq.png' });
+  await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
+  await p.locator('.goalnum').click(); await p.waitForTimeout(400); ok(p.url().endsWith('#/progress'), 'a tap on the Home goal card opens Progress', p.url());
+  await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
   await p.getByRole('button', { name: /Change/ }).click();
   ok(await p.locator('.goal-picker').isVisible() && p.url().endsWith('#/'), 'Change opens the picker on Home itself');
   await p.screenshot({ path: out + '/home-picker.png' });
@@ -68,13 +72,13 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   ok((await p.evaluate(async () => (await import('./js/know.js')).K.goal)).kind === 'freq', 'a goal chosen on Home is saved and the card returns');
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setGoal({ kind: 'freq', min: 30 }); }); await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setGoal({ kind: 'passage', book: '1JN', c1: 1, v1: 1, c2: 2, v2: 29 }); });
-  await p.goto(URL + '#/read'); await p.waitForTimeout(800); await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
-  ok(/can read \d+% of this passage/.test(await p.locator('#view').textContent()) && await p.locator('a:has-text("next word")').count() > 0, 'Home card for a passage goal has Learn and Read');
+  await p.goto(URL + '#/read'); await p.waitForTimeout(800); await p.goto(URL + '#/learn/words'); await p.waitForSelector('.finrow');
+  ok(/words? to go/.test(await p.locator('#view').textContent()) && await p.locator('a:has-text("next word")').count() === 0, 'Vocabulary card for a passage goal: finish estimate, no second learn button');
   await p.screenshot({ path: out + '/home-passage.png' });
 
   // finish-by control
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('newPerDay', 10); await k.setGoal({ kind: 'freq', min: 30 }); });
-  await p.reload(); await p.waitForSelector('.goalnum');
+  await p.goto(URL + '#/learn/words'); await p.reload(); await p.waitForSelector('.finrow');
   await p.getByRole('button', { name: /Adjust/ }).click();
   ok(await p.locator('.pacectl').isVisible(), 'Adjust opens the finish control');
   await p.getByRole('button', { name: /Close/ }).click(); ok(await p.locator('.pacectl').count() === 0, 'the Adjust button closes the control again');
@@ -87,7 +91,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   const t2 = await p.locator('.perday').textContent(); const per2 = +t2.match(/(\d+) new word/)[1];
   ok(per2 > per1, 'an earlier finish raises it', per1 + ' -> ' + per2);
   await p.screenshot({ path: out + '/home-pace.png' });
-  await p.getByRole('button', { name: 'Use this pace' }).click(); await p.waitForSelector('.goalnum');
+  await p.getByRole('button', { name: 'Use this pace' }).click(); await p.waitForSelector('.finrow');
   ok(await p.evaluate(async () => (await import('./js/know.js')).setting('newPerDay')) === per2, 'Use this pace saves the daily new words', String(per2));
   await p.getByRole('button', { name: /Adjust/ }).click();
   for (let i = 0; i < 12 && await p.getByRole('button', { name: 'Fewer days' }).isEnabled(); i++) await p.getByRole('button', { name: 'Fewer days' }).click();
@@ -145,9 +149,9 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
     await p.goto(URL + hash); await p.reload(); await p.waitForTimeout(600);
     stray.push([hash, /(null|undefined)/.test(await p.locator('#view').innerText())]);
   }
-  await p.goto(URL + '#/'); await p.reload(); await p.waitForSelector('.goalnum'); await p.getByRole('button', { name: /Adjust/ }).click();
+  await p.goto(URL + '#/learn/words'); await p.reload(); await p.waitForSelector('.finrow'); await p.getByRole('button', { name: /Adjust/ }).click();
   stray.push(['pace open', /(null|undefined)/.test(await p.locator('#view').innerText())]);
-  await p.getByRole('button', { name: 'Cancel' }).click(); await p.getByRole('button', { name: /Change/ }).click();
+  await p.getByRole('button', { name: 'Cancel' }).click(); await p.goto(URL + '#/'); await p.waitForSelector('.goalnum'); await p.getByRole('button', { name: /Change/ }).click();
   stray.push(['home picker', /(null|undefined)/.test(await p.locator('#view').innerText())]);
   ok(!stray.some((x) => x[1]), 'no stray null or undefined on Home, Progress, pace control or picker', JSON.stringify(stray.filter((x) => x[1])));
   ok(errs.length === 0, 'no page errors', errs.join(' | ').slice(0, 200));

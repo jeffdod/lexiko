@@ -11,8 +11,8 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(300); await k.setSetting('levelAsked', true); });
   const go = async (h) => { await p.goto(URL + h); await p.reload(); await ready(); await p.waitForTimeout(300); };
   await go('#/learn');
-  ok(await p.locator('.start').count() === 1 && await p.locator('.topics .tile').count() === 2 && await p.locator('a.tile[href="#/learn/verbs"]').count() === 1, 'Learn: one start button, two topics, a Verbs tile');
-  ok(/Your goal/.test(await p.textContent('#view')) && await p.locator('button:has-text("Change ›")').count() === 1, 'Learn: a goal card with Change ›');
+  await p.waitForTimeout(300); ok(await p.locator('a.area').count() === 3, 'Learn opens Home with three areas');
+  await go('#/learn/words'); ok(await p.locator('.start').count() === 1 && await p.locator('button:has-text("Change ›")').count() === 1, 'Vocabulary: one start button and a goal card with Change › (no goal chosen yet)');
   await p.click('button:has-text("Change ›")'); await p.waitForSelector('.goal-picker'); ok(true, 'Change › opens the picker in place');
   await p.click('button:has-text("Cancel")'); ok(await p.locator('.goal-picker').count() === 0, 'Cancel closes it');
   await go('#/learn/words');
@@ -20,7 +20,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(/Look ahead at new words/.test(v) && /Review what I’ve learned|Learn new words|Review words/.test(v) && /Strengthen weak spots/.test(v) && !/Study a passage|Study by how common|Options/.test(v), 'Vocabulary: start button, three links, no extra sections');
   await go('#/parse');
   const pv = await p.textContent('#view');
-  ok(/Look ahead at new forms/.test(pv) && /Strengthen weak spots/.test(pv) && /Charts/.test(pv) && !/Study a passage|Options/.test(pv), 'Parsing: start button, links, Charts, no extra sections');
+  ok(/Look ahead at new forms/.test(pv) && /Strengthen weak spots/.test(pv) && /Drill the chart/.test(pv) && !/Study a passage|Options/.test(pv), 'Parsing: start button, links, Charts, no extra sections');
   await go('#/settings');
   const sv = await p.textContent('#view');
   ok(/Quiz style/.test(sv) && /New words per day/.test(sv) && /Pause new words/.test(sv) && /Parsing/.test(sv) && /Guided/.test(sv) && /New forms per day/.test(sv) && /Pause new forms/.test(sv), 'Settings holds pace, quiz style and Parsing style');

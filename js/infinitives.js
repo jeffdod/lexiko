@@ -17,8 +17,8 @@ export function renderInfinitives(view) {
     if (r.fam !== last) { last = r.fam; rows.push(h('div.ptcfam', r.fam)); }
     rows.push(h('div.ptcrow', h('div.infname', h('span', r.name), h('span.mf', { lang: 'grc' }, r.model), h('span.mf.en', r.gloss)), h('div.ptcchips', lg(r.ending))));
   }
-  clear(view).append(backHead('Infinitives', '#/learn/charts', 'Charts'), h('div.stack',
-    h('a.btn.primary.block.start', { href: '#/learn/charts/infinitives/run' }, h('b', 'Which kind is it?'), h('small', 'Practice recognizing infinitives')),
+  clear(view).append(backHead('Infinitives', '#/reference', 'Reference'), h('div.stack',
+    h('a.btn.sm.practice', { href: '#/learn/charts/infinitives/run' }, 'Practice this ›'),
     h('div.row.wrap.links', h('a.btn.ghost.sm', { href: '#/parse/run/inf/all' }, 'Parse some infinitives'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'inf' }) }, icon('table', 18), ' Look at the chart')),
     h('div.card.stack', h('h2', 'How to read one'),
       h('p.small', 'An infinitive is a stem plus one ending, and the ending tells you the tense and voice. It has no person, number, case or gender.'),
@@ -93,7 +93,7 @@ export function runInfDrill(view, only = null) {
       h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'),
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'infinitives')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((x) => ({ word: x.w, greek: true, sub: INFB.get(x.key).name, why: null })), () => { const again = S.missed.map((x) => ({ x, tries: 1 })); S.missed = []; queue.length = 0; queue.push(...again); S.shown = 0; S.round = 0; next(); }),
-        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/infinitives' }, 'Back to Infinitives'), ...backLinks('#/learn', 'Back to Learn'))));
+        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/infinitives' }, 'Back to Infinitives'), ...backLinks('#/home', 'Back to Home'))));
   };
   const next = () => {
     stop(); let c = queue.shift();

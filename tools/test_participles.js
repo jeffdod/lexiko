@@ -15,7 +15,7 @@ const { chromium } = require('playwright');
   await go('#/learn/charts/participles');
   ok(await p.locator('.ptcrow').count() === 10, 'the page lists the ten kinds');
   ok((await p.innerText('main, #view')).includes('1 · The morpheme') && (await p.innerText('#view')).includes('2 · The formative'), 'morpheme card first, then formative');
-  ok(await p.locator('a.btn.start').count() === 1, '"Which kind is it?" button');
+  ok(await p.locator('a.practice').count() === 1, 'Practice this link');
   await p.click('.ptcrow a >> nth=0'); await p.waitForTimeout(500);
   ok(await p.locator('.ptctable tbody tr').count() === 8 && await p.locator('.ptctable tbody tr:first-child td').count() === 3, 'a paradigm is eight rows by three genders');
   ok(await p.locator('a.btn:text-is("Parse forms like this")').count() === 1 && await p.locator('a.btn:text-is("Which kind is it?")').count() === 1, 'paradigm page buttons');

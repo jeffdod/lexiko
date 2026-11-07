@@ -93,8 +93,8 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await p.reload(); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });
   ok(await p.evaluate(async () => { const k = await import('./js/know.js'); return ![...k.K.cards.keys()].some((id) => id.startsWith('p:')); }), 'old principal-part cards are gone after loading');
   // ---- pages
-  for (const [u, t] of [['#/learn', /Verbs/], ['#/learn/verbs', /Verbs/], ['#/parts', /Verbs/]]) { await p.goto(URL + u); await p.reload(); await p.waitForSelector('#view h1, #view h2, #view .pagehead'); ok(t.test(await p.textContent('#view')) && !/(null|undefined)/.test(await p.textContent('#view')), u + ' shows Verbs', ''); }
-  ok(!/Principal parts/.test(await (async () => { await p.goto(URL + '#/learn'); await p.reload(); await p.waitForSelector('.topics'); return p.textContent('.topics'); })()), 'Learn has no Principal parts topic');
+  for (const [u, t] of [['#/learn/verbs', /Verbs/], ['#/parts', /Verbs/]]) { await p.goto(URL + u); await p.reload(); await p.waitForSelector('#view h1, #view h2, #view .pagehead'); ok(t.test(await p.textContent('#view')) && !/(null|undefined)/.test(await p.textContent('#view')), u + ' shows Verbs', ''); }
+  ok(!/Principal parts/.test(await (async () => { await p.goto(URL + '#/home'); await p.reload(); await p.waitForSelector('.area'); return p.textContent('#view'); })()), 'Home has no Principal parts topic');
   const n0 = await p.evaluate(async () => { const k = await import('./js/know.js'); const { D } = await import('./js/data.js'); const L = D.lex.filter((x) => x.pos === 'V' && k.verbStatus(x.n))[0]; await k.rate(L.n, 3, 'new'); return L.n; });
   await p.goto(URL + '#/learn/verbs'); await p.reload(); await p.waitForSelector('.verbrow');
   await p.screenshot({ path: out + '/verbs.png', fullPage: true });

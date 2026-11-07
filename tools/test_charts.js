@@ -17,14 +17,16 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(/1st aorist passive/.test(m.sum) && /θη/.test(m.sum) && /secondary active/.test(m.sum), 'row summary uses the chart', m.sum);
 
   await go('#/learn');
-  ok(await p.locator('a.tile[href="#/learn/charts"]').count() === 1 && /Learn the master verb chart/.test(await p.textContent('a.tile[href="#/learn/charts"]')), 'Learn: Charts tile');
-  await p.click('a.tile[href="#/learn/charts"]'); await p.waitForSelector('h1:text-is("Charts")');
+  await go('#/home'); await p.waitForSelector('a.area[href="#/reference"]');
+  ok(await p.locator('a.area[href="#/reference"]').count() === 1, 'Home: Reference area');
+  await p.click('a.area[href="#/reference"]'); await p.waitForSelector('a.area[href="#/learn/charts"]'); ok(await p.locator('a.area').count() >= 6, 'Reference lists the master chart and the kinds of form');
+  await p.click('a.area[href="#/learn/charts"]'); await p.waitForSelector('h1:text-is("Master verb chart")');
   ok(await p.locator('a.rowlink').count() === 20 && await p.locator('.sqrow.e:not(.head)').count() === 4, 'Charts page: 20 chart rows and 4 endings rows');
-  ok(await p.locator('.sqrow:has(a.rowlink) .sq').count() === 100 && await p.locator('a.start:has-text("20 new")').count() === 1, 'Charts page: 100 squares, start button offers a full round of 20 new');
+  ok(await p.locator('.sqrow:has(a.rowlink) .sq').count() === 100 && await p.locator('a.practice').count() === 1, 'Charts page: 100 squares, the practice link is there');
   ok(!/(null|undefined)/.test(await p.textContent('#view')), 'Charts page: no stray null/undefined');
 
   // a drill: answer everything right except the first question, then check cards
-  await p.click('a.start'); await p.waitForSelector('.qcard');
+  await p.click('a.practice'); await p.waitForSelector('.qcard');
   ok(await p.locator('.opt').count() >= 2 && /Master verb chart|Personal endings/.test(await p.textContent('.qmeta')), 'drill: a multiple-choice question');
   let n = 0, firstWrong = true, overCount = false, sawRetry = false;
   for (let i = 0; i < 40; i++) {
@@ -43,7 +45,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await p.waitForSelector('h1:text-is("Chart practice complete")'); ok(/squares done/.test(await p.textContent('#view')), 'drill: finish screen');
   const st = await p.evaluate(async () => { const k = await import('./js/know.js'); const cs = [...k.K.cards.values()].filter((c) => /^[ce]:/.test(c.id)); return { n: cs.length, again: cs.filter((c) => c.lapses > 0 || c.state === 'relearning' || c.state === 'learning').length }; });
   ok(st.n === 20, 'drill: 20 new squares started', JSON.stringify(st));
-  await go('#/learn/charts'); ok(await p.locator('a.start:has-text("new")').count() === 1, 'no daily limit: another round of new squares is offered at once', await p.textContent('.start'));
+  await go('#/learn/charts'); ok(await p.locator('a.practice').count() === 1, 'no daily limit: another round of new squares is offered at once', await p.textContent('#view'));
   ok(await p.locator('.sqrow .sq.shaky, .sqrow .sq.known').count() === 20, 'started squares are colored');
 
   // scheduling: due squares come first; time moves on

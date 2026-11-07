@@ -13,7 +13,7 @@ export function renderMi(view) {
         h('tbody', v.rows.map((r) => h('tr', h('th', { scope: 'row' }, r[0]), h('td', { lang: 'grc' }, r[1] || '—'), hasAor ? h('td', { lang: 'grc' }, r[2] || '—') : null))))),
       v.note ? h('p.muted.small', v.note) : null);
   });
-  clear(view).append(backHead('Verbs in -μι', '#/learn/charts', 'Charts'), h('div.stack',
+  clear(view).append(backHead('Verbs in -μι', '#/reference', 'Reference'), h('div.stack',
     h('div.card.stack', h('h2', 'Four classes, one pattern each'),
       h('p.small', '-μι verbs are sorted by the vowel their root ends in. Learn the pattern for one verb in a class and the rest follow. Always learn the ', h('b', 'root'), ' with the verb: the aorist and future are built from it, without the reduplication.'),
       h('p.small.muted', 'In the present, the stem is reduplicated with an ', h('b', 'ι'), ' (', lg('δι-δο-'), '); in the perfect it is reduplicated with an ', h('b', 'ε'), ' (', lg('δέ-δω-κα'), '). The indicative aorist uses κα (', lg('ἔδωκα'), '); the infinitive, participle and the other moods use the bare root.')),

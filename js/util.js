@@ -106,6 +106,8 @@ export function icon(name, size = 22) {
 export const practiceBanner = (preview, recent = false, row = false) => h('div.practice-note', h('b', preview ? 'Look ahead' : recent ? 'Refresher' : row ? 'Chart row' : 'Strengthen'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : row ? 'forms of this row from the text, in verbs you know; practice only, so it won’t change your review schedule.' : recent ? 'words you started recently; practice only, so it won’t change your review schedule.' : 'practice only; it won’t change your review schedule.'));
 
 /** A collapsed section: keeps secondary options out of the way until you want them. */
+/** A big tappable card: icon, title, one line saying what it is, an optional example line, an optional count badge and a chevron. */
+export const areaCard = ({ href, ic, title, sub, ex, badge, chevron = true }) => h('a.area', { href }, icon(ic, 28), h('div.grow', h('b', title), sub ? h('span', sub) : null, ex ? h('div.ex', ex) : null), badge ? h('em.due', badge) : null, chevron ? h('span.chev', icon('chevR', 18)) : null);
 export const fold = (title, ...kids) => h('details.fold', h('summary', title), h('div.stack', kids));
 /** The one big button of a page: what to do next, with a line saying what it will give you. */
 export const startButton = (s) => h('a.btn.primary.block.start', { href: s.href }, h('b', s.label), s.sub ? h('small', s.sub) : null);
@@ -128,8 +130,8 @@ export function noteRoute(hash) {
   if (cur.startsWith('#/read') && !(origin.prev || '').startsWith('#/read')) origin.readFrom = origin.prev || null;      // where the reader was entered from
   origin.prev = cur;
 }
-const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/progress/, 'Back to Progress'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Learn'],
-  [/^#\/parse$/, 'Back to Parsing'], [/^#\/learn\/verbs?(\/|$)/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to search']];
+const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/progress/, 'Back to Progress'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Home'],
+  [/^#\/parse(\/(form|chart))?$/, 'Back to Verb practice'], [/^#\/reference/, 'Back to Reference'], [/^#\/learn\/verbs?(\/|$)/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to Glossary']];
 /** The usual "Back to <topic page>" button, preceded by one to wherever the quiz was started from when that is somewhere else. */
 export function backLinks(defaultHref, defaultLabel, primary = false) {
   const o = origin.href, hit = o && o !== defaultHref && ORIGIN_LABEL.find(([re]) => re.test(o));

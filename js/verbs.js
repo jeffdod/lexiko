@@ -20,7 +20,7 @@ export function verbsNote() {
 
 export function renderVerbsPage(view) {
   const ns = startedVerbs().filter((n) => verbStatus(n)), brake = verbBrake();
-  clear(view).append(backHead('Verbs', '#/learn', 'Learn'),
+  clear(view).append(backHead('Verbs', '#/home', 'Home'),
     h('div.stack',
       h('div.card.small', h('b', brake.braked ? 'New verbs are paused.' : 'New verbs are arriving.'), ' ', brake.braked ? brake.why : 'About one for every four other new words.'),
       ns.length

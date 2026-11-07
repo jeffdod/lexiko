@@ -19,8 +19,8 @@ export function renderImperative(view) {
     rows.push(h('div.ptcrow', h('a', { href: '#/learn/charts/imperative/' + r.key }, h('span', r.name + ' ›'), lg(r.forms.slice(0, 3).join(', ') + '…', '.mf')),
       h('div.ptcchips', lg(chipOf(r)))));
   }
-  clear(view).append(backHead('Imperative', '#/learn/charts', 'Charts'), h('div.stack',
-    h('a.btn.primary.block.start', { href: '#/learn/charts/imperative/run' }, h('b', 'Which kind is it?'), h('small', 'Practice recognizing imperatives')),
+  clear(view).append(backHead('Imperative', '#/reference', 'Reference'), h('div.stack',
+    h('a.btn.sm.practice', { href: '#/learn/charts/imperative/run' }, 'Practice this ›'),
     h('div.row.wrap.links', h('a.btn.ghost.sm', { href: '#/parse/run/imp/all' }, 'Parse some imperatives'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'endings' }) }, icon('table', 18), ' Look at the endings')),
     h('div.card.stack', h('h2', 'How to read one'),
       h('p.small', 'An imperative is a command, so it has only the 2nd and 3rd person. Three of its four forms take the same endings in every tense:'),
@@ -119,7 +119,7 @@ export function runImpDrill(view, only = null) {
       h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'),
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'imperatives')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((x) => ({ word: x.w, greek: true, sub: IMPB.get(x.key).name, why: null })), () => { const again = S.missed.map((x) => ({ x, tries: 1 })); S.missed = []; queue.length = 0; queue.push(...again); S.shown = 0; S.round = 0; next(); }),
-        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/imperative' }, 'Back to Imperative'), ...backLinks('#/learn', 'Back to Learn'))));
+        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/imperative' }, 'Back to Imperative'), ...backLinks('#/home', 'Back to Home'))));
   };
   const next = () => {
     stop(); let c = queue.shift();

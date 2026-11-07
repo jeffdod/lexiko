@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
   await go('#/learn/charts'); ok(await p.locator('a.btn:text-is("Open Infinitives")').count() === 1, 'Charts page links to Infinitives');
   await go('#/learn/charts/infinitives');
   ok(await p.locator('.ptcrow').count() === 10, 'the page lists the ten kinds');
-  ok(/to be loosed/.test(await p.innerText('#view')) && await p.locator('a.btn.start').count() === 1, 'meanings shown; "Which kind is it?" button');
+  ok(/to be loosed/.test(await p.innerText('#view')) && await p.locator('a.practice').count() === 1, 'meanings shown; Practice this link');
   const real = await p.evaluate(async () => { const P = await import('./js/parse.js'), m = await import('./js/infdata.js'); const bad = []; let n = 0, shy = 0, none = 0;
     for (const x of P.infinitiveForms(null)) { const sp = m.splitInf(x.w, x.key); if (/­/.test(x.w)) shy++; if (!sp) { none++; continue; } n++; if (sp.stem + sp.ending !== x.w) bad.push(x.w); }
     return { n, shy, none, bad: bad.slice(0, 5) }; });

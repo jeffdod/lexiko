@@ -21,8 +21,8 @@ export function renderParticiples(view) {
     fam.push(h('div.ptcrow', h('a', { href: '#/learn/charts/participle/' + r.key }, h('span', r.name + ' ›'), lg(modelForm(r), '.mf')),
       h('div.ptcchips', lg(r.form || '—'), lg(r.morph))));      // name and model form on the left, the two pieces on the right
   }
-  clear(view).append(backHead('Participles', '#/learn/charts', 'Charts'), h('div.stack',
-    h('a.btn.primary.block.start', { href: '#/learn/charts/participles/run' }, h('b', 'Which kind is it?'), h('small', 'Practice recognizing participles')),
+  clear(view).append(backHead('Participles', '#/reference', 'Reference'), h('div.stack',
+    h('a.btn.sm.practice', { href: '#/learn/charts/participles/run' }, 'Practice this ›'),
     h('div.row.wrap.links', h('a.btn.ghost.sm', { href: '#/parse/run/ptc/all' }, 'Parse some participles'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, icon('table', 18), ' Look at the chart')),
     h('div.card.stack', h('h2', '1 · The morpheme: voice and endings'),
       h('div.ptcthree', [['ντ', '3-1-3', 'active, and the aorist passive'], ['οτ', '3-1-3', 'perfect active'], ['μενο/η', '2-1-2', 'middle or passive (middle only in the aorists)']]
@@ -115,7 +115,7 @@ export function runPtcDrill(view, only = null) {
       h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'),
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'participles')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((x) => ({ word: x.w, greek: true, sub: PTCB.get(x.key).name, why: null })), () => { const again = S.missed.map((x) => ({ x, tries: 1 })); S.missed = []; queue.length = 0; queue.push(...again); S.shown = 0; S.round = 0; next(); }),
-        h('div.row.wrap', h('a.btn.primary', { href: only ? '#/learn/charts/participle/' + only : '#/learn/charts/participles' }, only ? 'Back to the paradigm' : 'Back to Participles'), ...backLinks('#/learn', 'Back to Learn'))));
+        h('div.row.wrap', h('a.btn.primary', { href: only ? '#/learn/charts/participle/' + only : '#/learn/charts/participles' }, only ? 'Back to the paradigm' : 'Back to Participles'), ...backLinks('#/home', 'Back to Home'))));
   };
   const next = () => {
     stop(); let c = queue.shift();
