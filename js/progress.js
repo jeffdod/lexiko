@@ -3,7 +3,7 @@ import { clockNow } from './clock.js';
 import { D, scopeLabel, periScope, periRange, periRef } from './data.js';
 import { K, sectionRead, counts, chapterReadiness, scopeReadiness, readinessClass, readinessLabel, setGoal, streak, currentGoal, goalStats, goalLabel, noteGoalDone } from './know.js';
 import { goalPicker } from './goals.js';
-import { h, clear, add, pct, icon, todayKey, fmt, fold } from './util.js';
+import { h, clear, add, pct, icon, todayKey, fmt, fold, backHead } from './util.js';
 import { readHref } from './reader.js';
 import { growthCard } from './growth.js';
 
@@ -96,7 +96,8 @@ export function renderProgress(view) {
 
   const sug = suggestions(5, rows);
   const mile = milestone(K.goal && K.goal.book ? K.goal : null, wc.known, kTok / tot);
-  clear(view).append(h('div.pagehead', h('h1', 'Progress')), h('div.stack',
+  clear(view).append(backHead('Progress', '#/home', 'Home'), h('div.stack',
+    goalCard,
     mile ? h('p.milestone', mile) : null,
     h('div.kpis',
       h('div.kpi', h('b', pct(kTok / tot)), h('span', 'of NT words you can read')),
@@ -105,7 +106,6 @@ export function renderProgress(view) {
     h('div.card', h('div.bar', h('i.k', { style: { width: pct(kTok / tot) } }), h('i.l', { style: { width: pct(lTok / tot) } })),
       h('div.legend', { style: { marginTop: '.5rem' } }, h('span', h('i', { style: { background: 'var(--good)' } }), 'known'), h('span', h('i', { style: { background: 'var(--warn)' } }), 'learning'), h('span', h('i', { style: { background: 'var(--bad)', opacity: .55 } }), 'new to you'))),
     growthCard({ hideEmpty: true }),
-    goalCard,
     doneCard,
     sug.length ? h('div.card.stack', h('h2', 'Good next reads'), h('p.muted.small', 'Sections where you already know most of the words — the sweet spot for reading with a few lookups.'), h('div.list', sug.map((r) => suggestionItem(r)))) : null,
     h('div.card', h('h2', 'Passages within reach'), h('p.muted.small', 'Sections you could read now, closest first. Open “By book” below to see every chapter.')),

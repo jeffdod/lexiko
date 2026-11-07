@@ -70,11 +70,9 @@ button { font: inherit; color: inherit; }
 .pracgrid .tile p { font-size: .8rem; }
 #nav a[aria-current='page'] { color: var(--accent); }
 #nav a[aria-current='page'] svg { stroke-width: 2.2; }
-#nav .brand { display: none; }
 @media (min-width: 880px) {
   #nav { top: 0; right: auto; width: var(--rail-w); flex-direction: column; justify-content: flex-start; border-top: 0; border-right: 1px solid var(--line); padding: calc(env(safe-area-inset-top) + 1rem) 0 1rem env(safe-area-inset-left); gap: .3rem; }
   #nav a { flex: none; height: 4rem; }
-  #nav .brand { display: flex; font-family: var(--greek); font-weight: 700; font-size: 1.25rem; color: var(--ink); height: auto; margin-bottom: .8rem; letter-spacing: -.01em; }
   #view { margin-left: max(var(--rail-w), calc((100vw - 46rem) / 2 + var(--rail-w) / 2)); padding-bottom: 3rem; max-width: 46rem; width: calc(100% - var(--rail-w)); }
 }
 
@@ -443,3 +441,16 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .subcmp { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; } .subpair { border: 1px solid var(--line); border-radius: 10px; padding: .4rem .6rem; text-align: center; background: var(--surface); } .subpair small { display: block; font: 700 .62rem var(--ui); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); } .subpair .g { font-size: 1.15rem; }
 .pcell.pone { border-left: 3px solid var(--accent); padding-left: .5rem; }
 .mitab { width: 100%; border-collapse: collapse; } .mitab th, .mitab td { text-align: left; padding: .35rem .4rem; border-top: 1px solid var(--line); vertical-align: top; } .mitab thead th { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-top: 0; } .mitab tbody th { font-size: .8rem; color: var(--muted); font-weight: 600; white-space: nowrap; } .mitab td { font: 1.05rem/1.35 var(--greek); }
+
+/* Home: the areas (big buttons) and the tappable goal card */
+.area { display: flex; align-items: center; gap: .9rem; padding: 1.1rem 1.1rem; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.area:hover { border-color: var(--accent); } .area > svg { flex: none; color: var(--accent); }
+.area b { display: block; font-size: 1.15rem; } .area span { display: block; color: var(--muted); font-size: .85rem; margin-top: .1rem; }
+.area .due { margin-left: auto; font-style: normal; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: .15rem .6rem; font-weight: 700; font-size: .8rem; white-space: nowrap; }
+.card.tap { cursor: pointer; } .card.tap:hover { border-color: var(--accent); }
+.sec { font: 700 .7rem var(--ui); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: .6rem 0 -.2rem; }
+.glabel { display: inline-flex; align-items: center; gap: .35rem; font: 700 .72rem var(--ui); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.stack > .milestone { margin-top: .4rem; }
+.area .grow { flex: 1; min-width: 0; } .area .ex { display: block; margin-top: .4rem; padding: .4rem .6rem; border-radius: 10px; background: var(--surface-2); font-size: .82rem; color: var(--ink-2); line-height: 1.45; }
+.area .chev { margin-left: auto; color: var(--muted); display: flex; flex: none; } .area .due + .chev { margin-left: .4rem; }
+.area .ex span { display: inline; margin: 0; color: inherit; font-size: inherit; }

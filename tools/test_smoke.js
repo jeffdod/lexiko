@@ -21,8 +21,8 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.click('button:has-text("Continue")');
   await page.waitForSelector('.goal-pick'); ok(/goal/i.test(await page.textContent('#view')), 'step 2 suggests a goal');
   await page.click('button:has-text("Start with this goal")');
-  await page.waitForSelector('.hero');
-  ok(await page.locator('.hero .start').count() === 1, 'home after first run');
+  await page.waitForSelector('.area');
+  ok(await page.locator('.area').count() === 3, 'home after first run: three areas');
 
   // search: by Greek form without accents, by Beta Code, by English, by Strong's number
   const found = async (q) => { await page.goto(URL + '#/search'); await page.waitForSelector('#sq'); await page.fill('#sq', q); await page.waitForTimeout(150); return page.locator('.list .li b').allTextContents(); };
@@ -75,7 +75,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
 
   // parsing practice
   await page.goto(URL + '#/parse'); await page.waitForSelector('.start');
-  ok(/Parsing/.test(await page.textContent('h1')), 'parsing page renders');
+  ok(/Verb practice/.test(await page.textContent('h1')), 'parsing page renders');
   await page.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('parseMode', 'guided'); });
   await page.goto(URL + '#/parse/run/mix/verb'); await page.waitForSelector('.pcard .qgreek');
   ok(/Which verb/.test(await page.textContent('#view')), 'a verb form starts by asking which verb'); await passVerb(page);
@@ -107,11 +107,11 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.screenshot({ path: out + '/04-reader-glosses.png' });
 
   // learn: passage session
-  await page.goto(URL + '#/learn'); await page.waitForSelector('.start');
-  ok(await page.locator('.topics .tile').count() === 2 && await page.locator('a.tile[href="#/learn/verbs"]').count() === 1 && /Review|Learn new|Practice|Strengthen|Look ahead/.test(await page.textContent('.start')), 'Learn shows one start button, two topics and a Verbs link');
+  await page.goto(URL + '#/learn'); await page.waitForSelector('.area'); await page.waitForTimeout(300);
+  ok(page.url().endsWith('#/home') && await page.locator('a.area[href="#/learn/words"]').count() === 1 && await page.locator('a.area[href="#/parse"]').count() === 1 && await page.locator('a.area[href="#/reference"]').count() === 1 && await page.locator('#nav a').count() === 4, '#/learn opens Home: three areas, and a bar of Home, Read, Progress, Settings');
   await page.screenshot({ path: out + '/05-learn.png' });
-  await page.goto(URL + '#/learn/words'); await page.waitForSelector('.start'); await page.click('button:has-text("Change ›")'); await page.waitForSelector('.goal-picker');
-  ok(await page.locator('.goal-picker').isVisible(), 'Change › opens the goal picker on the Vocabulary page');
+  await page.goto(URL + '#/'); await page.waitForSelector('.area'); await page.click('button:has-text("Change ›")'); await page.waitForSelector('.goal-picker');
+  ok(await page.locator('.goal-picker').isVisible(), 'Change › opens the goal picker on Home');
   await page.goto(URL + '#/learn/passage/JHN/1/1/1/18'); await page.waitForSelector('.qcard');
   await page.screenshot({ path: out + '/06-quiz-front.png' });
   await page.click('button:has-text("Show answer")'); await page.waitForSelector('.grades');

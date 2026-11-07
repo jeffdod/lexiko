@@ -2,7 +2,7 @@
 
 Build your Greek vocabulary. Read the Greek New Testament with confidence. A free, offline-first Progressive Web App: no login, no server, hosted as static files on GitHub Pages.
 
-**What it has:** a tap-for-parsing reader, vocabulary spaced repetition (FSRS), parsing and principal-parts practice, passage readiness and goals, reference charts with chart practice, search, backup/restore, and an offline PWA shell.
+**What it has:** a tap-for-parsing reader, vocabulary spaced repetition (FSRS), parsing and principal-parts practice, passage readiness and goals, reference charts with chart practice, a glossary, backup/restore, and an offline PWA shell.
 
 ## Use it
 Open `https://lexiko.org/` and "Add to Home Screen" / "Install app". It then runs full-screen and fully offline.
@@ -61,14 +61,14 @@ Parsing a passage (Study a passage) has two one-click buttons for the same text:
 * **Scheduling:** FSRS (open algorithm, default parameters).
 * App code: licence to be chosen by the owner.
 
-## First run and search
-A brand-new user (no level chosen, nothing studied) sees two plain questions first (`js/welcome.js`): how much Greek they know (which sets the level) and what they want to do first. **Search** (`#/search`, `js/search.js`, the magnifier on Home) finds a word by Greek form with or without accents, by English meaning, or by Strong's number, and shows its meaning, where it occurs and its forms; all Greek shown comes from the text and lexicon data.
+## First run and the Glossary
+A brand-new user (no level chosen, nothing studied) sees two plain questions first (`js/welcome.js`): how much Greek they know (which sets the level) and what they want to do first. The **Glossary** (`#/search`, `js/search.js`, under Reference) lists every word, α→ω or ω→α with a letter strip, or most common first, and filters as you type: it finds a word by Greek form with or without accents, by Beta Code, by English meaning, or by Strong's number, and shows its meaning, where it occurs and its forms; all Greek shown comes from the text and lexicon data.
 
-## Home, shortcuts, word groups, learning curve, locked backups
-* **Home** leads with one main button (what to do now), then your reading goal (or where you left off), a small learning-curve chart, and a folded "Good next reads".
+## App layout, shortcuts, word groups, learning curve, locked backups
+* **Layout**: the bottom bar is Home, Read, Progress, Settings. **Home** is a goal card (a tap opens Progress; "Change ›" opens the goal picker) and three large buttons: **Vocabulary** (`#/learn/words`: learn, review, look ahead, the pace control), **Verb practice** (`#/parse`: parsing, build a form, chart drills, principal-parts quiz, your verbs; exercises only) and **Reference** (`#/reference`: Glossary, quick charts, verb charts, kinds of form, principal-parts list; study only, no scoring). Study pages link to their exercise with "Practice this ›". `#/learn` redirects to Home.
 * **Keyboard** (computers): in vocabulary sessions Space shows the answer, 1–4 rate it (or choose an option), Space continues; parsing and principal-parts quizzes already take Enter and 1–4.
-* **Study by how common** (Learn › Vocabulary): `#/learn/set/<min>/<max>` teaches the words you don't know yet that occur between min and max times.
-* **Learning curve** (`js/growth.js`, Home and Progress): cumulative words started, rebuilt from the per-day counts lexiko already keeps (so it has history from day one).
+* **Study by how common** (Vocabulary): `#/learn/set/<min>/<max>` teaches the words you don't know yet that occur between min and max times.
+* **Learning curve** (`js/growth.js`, Progress): cumulative words started, rebuilt from the per-day counts lexiko already keeps (so it has history from day one).
 * **Locked backups**: in Settings an optional passphrase encrypts the backup file (AES-GCM, key from PBKDF2-SHA256, 250,000 rounds; `js/store.js`). The passphrase is never stored; restoring asks for it. Needs a secure context (https or localhost).
 
 ## Settings, help, progress and accessibility

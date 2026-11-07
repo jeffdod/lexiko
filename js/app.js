@@ -9,6 +9,7 @@ import { renderLearn } from './learn.js';
 import { renderProgress } from './progress.js';
 import { renderParse, bootFamilies } from './parse.js';
 import { renderParts } from './parts.js';
+import { renderReference } from './reference.js';
 import { renderSearch } from './search.js';
 import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
@@ -18,20 +19,19 @@ import { startAutoBackup } from './backup.js';
 
 const view = document.getElementById('view');
 const navEl = document.getElementById('nav');
-const TABS = [['home', 'Home', 'home'], ['read', 'Read', 'read'], ['learn', 'Learn', 'learn'], ['progress', 'Progress', 'progress'], ['settings', 'Settings', 'settings']];
-const routes = { home: renderHome, read: renderReader, learn: renderLearn, progress: renderProgress, settings: renderSettings, parse: renderParse, parts: renderParts, search: renderSearch, help: renderHelp };
+const TABS = [['home', 'Home', 'home'], ['read', 'Read', 'read'], ['progress', 'Progress', 'progress'], ['settings', 'Settings', 'settings']];
+const routes = { home: renderHome, read: renderReader, learn: renderLearn, progress: renderProgress, settings: renderSettings, parse: renderParse, parts: renderParts, reference: renderReference, search: renderSearch, help: renderHelp };
 let cleanup = null;
 
 function buildNav() {
-  clear(navEl).append(h('a.brand', { href: '#/home', 'aria-label': 'lexiko home' }, 'λ'),
-    ...TABS.map(([id, label, ic]) => h('a', { href: id === 'read' ? '#/read' : '#/' + id, dataset: { tab: id } }, icon(ic, 24), label)));
+  clear(navEl).append(...TABS.map(([id, label, ic]) => h('a', { href: id === 'read' ? '#/read' : '#/' + id, dataset: { tab: id } }, icon(ic, 24), label)));
 }
 function route() {
   noteRoute(location.hash);
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/').map(decodeURIComponent);
   const name = routes[parts[0]] ? parts[0] : 'home';
   if (cleanup) { try { cleanup(); } catch (e) { console.error(e); } cleanup = null; }
-  const tabName = name === 'parse' || name === 'parts' ? 'learn' : name === 'search' ? 'home' : name === 'help' ? 'settings' : name;
+  const tabName = name === 'parse' || name === 'parts' || name === 'reference' || name === 'learn' || name === 'search' ? 'home' : name === 'help' ? 'settings' : name;
   navEl.querySelectorAll('a[data-tab]').forEach((a) => (a.dataset.tab === tabName ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   view.scrollTop = 0; window.scrollTo(0, 0);
   try { cleanup = routes[name](view, parts.slice(1)) || null; }

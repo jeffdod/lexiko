@@ -68,13 +68,13 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
 
   // the page
   await p.evaluate(async () => { const k = await import('./js/know.js'); k.K.famAcc = {}; await k.setSetting('formLevel', 1); await k.setSetting('formsAll', false); });
-  await p.goto(URL + '#/settings'); await p.goto(URL + '#/parse'); await p.reload(); await ready(); await p.waitForSelector('h2:text-is("Forms you are working on")');
+  await p.goto(URL + '#/settings'); await p.goto(URL + '#/parse'); await p.reload(); await ready(); await p.waitForSelector('summary:has-text("Forms you are working on")'); await p.click('summary:has-text("Forms you are working on")');
   ok(await p.locator('.chip.accent').count() === 1 && /Next:/.test(await p.textContent('#view')), 'Parsing page lists open kinds and the next one', (await p.locator('.chip.accent').allTextContents()).join(','));
   await p.click('button:text-is("Open it now")'); await p.waitForTimeout(300);
   ok(await p.locator('.chip.accent').count() === 2, 'Open it now adds the next kind');
   await p.goto(URL + '#/settings'); await p.waitForSelector('b:text-is("Show all forms")'); await p.locator('div:has(> div > b:text-is("Show all forms")) button:text-is("On")').click(); await p.waitForTimeout(250);
   ok(await p.evaluate(async () => (await import('./js/know.js')).K.settings.formsAll) === true, 'Settings: Show all forms switches on');
-  await p.goto(URL + '#/parse'); await p.waitForTimeout(500); ok(/Show all forms is on/.test(await p.textContent('#view')), 'Parsing page says everything is open');
+  await p.goto(URL + '#/parse'); await p.waitForTimeout(500); await p.click('summary:has-text("Forms you are working on")'); ok(/Show all forms is on/.test(await p.textContent('#view')), 'Parsing page says everything is open');
   ok(!/(null|undefined)/.test(await p.textContent('#view')), 'no stray null/undefined');
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);

@@ -4,7 +4,7 @@ import { D, lexeme, chapterVerses, senseNs, tokenForm, refLabel, unpack } from '
 import { decode } from './morph.js';
 import { status, markKnown, markLearning, K } from './know.js';
 import { readHref, statusChip } from './reader.js';
-import { h, clear, toAcute, toast, icon, fmt, knowButtons } from './util.js';
+import { h, clear, toAcute, toast, icon, fmt, knowButtons, backHead } from './util.js';
 
 const GREEK = /[Ͱ-Ͽἀ-῿]/;
 /** Compare Greek without accents, breathings or case; final sigma = sigma. */
@@ -30,6 +30,7 @@ const betaFold = (q) => fold(betaToGreek(q));
 /** Accent-exact key: keeps breathings and accents, treats the grave (a position variant) as the acute, ignores case and final sigma. */
 const accKey = (s) => s.normalize('NFD').replace(/̀/g, '́').normalize('NFC').toLowerCase().replace(/ς/g, 'σ');
 
+export const setSearchQuery = (q) => { lastQuery = q; };
 let formIndex = null, accIndex = null;           // [{ key, i }] for every distinct word form
 let lastQuery = '';
 
@@ -142,25 +143,48 @@ function showBetaHelp() {
   document.body.append(dlg); dlg.showModal();
 }
 
+let sortMode = 'alpha', sortDir = 1;                            // the glossary's order survives leaving and coming back
+let alphaCache = null;
+const firstLetter = (L) => fold(L.head).replace(/[^α-ω]/g, '')[0] || '';
+const alphaList = () => alphaCache || (alphaCache = D.lex.map((L) => [fold(L.head), L]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1].rank - b[1].rank)).map((x) => x[1]));
+
 export function renderSearch(view, params = []) {
   if (params[0] === 'w' && lexeme(+params[1])) return detail(view, +params[1], () => { location.hash = '#/search'; });
-  const input = h('input', { type: 'search', id: 'sq', value: lastQuery, placeholder: 'Greek (or Beta Code), English meaning, or Strong’s number', autocomplete: 'off', autocapitalize: 'off', 'aria-label': 'Search words', style: { width: '100%', fontSize: '1.1rem' } });
+  const input = h('input', { type: 'search', id: 'sq', value: lastQuery, placeholder: 'Greek (or Beta Code), English meaning, or Strong’s number', autocomplete: 'off', autocapitalize: 'off', 'aria-label': 'Search the glossary', style: { width: '100%', fontSize: '1.1rem' } });
   input.spellcheck = false;
   const out = h('div.list');
-  const hint = h('div.muted.small');
+  const hint = h('div.muted.small'), controls = h('div.stack');
+  const row = (L) => h('a.li', { href: '#/search/w/' + L.n, 'data-l': firstLetter(L), style: { gap: '.7rem' } },
+    h('span.grow', h('b', { lang: 'grc', style: { fontSize: '1.15rem' } }, L.head), h('div.muted.small', L.short)),
+    h('span.muted.small', fmt(L.freq) + '×'), statusChip(L.n));
+  const drawControls = () => {
+    clear(controls);
+    const alpha = sortMode === 'alpha';
+    controls.append(h('div.row', { style: { gap: '.4rem' } },
+      h('button.btn.sm' + (alpha ? '.primary' : ''), { 'aria-pressed': String(alpha), 'aria-label': alpha ? (sortDir > 0 ? 'Alphabetical, alpha to omega. Tap to reverse.' : 'Alphabetical, omega to alpha. Tap to reverse.') : 'Alphabetical order',
+        onclick: () => { if (sortMode === 'alpha') sortDir = -sortDir; else sortMode = 'alpha'; draw(); } }, sortDir < 0 ? 'ω → α' : 'α → ω'),
+      h('button.btn.sm' + (alpha ? '' : '.primary'), { 'aria-pressed': String(!alpha), onclick: () => { sortMode = 'freq'; draw(); } }, 'Most common')));
+    if (alpha) {
+      const have = new Set(D.lex.map(firstLetter)), ls = 'αβγδεζηθικλμνξοπρστυφχψω'.split('').filter((l) => have.has(l)); if (sortDir < 0) ls.reverse();
+      controls.append(h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto', gap: '.35rem', paddingBottom: '.2rem' }, role: 'group', 'aria-label': 'Jump to letter' },
+        ls.map((l) => h('button.btn.sm', { lang: 'grc', style: { minWidth: '2.6rem', padding: '0 .4rem', flex: 'none' }, onclick: () => { const t = out.querySelector('[data-l="' + l + '"]'); if (t) t.scrollIntoView({ block: 'start' }); } }, l))));
+    }
+  };
   const draw = () => {
     lastQuery = input.value;
-    const res = findWords(input.value);
-    clear(out);
-    if (!input.value.trim()) hint.textContent = 'Type Greek with or without accents, Beta Code, an English word such as “peace”, or a number such as G1519. Any form of a word finds the word.';
-    else if (!res.length) hint.textContent = 'No match. Try fewer letters, or search by the English meaning.';
-    else hint.textContent = '';
-    res.forEach((L) => out.append(h('a.li', { href: '#/search/w/' + L.n, style: { gap: '.7rem' } },
-      h('span.grow', h('b', { lang: 'grc', style: { fontSize: '1.15rem' } }, L.head), h('div.muted.small', L.short)),
-      h('span.muted.small', fmt(L.freq) + '×'), statusChip(L.n))));
+    const q = input.value.trim(), res = q ? findWords(input.value) : null;
+    clear(out); clear(controls);
+    if (!q) {
+      drawControls();
+      const list = sortMode === 'alpha' ? (sortDir > 0 ? alphaList() : alphaList().slice().reverse()) : D.lex.slice().sort((a, b) => b.freq - a.freq || a.rank - b.rank);
+      hint.textContent = fmt(list.length) + ' words · tap one to see where it appears. Or type above to search.';
+      const frag = document.createDocumentFragment(); list.forEach((L) => frag.append(row(L))); out.append(frag);
+      return;
+    }
+    hint.textContent = res.length ? res.length + (res.length === 1 ? ' match' : ' matches') : 'No match. Try fewer letters, or search by the English meaning.';
+    res.forEach((L) => out.append(row(L)));
   };
   input.addEventListener('input', draw);
-  clear(view).append(h('div.stack', h('div.pagehead', h('h1', 'Search')), input, h('div.row.wrap.between', hint, h('button.btn.ghost.sm', { onclick: showBetaHelp }, 'What is Beta Code?')), out));
+  clear(view).append(h('div.stack', backHead('Glossary', '#/reference', 'Reference'), input, controls, h('div.row.wrap.between', hint, h('button.btn.ghost.sm', { onclick: showBetaHelp }, 'What is Beta Code?')), out));
   draw();
-  if (!lastQuery) input.focus({ preventScroll: true });
 }

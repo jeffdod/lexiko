@@ -4,7 +4,7 @@ import { D } from './data.js';
 import { K, setting, setSetting, setLevel, studiedCount, getParseStats } from './know.js';
 import { paceOptions } from './pace.js';
 import { store, requestPersistence, makeBackup, importBackup, validateBackup, ENC_FORMAT, canLock, lockBackup, unlockBackup } from './store.js';
-import { h, clear, toast, icon, pct, fold, fmt } from './util.js';
+import { h, clear, toast, icon, pct, fold, fmt, backHead } from './util.js';
 import { renderDev } from './timetravel.js';
 import { runBackup, autoSupported, autoState, chooseFolder, stopAuto, allowAuto, folderName, writeAuto, AUTO_FILE } from './backup.js';
 
@@ -106,7 +106,7 @@ export function renderSettings(view, params = []) {
   const parseNoteEl = h('div.muted.small');
   const parseNote = async () => { const st = await getParseStats(); parseNoteEl.textContent = setting('parseMode') === 'auto' ? 'Automatic: verbs ' + (st.mode.verb || 'guided') + ', nouns, adjectives & pronouns ' + (st.mode.other || 'guided') + '.' : ''; };
   parseNote();
-  clear(view).append(h('div.pagehead', h('h1', 'Settings')), h('div.stack',
+  clear(view).append(backHead('Settings', '#/home', 'Home'), h('div.stack',
     h('a.card.flat.row.between', { href: '#/help', style: { textDecoration: 'none', color: 'inherit' } }, h('b', 'How lexiko works'), h('span.muted', '›')),
     h('div.card.stack', h('h2', 'Your data'),
       h('div.muted.small', { id: 'bk-last' }, lastBackup ? 'Last backup: ' + new Date(lastBackup).toLocaleString() : 'No backup yet. Your progress lives only on this device — back it up now and then.'),

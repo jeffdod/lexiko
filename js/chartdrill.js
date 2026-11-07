@@ -78,7 +78,7 @@ export function runDrill(view, rowKey = null) {
     clear(view).append(h('div.pagehead', h('h1', 'Chart practice complete')),
       h('div.card.stack', h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'squares done')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((it) => { const q = question(it); return { word: q.main + ' ' + q.sub.replace('?', ''), greek: false, sub: it.kind === 'square' ? ATTR_LABEL[it.attr] : 'ending', why: null }; }), () => { const again = S.missed.map((it) => ({ it, tries: 1 })); S.missed = []; runList(again); }),
-        h('div.row.wrap', h('a.btn.primary', { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'), ...backLinks('#/learn', 'Back to Learn'))));
+        h('div.row.wrap', h('a.btn.primary', { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'), ...backLinks('#/home', 'Back to Home'))));
   };
   const runList = (list) => { queue.length = 0; queue.push(...list); S.shown = 0; S.round = 0; next(); };
   const next = () => {
@@ -155,13 +155,13 @@ const square = (id, label) => h('i.sq.' + stateOf(id), { title: label });
 export function renderChartsPage(view) {
   const c = counts(), p = plan();
   const sub = p.due.length || p.nw.length ? [p.due.length ? p.due.length + ' due' : null, p.nw.length ? p.nw.length + ' new' : null].filter(Boolean).join(' + ') : 'All caught up';
-  const start = p.due.length || p.nw.length ? h('a.btn.primary.block.start', { href: '#/learn/charts/run' }, h('b', 'Practice the verb chart'), h('small', sub)) : h('div.btn.block.start.done', h('b', 'Practice the verb chart'), h('small', sub));
+  const start = h('div.row.wrap', { style: { alignItems: 'center' } }, h('a.btn.sm.practice', { href: '#/learn/charts/run' }, 'Practice this chart ›'), h('span.muted.small', sub));
   const head = h('div.sqrow.head', h('span'), CHART_ATTRS.map((a) => h('span', ATTR_LABEL[a])));
   const rows = [];
   for (const r of ROWS) rows.push(h('div.sqrow', h('a.rn.rowlink', { href: '#/learn/charts/paradigm/' + r.key, 'aria-label': r.name + ': see its paradigm' }, r.name + ' ›'), CHART_ATTRS.map((a) => square(squareId(r.key, a), r.name + ', ' + ATTR_LABEL[a]))));
   const ends = ENDSETS.map(([set, title, table]) => h('div.sqrow.e', h('span.rn', title.replace('middle/passive', 'mid/pas')), table.map((pp) => square(endingId(set, pp[0]), title + ', ' + pp[0]))));
   const gaps = [4, 10, 17]; gaps.reverse().forEach((i) => rows.splice(i, 0, h('div', { style: { height: '.35rem' } })));
-  clear(view).append(backHead('Charts', '#/learn', 'Learn'), h('div.stack',
+  clear(view).append(backHead('Master verb chart', '#/reference', 'Reference'), h('div.stack',
     start,
     h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts() }, icon('table', 18), ' Look at the chart'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
     h('div.card.stack', h('div.row.between', h('h2', 'Master verb chart'), h('span.chip', c.known + ' of ' + c.total + ' known')),

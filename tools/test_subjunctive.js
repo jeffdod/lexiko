@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
   await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.formLevel = F.NLEVELS; });
   await go('#/learn/charts'); ok(await p.locator('a.btn:text-is("Open Subjunctive")').count() === 1, 'Charts page links to Subjunctive');
   await go('#/learn/charts/subjunctive');
-  ok(await p.locator('.ptcrow').count() === 8 && await p.locator('a.btn.start').count() === 1, 'the page lists the eight kinds; "Which kind is it?" button');
+  ok(await p.locator('.ptcrow').count() === 8 && await p.locator('a.practice').count() === 1, 'the page lists the eight kinds; Practice this link');
   await p.click('.ptcrow a >> nth=2'); await p.waitForTimeout(500);
   ok(await p.locator('.pcell').count() === 6 && await p.locator('.pcell .pform').count() === 6, 'a paradigm has six forms, each with its formative marked');
   ok(await p.locator('a.btn:text-is("Parse forms like this")').count() === 1 && await p.locator('a.btn:text-is("Which kind is it?")').count() === 1, 'paradigm page buttons');

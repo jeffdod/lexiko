@@ -11,7 +11,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(!(await p.$('.readback')), 'search itself has no reader back link');
   await p.evaluate(() => { location.hash = '#/read/JHN/3/16'; }); await p.waitForSelector('.reader');
   const t = await p.textContent('.readback');
-  ok(/Back to search/.test(t) && !/(null|undefined)/.test(await p.textContent('#view')), 'reader opened from search offers Back to search', t.trim());
+  ok(/Back to Glossary/.test(t) && !/(null|undefined)/.test(await p.textContent('#view')), 'reader opened from search offers Back to Glossary', t.trim());
   await p.click('a[aria-label="Next chapter"]'); await p.waitForSelector('.reader');
   ok(!!(await p.$('.readback')), 'still there after changing chapter');
   await p.click('.readback a'); await p.waitForSelector('#sq');

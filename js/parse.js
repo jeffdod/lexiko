@@ -4,8 +4,9 @@ import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead } from './util.js';
-import { ROWS, say } from './chartdrill.js';
+import { h, clear, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
+import { ROWS, say, plan as chartPlan } from './chartdrill.js';
+import { verbsInProgress } from './verbs.js';
 import { PTCB } from './ptcdata.js';
 import { INFB, infKey } from './infdata.js';
 import { SUBB, subKey } from './subdata.js';
@@ -308,7 +309,7 @@ async function recordResult(st, it, res) {
 let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
 
-function runSession(view, queue, { title, scope, restart, practice = false, back = ['#/parse', 'Back to Parsing'] }) {
+function runSession(view, queue, { title, scope, restart, practice = false, back = ['#/parse', 'Back to Verb practice'] }) {
   const total = queue.length;
   const S = { missed: [], shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {}, hist: [] };
   let st = null, cur = null;
@@ -665,13 +666,15 @@ export function renderParse(view, params) {
     }
     return runSession(view, q, { title: scope ? scopeLabel(scope) : KIND_TITLE[kind], scope, restart: () => renderParse(view, params) });
   }
+  if (mode === 'form') return practiceForm(view);
+  if (mode === 'chart') return practiceChart(view);
   landing(view);
 }
 
 /** Which kinds of verb form are open, what is next, and how close you are. */
-function levelsCard(redraw) {
-  const lv = formLevel(), all = !!setting('formsAll'), box = h('div.card.stack');
-  box.append(h('h2', 'Forms you are working on'));
+function levelsCard(redraw, bare = false) {
+  const lv = formLevel(), all = !!setting('formsAll'), box = h(bare ? 'div.stack' : 'div.card.stack');
+  if (!bare) box.append(h('h2', 'Forms you are working on'));
   if (setting('formsByChart')) box.append(h('p.muted.small', 'An indicative form also waits until its row on the Master verb chart is learned (Settings, Parsing).'));
   if (all) { box.append(h('p.muted.small', 'Every kind of form is open, because Show all forms is on in Settings.')); return box; }
   box.append(h('p.muted.small', 'Only these kinds of verb form appear in questions for now.'),
@@ -684,20 +687,41 @@ function levelsCard(redraw) {
   } else box.append(h('p.muted.small', 'Every kind of form is open.'));
   return box;
 }
+const gk = (t) => h('span', { lang: 'grc' }, t);
 async function landing(view) {
   ensureIndex();
   const st = await getParseStats();
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
-  const sm = smart('parse');
+  const sm = smart('parse'), nv = verbsInProgress();
   clear(view).append(
-    backHead('Parsing', '#/learn', 'Learn'),
+    backHead('Verb practice', '#/home', 'Home'),
     h('div.stack',
       startButton(sm),
       paceNote(parsePace(), 'forms'),
-      h('div.row.wrap.links', h('a.btn.ghost.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.ghost.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.ghost.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots'), chartsButton()),
-      h('div.card.stack', h('h2', 'Practice by form'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),
-        h('div.pracgrid', [['Clue hunt', '#/parse/run/clues/known', 'Find the clues, then name the form'], ['Build the form', '#/parse/run/build/known', 'Put a form together from its pieces'], ['Parse from the chart', '#/learn/charts/pick', 'Pick rows of the master verb chart'], ['Master verb chart', '#/learn/charts/run', 'Drill the chart squares'], ['Participles', '#/learn/charts/participles', 'Tell the kinds apart'], ['Infinitives', '#/learn/charts/infinitives', 'The ten kinds'], ['Subjunctive', '#/learn/charts/subjunctive', 'The eight kinds'], ['Imperative', '#/learn/charts/imperative', 'The eight kinds'], ['Verbs in -μι', '#/learn/charts/mi', 'Roots and reduplication']].map(([t, href, d]) => h('a.tile', { href }, h('h3', t), h('p', d))))),
-      miniGoalCard(() => landing(view)),
-      levelsCard(() => landing(view)),
-      Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
+      h('div.row.wrap.links', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots')),
+      h('div.sec', 'Choose a kind of practice'),
+      areaCard({ href: '#/parse/form', ic: 'text', title: 'Practice by form', sub: 'Take real forms apart or put them together', ex: 'Clue hunt · Build the form · Parse from the chart' }),
+      areaCard({ href: '#/parse/chart', ic: 'table', title: 'Drill the chart', sub: 'Learn the tenses, endings and kinds of form', ex: 'Chart squares · participles · subjunctive · more' }),
+      areaCard({ href: '#/parts/exercise', ic: 'book', title: 'Principal parts practice', sub: 'Know the principal parts each verb is built from' }),
+      areaCard({ href: '#/learn/verbs', ic: 'learn', title: 'Your verbs', sub: 'See how each verb you are learning is going', ex: nv ? nv + (nv === 1 ? ' verb' : ' verbs') + ' in progress' : null }),
+      fold('Forms you are working on', levelsCard(() => landing(view), true), Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null)));
+}
+/** Practice by form: three ways to work on real forms. Practice only. */
+function practiceForm(view) {
+  clear(view).append(backHead('Practice by form', '#/parse', 'Verb practice'), h('div.stack',
+    h('p.muted.small', { style: { margin: 0 } }, 'Real forms from the text. Practice only: nothing here changes your review schedule.'),
+    areaCard({ href: '#/parse/run/clues/known', ic: 'text', title: 'Clue hunt', sub: 'Name the form by finding its clues, one at a time', ex: h('span', 'You see ', gk('ἐπίστευσαν'), ' and pick the augment, stem, formative and ending.') }),
+    areaCard({ href: '#/parse/run/build/known', ic: 'learn', title: 'Build the form', sub: 'Put a form together from its pieces', ex: h('span', 'You are told “aorist active, 3rd plural of ', gk('πιστεύω'), '” and build it step by step.') }),
+    areaCard({ href: '#/learn/charts/pick', ic: 'table', title: 'Parse from the chart', sub: 'Practice the chart rows you choose', ex: 'Pick rows, such as the imperfect, then parse real forms from them.' })));
+}
+/** Drill the chart: the chart squares, and the drills for each kind of form. */
+function practiceChart(view) {
+  const p = chartPlan(), n = p.due.length + p.nw.length;
+  clear(view).append(backHead('Drill the chart', '#/parse', 'Verb practice'), h('div.stack',
+    areaCard({ href: '#/learn/charts/run', ic: 'table', title: 'Chart squares', sub: 'Drill the master verb chart square by square', ex: n ? (p.due.length ? p.due.length + ' due' : '') + (p.due.length && p.nw.length ? ' · ' : '') + (p.nw.length ? p.nw.length + ' new' : '') : 'All caught up' }),
+    h('div.sec', 'By kind of form'),
+    areaCard({ href: '#/learn/charts/participles/run', ic: 'text', title: 'Participles', sub: 'Tell the ten kinds apart' }),
+    areaCard({ href: '#/learn/charts/infinitives/run', ic: 'text', title: 'Infinitives', sub: 'The ten kinds' }),
+    areaCard({ href: '#/learn/charts/subjunctive/run', ic: 'text', title: 'Subjunctive', sub: 'The eight kinds' }),
+    areaCard({ href: '#/learn/charts/imperative/run', ic: 'text', title: 'Imperative', sub: 'The eight kinds' })));
 }

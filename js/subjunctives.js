@@ -19,8 +19,8 @@ export function renderSubjunctive(view) {
       h('div.ptcchips', ...(r.formative ? [lg(r.formative)] : []), lg('ω/η'))));
   }
   const pair = (lab, a, b) => h('div.subpair', h('small', lab), lg(a, '.g'));
-  clear(view).append(backHead('Subjunctive', '#/learn/charts', 'Charts'), h('div.stack',
-    h('a.btn.primary.block.start', { href: '#/learn/charts/subjunctive/run' }, h('b', 'Which kind is it?'), h('small', 'Practice recognizing subjunctives')),
+  clear(view).append(backHead('Subjunctive', '#/reference', 'Reference'), h('div.stack',
+    h('a.btn.sm.practice', { href: '#/learn/charts/subjunctive/run' }, 'Practice this ›'),
     h('div.row.wrap.links', h('a.btn.ghost.sm', { href: '#/parse/run/sub/all' }, 'Parse some subjunctives'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'endings' }) }, icon('table', 18), ' Look at the endings')),
     h('div.card.stack', h('h2', 'How to read one'),
       h('p.small', 'A subjunctive is the stem, then (in the aorist) a formative, then a ', h('b', 'long'), ' connecting vowel, ', lg('ω'), ' or ', lg('η'), ', then the primary personal endings.'),
@@ -122,7 +122,7 @@ export function runSubDrill(view, only = null) {
       h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'),
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'subjunctives')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((x) => ({ word: x.w, greek: true, sub: SUBB.get(x.key).name, why: null })), () => { const again = S.missed.map((x) => ({ x, tries: 1 })); S.missed = []; queue.length = 0; queue.push(...again); S.shown = 0; S.round = 0; next(); }),
-        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/subjunctive' }, 'Back to Subjunctive'), ...backLinks('#/learn', 'Back to Learn'))));
+        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/subjunctive' }, 'Back to Subjunctive'), ...backLinks('#/home', 'Back to Home'))));
   };
   const next = () => {
     stop(); let c = queue.shift();

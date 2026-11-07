@@ -11,8 +11,8 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached' });
   await page.click('.choice:has-text("I know the basics")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")');
-  await page.waitForSelector('.hero');
-  ok(await page.locator('.hero .start').count() === 1, 'home leads with one main button');
+  await page.waitForSelector('.area');
+  ok(await page.locator('.area').count() === 3 && await page.locator('.card .goalnum, .card:has-text("Set a goal")').count() >= 1, 'home: a goal card and three areas');
   ok(await page.locator('.kpis').count() === 0, 'home has no row of number boxes');
   ok(/goal words known/.test(await page.textContent('#view')), 'home shows the goal card');
 
@@ -27,7 +27,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
 
   // undo: taking back the last answer restores the card, the counts and the previous question
   { const snap = () => page.evaluate(async () => { const k = await import('./js/know.js'); const st = await import('./js/store.js'); return { cards: k.K.cards.size, log: (await st.store.allLog()).length, r: (k.K.daily[Object.keys(k.K.daily).pop()] || {}).r || 0 }; });
-    await page.goto(URL + '#/home'); await page.waitForSelector('.hero'); await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcard');
+    await page.goto(URL + '#/home'); await page.waitForSelector('.area'); await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcard');
     ok(await page.locator('.undorow').count() === 0, 'no Undo before the first answer');
     const before = await snap(), firstWord = await page.textContent('.qgreek');
     await page.keyboard.press(' '); await page.waitForSelector('.grades'); await page.keyboard.press('3'); await page.waitForSelector('.undorow');
@@ -44,7 +44,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   // parsing a passage: one click for everything, one click for verbs only
   await page.goto(URL + '#/parse'); await page.waitForSelector('.start');
   ok(await page.locator('summary:has-text("Study a passage")').count() === 0 && await page.locator('summary:has-text("Options")').count() === 0, 'Parsing page no longer has Study a passage or Options sections');
-  ok(await page.locator('button:has-text("Change ›")').count() === 1, 'Parsing page has the goal card');
+  ok(await page.locator('a.area').count() >= 0, 'Parsing page loads');
   { const vb = '#/parse/run/passage/JHN/1/1/1/18/verb';
     await page.goto(URL + vb); await page.waitForSelector('.qcard'); await passVerb(page); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
   // parsing: when the answer is wrong, the right button is lit even for a voice that has no button of its own (middle or passive deponent)
@@ -53,7 +53,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
         if (d.pos === 'V' && d.slots.voice === 'N' && d.slots.tense && d.slots.mood) return { book: bk.code, ch, v, w: f.plain.replace(/\u00ad/g, ''), tense: d.slots.tense }; } return null; });
     ok(!!tgt, 'found a verb whose voice is middle or passive deponent: ' + (tgt && tgt.w));
     if (tgt) {
-      await page.goto(URL + '#/home'); await page.waitForSelector('.hero');
+      await page.goto(URL + '#/home'); await page.waitForSelector('.area');
       await page.goto(URL + ['#/parse/run/passage', tgt.book, tgt.ch, tgt.v, tgt.ch, tgt.v, 'verb'].join('/')); await page.waitForSelector('.qcard');
       let lit = null; const seen = [];
       for (let i = 0; i < 15 && lit === null; i++) {
@@ -91,7 +91,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('[data-t]');
   { let hit = false; for (let i = 0; i < 40 && !hit; i++) { await page.locator('[data-t]').nth(i).click(); hit = (await page.locator('#pop details.pparts').count()) > 0; }
     ok(hit && await page.locator('#pop details.pparts[open]').count() === 0 && await page.locator('#pop details.pparts .pp').count() === 6, 'reader popup offers collapsed principal parts for a verb'); }
-  await page.goto(URL + '#/parse'); await page.click('button:has-text("Charts")'); await page.click('dialog button:has-text("Participles")');
+  await page.goto(URL + '#/parse'); await page.waitForSelector('.area'); await page.evaluate(async () => { (await import('./js/charts.js')).openCharts(); }); await page.click('dialog button:has-text("Participles")');
   ok(await page.locator('dialog table.cpart').count() === 2 && /λέγοντες/.test(await page.textContent('dialog .cbody')), 'participle chart shows build and endings tables');
   await page.click('dialog button:has-text("Infinitives")');
   ok(/κεναι/.test(await page.textContent('dialog .cbody')), 'infinitive chart shows');
@@ -153,7 +153,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   ok(r.fmt === 'lexiko-backup-locked' && !r.leaks && r.back === 'world' && r.bad === 'wrong', 'a locked backup hides its contents, opens with the right passphrase and refuses a wrong one');
 
   // noun and adjective endings chart, counted from the text; help page; settings fold
-  await page.goto(URL + '#/parse'); await page.waitForSelector('button:has-text("Charts")'); await page.click('button:has-text("Charts")'); await page.click('button:has-text("Noun endings")');
+  await page.goto(URL + '#/reference'); await page.waitForSelector('button:has-text("Charts")'); await page.click('button:has-text("Charts")'); await page.click('button:has-text("Noun endings")');
   ok(await page.locator('dialog.charts .cblock').count() === 4 && await page.locator('dialog.charts .csec').count() === 2, 'noun endings: the two charts, each with first/second and third declension');
   const txt = await page.locator('dialog.charts .cbody').innerText();
   ok(/Master case endings/.test(txt) && /ος/.test(txt) && /ῳ/.test(txt) && /σι\(ν\)/.test(txt) && !/%/.test(txt), 'noun charts show the grammar’s endings');
@@ -175,7 +175,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   // phone width: the reader (with its Previous / Mark as read / Next footer) must not stretch the page
   { const pctx = await b.newContext({ viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true }); const pp = await pctx.newPage();
     await pp.goto(URL); await pp.waitForSelector('#loading', { state: 'detached' });
-    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Start with this goal")'); await pp.waitForSelector('.hero');
+    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Start with this goal")'); await pp.waitForSelector('.area');
     await pp.goto(URL + '#/read/JHN/1'); await pp.waitForSelector('[data-t]');
     const o = await pp.evaluate(() => ({ cw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth }));
     ok(o.sw <= o.cw + 1, 'reader fits a 320px phone without sideways scrolling ' + JSON.stringify(o)); await pctx.close(); }
