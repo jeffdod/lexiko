@@ -1129,7 +1129,7 @@ Strong's	Goodrick-Kohlenberger	Greek Word	English Definition (brief)	English Def
 1142	1230	"dai/mwn, onos, o("	"an evil-spirit, demon"	"an evil-spirit, demon."
 1143	1231	da/knw	"I bite, backbite, harm seriously"	"I bite; hence: I backbite, harm seriously."
 1144	1232	"da/kruon, ou, to/"	a tear	a tear.
-1145	1233	dakru/w	"I shed tears, week"	"I shed tears, weep."
+1145	1233	dakru/w	"I shed tears, weep"	"I shed tears, weep."
 1146	1234	"daktu/lios, ou, o("	a finger-ring	a finger-ring.
 1147	1235	"da/ktulos, ou, o("	a finger	a finger.
 1148	1236	"*dalmanouqa/, h("	Dalmanutha	"Dalmanutha, a town or village near Magdala."

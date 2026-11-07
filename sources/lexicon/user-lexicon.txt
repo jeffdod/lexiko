@@ -1134,7 +1134,7 @@
 1142	DAI/MWN, ONOS, O(	an evil-spirit, demon
 1143	DA/KNW	I bite, backbite, harm seriously
 1144	DA/KRUON, OU, TO/	a tear
-1145	DAKRU/W	I shed tears, week
+1145	DAKRU/W	I shed tears, weep
 1146	DAKTU/LIOS, OU, O(	a finger-ring
 1147	DA/KTULOS, OU, O(	a finger
 1148	*DALMANOUQA/, H(	Dalmanutha
