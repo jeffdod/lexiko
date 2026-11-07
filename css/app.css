@@ -454,3 +454,8 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .area .grow { flex: 1; min-width: 0; } .area .ex { display: block; margin-top: .4rem; padding: .4rem .6rem; border-radius: 10px; background: var(--surface-2); font-size: .82rem; color: var(--ink-2); line-height: 1.45; }
 .area .chev { margin-left: auto; color: var(--muted); display: flex; flex: none; } .area .due + .chev { margin-left: .4rem; }
 .area .ex span { display: inline; margin: 0; color: inherit; font-size: inherit; }
+
+/* the scroll-to-top/bottom button (util.js scrollButton): hidden until you scroll, then fades out again */
+.scrollfab { position: fixed; z-index: 19; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px); width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 14px rgba(0,0,0,.28); cursor: pointer; opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s; }
+.scrollfab.on { opacity: 1; visibility: visible; transition: opacity .2s ease; }
+@media (prefers-reduced-motion: reduce) { .scrollfab, .scrollfab.on { transition: none; } }
