@@ -60,7 +60,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   ok(/words? to go · about/.test(ht) && /Goal/.test(ht) && !/goal words known/.test(ht), 'Vocabulary goal card: the goal and the finish estimate only');
   await p.screenshot({ path: out + '/home-freq.png' });
   await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
-  await p.locator('.goalnum').click(); await p.waitForTimeout(400); ok(p.url().endsWith('#/progress'), 'a tap on the Home goal card opens Progress', p.url());
+  await p.locator('.goalnum').click(); await p.waitForTimeout(400); ok(!p.url().endsWith('#/progress'), 'a tap on the Home goal card does nothing (Progress is in the bottom bar)', p.url());
   await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
   await p.getByRole('button', { name: /Change/ }).click();
   ok(await p.locator('.goal-picker').isVisible() && p.url().endsWith('#/'), 'Change opens the picker on Home itself');

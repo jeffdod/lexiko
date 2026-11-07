@@ -9,6 +9,7 @@ import { setSetting } from './know.js';
 
 const rowName = (r) => { const x = ROWS.find((q) => q.key === r); return x ? x.name || x.title || r : r; };
 const chip = (on) => h(on ? 'span.chip.good' : 'span.chip', on ? 'Open' : 'Locked');
+const sq = (n) => n + (n === 1 ? ' square' : ' squares');
 const nOpen = (f) => f.kinds.filter((k) => gateOpen(f.id + ':' + k.key)).length;
 
 export async function turnOnVerbs() { await setGate('verbs', true); }
@@ -25,7 +26,7 @@ export function unlockSection() {
     h('div.sec', 'Unlock verb forms'),
     h('p.muted.small', 'Present active is already on. Pass a drill to start getting that type of verb form in your daily parsing.'),
     h('div.list',
-      row('#/parse/kinds/ind', 'Indicative', rows + ' of ' + ROW_KEYS.length + ' rows open' + (n ? ', ' + (p.due.length ? p.due.length + ' due' : p.nw.length + ' new') : '')),
+      row('#/parse/kinds/ind', 'Indicative', rows + ' of ' + ROW_KEYS.length + ' rows open' + (n ? ', ' + (p.due.length ? sq(p.due.length) + ' to review' : sq(p.nw.length) + ' new') : '')),
       ...FAMILIES.map((f) => row('#/parse/kinds/' + f.id, f.name, nOpen(f) + ' of ' + f.kinds.length + ' kinds open'))),
     h('p.small', h('a', { href: '#/parse/gates' }, 'What’s open ›')));
 }
@@ -37,7 +38,7 @@ export function renderRows(view) {
   const p = chartPlan(), due = p.due.length;
   clear(view).append(backHead('Indicative', '#/parse', 'Parsing'), h('div.stack',
     h('p.muted.small', 'A row opens in daily parsing when you have learned its squares on the master verb chart. Present active is always open.'),
-    h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run' }, 'Drill all rows' + (due ? ' (' + due + ' due)' : '')), h('a.btn.ghost', { href: '#/learn/charts' }, 'Study the chart')),
+    h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run' }, 'Drill all rows' + (due ? ' (' + sq(due) + ' to review)' : '')), h('a.btn.ghost', { href: '#/learn/charts' }, 'Study the chart')),
     ...TENSES.flatMap(([pre, title]) => {
       const rs = ROWS.filter((r) => r.key.startsWith(pre));
       return rs.length ? [h('div.sec', title), h('div.list', rs.map((r) => {

@@ -83,7 +83,7 @@ function goalSummary(view) {
   if (K.goal && goalFinished(currentGoal())) return finishedCard(() => renderHome(view));
   const box = h('div.card.stack'), g = currentGoal();
   const draw = (open) => {
-    clear(box); box.classList.remove('tap'); box.removeAttribute('tabindex'); box.removeAttribute('role'); box.removeAttribute('aria-label'); box.onclick = null; box.onkeydown = null;     // only the summary opens Progress, not the picker
+    clear(box);
     if (open) return add(box, h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: (e) => { e.stopPropagation(); draw(false); } }, 'Cancel')), goalPicker({ initial: g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } }));
     if (!K.goal) return add(box, h('b', icon('target', 18), ' Set a goal'), h('div.muted.small', 'Pick the words you want to know, by how common they are or by the passage you want to read.'), h('button.btn.primary', { onclick: () => draw(true) }, 'Choose a goal ›'));
     const gs = goalStats(g), per = Math.max(1, setting('newPerDay') || 10), days = Math.ceil(gs.left / per);
@@ -91,8 +91,6 @@ function goalSummary(view) {
       h('div.goalnum', fmt(gs.known) + ' of ' + fmt(gs.total) + ' goal words known · ' + pct(gs.pct)),
       h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })),
       h('div.muted.small', gs.left ? gs.left + ' word' + (gs.left === 1 ? '' : 's') + ' to go · ' + (days <= 1 ? 'about a day' : 'about ' + days + ' days') + ' at ' + per + ' a day' : 'You know every word in this goal.'));
-    box.classList.add('tap'); box.tabIndex = 0; box.setAttribute('role', 'link'); box.setAttribute('aria-label', 'Open Progress');
-    box.onclick = () => { location.hash = '#/progress'; }; box.onkeydown = (e) => { if (e.key === 'Enter') location.hash = '#/progress'; };
   };
   draw(false); return box;
 }
