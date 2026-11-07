@@ -7,7 +7,7 @@ import { h, clear, fmt } from './util.js';
 // [level, title, description, how often to spot-check words you say you know]
 const LEVEL_CHOICES = [
   [null, 'I’m just starting', 'New to Greek, or still learning the alphabet'],
-  [50, 'I’m rusty', 'I know my grammar and once knew these words, but I’m out of practice. lexiko will quiz you on them often', 0.2, 'rusty'],
+  [50, 'I’m rusty', 'I know my grammar and once knew the most common words, but I’m out of practice. lexiko will quiz you on them often', 0.2, 'rusty'],
   [50, 'I know the basics', 'I’ve studied some grammar and know the most common words'],
   [20, 'I can read with a lexicon', 'I read the New Testament, but look up a lot'],
   [5, 'I read Greek regularly', 'Show me mainly the words I don’t know'],
