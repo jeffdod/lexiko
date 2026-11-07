@@ -1,4 +1,4 @@
-// Reference: things to look up and study (word search, the verb charts, the kinds of form). No exercises here: those live in Verb practice.
+// Reference: things to look up and study (word search, the verb charts, the kinds of form). No exercises here: those live in Parsing.
 import { h, clear, backHead, areaCard, icon } from './util.js';
 import { setSearchQuery } from './search.js';
 import { chartsButton } from './charts.js';
@@ -25,7 +25,7 @@ function partsList(view) {
   };
   input.addEventListener('input', draw); draw();
   clear(view).append(backHead('Principal parts', '#/reference', 'Reference'), h('div.stack', input, list,
-    h('p.muted.small', 'The most common verbs come first. This is a list to look things up in; to practice, open Verb practice.')));
+    h('p.muted.small', 'The most common verbs come first. This is a list to look things up in; to practice, open Parsing.')));
 }
 
 export function renderReference(view, params = []) {
@@ -47,5 +47,5 @@ export function renderReference(view, params = []) {
     areaCard({ href: '#/learn/charts/subjunctive', ic: 'text', title: 'Subjunctive', sub: 'The eight kinds' }),
     areaCard({ href: '#/learn/charts/imperative', ic: 'text', title: 'Imperative', sub: 'The eight kinds' }),
     areaCard({ href: '#/learn/charts/mi', ic: 'text', title: 'Verbs in -μι', sub: 'Roots and reduplication' }),
-    h('p.muted.small', 'Each of these pages has a “Practice this” link that opens its exercise in Verb practice.')));
+    h('p.muted.small', 'Each of these pages has a “Practice this” link that opens its exercise in Parsing.')));
 }

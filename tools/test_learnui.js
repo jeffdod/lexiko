@@ -20,7 +20,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(/Look ahead at new words/.test(v) && /Review what I’ve learned|Learn new words|Review words/.test(v) && /Strengthen weak spots/.test(v) && !/Study a passage|Study by how common|Options/.test(v), 'Vocabulary: start button, three links, no extra sections');
   await go('#/parse');
   const pv = await p.textContent('#view');
-  ok(/Look ahead at new forms/.test(pv) && /Strengthen weak spots/.test(pv) && /Drill the chart/.test(pv) && !/Study a passage|Options/.test(pv), 'Parsing: start button, links, Charts, no extra sections');
+  ok(/Look ahead at new forms/.test(pv) && /Strengthen weak spots/.test(pv) && /Unlock verb forms/.test(pv) && !/Study a passage|Options/.test(pv), 'Parsing: start button, links, Charts, no extra sections');
   await go('#/settings');
   const sv = await p.textContent('#view');
   ok(/Quiz style/.test(sv) && /New words per day/.test(sv) && /Pause new words/.test(sv) && /Parsing/.test(sv) && /Guided/.test(sv) && /New forms per day/.test(sv) && /Pause new forms/.test(sv), 'Settings holds pace, quiz style and Parsing style');

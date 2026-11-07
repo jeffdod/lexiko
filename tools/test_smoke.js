@@ -75,7 +75,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
 
   // parsing practice
   await page.goto(URL + '#/parse'); await page.waitForSelector('.start');
-  ok(/Verb practice/.test(await page.textContent('h1')), 'parsing page renders');
+  ok(/Parsing/.test(await page.textContent('h1')), 'parsing page renders');
   await page.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('parseMode', 'guided'); });
   await page.goto(URL + '#/parse/run/mix/verb'); await page.waitForSelector('.pcard .qgreek');
   ok(/Which verb/.test(await page.textContent('#view')), 'a verb form starts by asking which verb'); await passVerb(page);
