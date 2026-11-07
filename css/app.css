@@ -127,6 +127,11 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 #loading .bar i { background: #fff; }
 #loading p { color: rgba(255, 255, 255, .9); }
 #loading a { color: #fff; text-decoration: underline; }
+#loadbar { width: 4%; }                                    /* starting width; js/app.js sets the real progress as data loads */
+#loadmsg { margin-top: .8rem; }
+#loading.explain .bar { display: none; }                  /* opened from a folder: js/boot.js explains instead of showing progress */
+#loading.explain #loadmsg { line-height: 1.5; }
+.noscript { padding: 1rem; }
 
 /* ---------- reader ---------- */
 .readbar { position: sticky; top: 0; z-index: 10; margin: calc(-1 * (env(safe-area-inset-top) + .9rem)) -1rem .6rem; padding: calc(env(safe-area-inset-top) + .5rem) 1rem .5rem; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
