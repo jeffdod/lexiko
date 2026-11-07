@@ -2,8 +2,8 @@
 // connecting vowel, endings) and every personal ending is a small scheduled card. Questions are multiple choice, in your chart's own words.
 import { clockNow } from './clock.js';
 import { D } from './data.js';
-import { K, formLevel, rateChart, chartCardsDue } from './know.js';
-import { CHART_ATTRS, levelName } from './families.js';
+import { K, openGateKeys, rateChart, chartCardsDue } from './know.js';
+import { CHART_ATTRS } from './families.js';
 import { exampleForm, paradigm, chartVerb } from './paradigms.js';
 import { MASTER, PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, openCharts } from './charts.js';
 import { h, clear, icon, pct, shuffle, toast, missedBlock, backHead, backLinks } from './util.js';
@@ -91,8 +91,9 @@ export function runDrill(view, rowKey = null) {
   const after = async (c, right) => {
     const ok = right && !c.peek;                                      // opening the second hint (the form itself) counts as a miss
     if (c.tries === 0) {                                              // only the first try is recorded
-      const lv = formLevel(); await rateChart(c.it.id, ok ? 3 : 1); S.done++; if (ok) S.good++; else S.missed.push(c.it);
-      if (formLevel() > lv) toast('New kind of verb form open: ' + levelName(formLevel()) + '. Learning the chart opened it.', 10000);
+      const before = openGateKeys(); await rateChart(c.it.id, ok ? 3 : 1); S.done++; if (ok) S.good++; else S.missed.push(c.it);
+      const opened = openGateKeys().filter((k) => !before.includes(k)).filter((k) => k.startsWith('row:'));
+      if (opened.length) toast('New type of verb form open: ' + (ROWS.find((r) => 'row:' + r.key === opened[0]) || { name: opened[0].slice(4) }).name + '. Learning the chart opened it.', 10000);
     }
     if (!ok && c.tries === 0) retryQ.push({ it: c.it, tries: 1 });       // a first miss gets one more try, in a retry round after the last card
     next();
@@ -170,7 +171,7 @@ export function renderChartsPage(view) {
       h('a.btn', { href: '#/learn/charts/pick' }, 'Parse from this chart')),
     h('div.card.stack', h('h2', 'Personal endings'), h('p.muted.small', 'One square for each person, in each set of endings.'),
       h('div.sqrow.head.e', h('span'), ['1s', '2s', '3s', '1p', '2p', '3p'].map((t) => h('span', t))), ...ends),
-    h('p.muted.small', 'Learning the chart also opens the matching kinds of verb form in Parsing.'),
+    h('p.muted.small', 'Learning the chart also opens the matching types of verb forms in Parsing.'),
     h('div.card.stack', h('h2', 'Participles'), h('p.muted.small', 'How to read a participle, a paradigm for each kind, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/participles' }, 'Open Participles')),
     h('div.card.stack', h('h2', 'Infinitives'), h('p.muted.small', 'The ten kinds, how to tell them apart, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/infinitives' }, 'Open Infinitives')),
     h('div.card.stack', h('h2', 'Subjunctive'), h('p.muted.small', 'How to read a subjunctive, a paradigm for each of the eight kinds, and practice telling which kind you are looking at.'), h('a.btn', { href: '#/learn/charts/subjunctive' }, 'Open Subjunctive')),

@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   const go = async (h) => { await p.evaluate((x) => { location.hash = x; }, h); await p.waitForTimeout(700); };
   await p.goto('http://localhost:8123/#/learn'); await p.waitForTimeout(1500);
-  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.formLevel = F.NLEVELS; });
+  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.gates = k.allGatesOpen(); });
   await go('#/learn/charts'); ok(await p.locator('a.btn:text-is("Open Verbs in -μι")').count() === 1, 'Charts page links to Verbs in -μι');
   await go('#/learn/charts/mi');
   ok(await p.locator('.mitab').count() === 6, 'six cards: δίδωμι, τίθημι, ἵστημι, ἀφίημι, δείκνυμι, εἰμί');

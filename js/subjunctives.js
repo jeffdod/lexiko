@@ -6,6 +6,8 @@ import { openCharts } from './charts.js';
 import { SUB, SUBB, SUB_LOOKALIKE, SUB_MP, splitSub } from './subdata.js';
 import { skel, chars, isLiquid, aoristNotes } from './ptcdata.js';
 import { contractType, contractSplit, pairsFrom, contractNote } from './contract.js';
+import { noteKind, kindLine } from './gatenote.js';
+import { verbsOn } from './know.js';
 import { h, clear, icon, pct, shuffle, missedBlock, backHead, backLinks } from './util.js';
 
 const lg = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
@@ -119,7 +121,7 @@ export function runSubDrill(view, only = null) {
   const finish = () => {
     stop();
     clear(view).append(h('div.pagehead', h('h1', 'Practice complete')),
-      h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'),
+      h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'), verbsOn() && S.kinds ? h('div.muted.small', [...S.kinds].map((k) => h('div', kindLine('sub', k)))) : null,
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'subjunctives')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((x) => ({ word: x.w, greek: true, sub: SUBB.get(x.key).name, why: null })), () => { const again = S.missed.map((x) => ({ x, tries: 1 })); S.missed = []; queue.length = 0; queue.push(...again); S.shown = 0; S.round = 0; next(); }),
         h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/subjunctive' }, 'Back to Subjunctive'), ...backLinks('#/home', 'Back to Home'))));
@@ -133,7 +135,7 @@ export function runSubDrill(view, only = null) {
   };
   const after = (c, right) => {
     const ok = right && !c.peek;                                      // the second hint counts as a miss
-    if (c.tries === 0) { S.done++; if (ok) S.good++; else { S.missed.push(c.x); retryQ.push({ x: c.x, tries: 1 }); } }
+    if (c.tries === 0) { S.done++; (S.kinds ||= new Set()).add(c.x.key); noteKind('sub', c.x.key, ok); if (ok) S.good++; else { S.missed.push(c.x); retryQ.push({ x: c.x, tries: 1 }); } }
     next();
   };
   function show(c) {

@@ -5,8 +5,9 @@ const { chromium } = require('playwright');
   p.on('pageerror', (e) => errs.push(String(e)));
   const ok = (c, m) => { if (!c) { console.log('FAIL: ' + m); process.exitCode = 1; } };
   await p.goto('http://localhost:8123/lexiko/#/parse'); await p.waitForTimeout(1800);
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'); K.K.settings.level = 0; K.K.settings.formLevel = F.NLEVELS; });
-  ok(await p.locator('.pracgrid a[href="#/parse/run/build/known"]').count() === 1, 'Practice by form links to Build the form');
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'); K.K.settings.level = 0; K.K.settings.gates = K.allGatesOpen(); });
+  await p.goto('http://localhost:8123/lexiko/#/parse/form'); await p.waitForTimeout(800);
+  ok(await p.locator('a[href="#/parse/run/build/known"]').count() === 1, 'Practice by form page links to Build the form');
   const d = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), { D } = await import('/lexiko/js/data.js');
     const at = (w) => D.forms.findIndex((f) => f.w.replace(/­/g, '') === w), sp = (w, row) => { const i = at(w); if (i < 0) return 'missing'; const x = B.decompose(i, row); return x ? [x.A, x.S, x.F, x.E, x.cell].join('|') : null; };
     return { a: sp('ἐπίστευσαν', 'aor1-act'), b: sp('ἔλαβον', 'aor2-act'), c: sp('πιστεύσει', 'fut-act'), d: sp('ἐπιστεύσαμεν', 'aor1-act'), e: sp('πιστεύει', 'pres-act'), f: sp('ἐπιστεύετε', 'impf-act'),
@@ -48,14 +49,14 @@ const { chromium } = require('playwright');
       out[m] = { ok, bad, con, snd, kinds: keys.size }; }
     return out; });
   ok(mo.sub.ok > 100 && mo.imp.ok > 80 && mo.inf.ok > 80 && mo.sub.bad + mo.imp.bad + mo.inf.bad === 0 && mo.sub.kinds >= 6 && mo.inf.kinds >= 6 && mo.sub.con > 10 && mo.imp.con > 10 && mo.inf.con > 10 && mo.sub.snd + mo.imp.snd + mo.inf.snd > 40, 'moods add up: ' + JSON.stringify(mo));
-  const gated = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), P = await import('/lexiko/js/parse.js'); const was = K.K.settings.formLevel; K.K.settings.formLevel = 1; const n = P.moodPool('sub', { anyVerb: true }).length + P.moodPool('imp', { anyVerb: true }).length + P.moodPool('inf', { anyVerb: true }).length; K.K.settings.formLevel = was; return n; });
+  const gated = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), P = await import('/lexiko/js/parse.js'); const was = K.K.settings.gates; K.K.settings.gates = { verbs: true }; const n = P.moodPool('sub', { anyVerb: true }).length + P.moodPool('imp', { anyVerb: true }).length + P.moodPool('inf', { anyVerb: true }).length; K.K.settings.gates = was; return n; });
   ok(gated === 0, 'moods wait for their level: ' + gated);
   // participles: stem · formative · ending (marker + case ending); perfects also show the reduplication
   const pt = await p.evaluate(async () => { const B = await import('/lexiko/js/buildform.js'), P = await import('/lexiko/js/parse.js'), K = await import('/lexiko/js/know.js');
     const sk = (s) => s.replace(/­/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ς/g, 'σ'); const out = { ok: 0, bad: 0, red: 0, snd: 0, aug: 0, con: 0, liq: 0, pre: 0, ps: 0, keys: new Set() };
     for (const x of P.ptcPool({ anyVerb: true })) { const d = B.decomposePtc(x); if (!d) continue; out.ok++; out.keys.add(d.key); if (d.A) out.red++; if (d.sound) out.snd++; if (d.aug) out.aug++;
       const core = d.sound ? d.sound.joined + (d.F + d.E).slice(1) : d.S + d.F + d.E; const pf = d.prefix ? d.prefix.shown : ''; if (d.prefix) out.pre++; if (d.contract) { out.con++; if (sk(pf + d.contract.head + d.contract.res + d.contract.rest) !== sk(d.word)) out.bad++; } else if (d.perfSound) { if (!d.aug && sk(pf + d.A + d.perfSound.joined) !== sk(d.word)) out.bad++; out.ps++; } else if (!d.aug && sk(pf + d.A + core) !== sk(d.word)) out.bad++; if (d.liquid) out.liq++; }
-    const was = K.K.settings.formLevel; K.K.settings.formLevel = 1; const gated = P.ptcPool({ anyVerb: true }).length; K.K.settings.formLevel = was;
+    const was = K.K.settings.gates; K.K.settings.gates = { verbs: true }; const gated = P.ptcPool({ anyVerb: true }).length; K.K.settings.gates = was;
     return { ok: out.ok, bad: out.bad, red: out.red, snd: out.snd, keys: out.keys.size, aug: out.aug, con: out.con, liq: out.liq, pre: out.pre, ps: out.ps, gated }; });
   ok(pt.ok > 100 && pt.bad === 0 && pt.keys >= 8 && pt.con > 200 && pt.liq > 3 && pt.pre > 200 && pt.ps > 30 && pt.red > 2 && pt.snd > 5 && pt.gated === 0, 'participles add up: ' + JSON.stringify(pt));
   // liquid verbs: the future and aorist have no σ; the stem is the verb's printed one (μένω: ἔμεινα, μενῶ); φθάνω and ἁμαρτάνω keep a σ and are left out

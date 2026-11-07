@@ -18,8 +18,10 @@ import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
-import { currentGoal, goalWords, formLevel, chartAllowsAny, miHeld, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
-import { levelOfTag, NLEVELS, levelName, isLiquidVerb } from './families.js';
+import { currentGoal, goalWords, formOpen, gateOpen } from './know.js';
+import { isLiquidVerb } from './families.js';
+import { gateKey } from './kinds.js';
+import { unlockSection, renderKinds, renderGates, renderHowto } from './gatesui.js';
 import { store } from './store.js';
 import { renderClues } from './cluehunt.js';
 import { renderBuild } from './buildform.js';
@@ -54,9 +56,8 @@ const cardIdFor = (id) => {
 };
 const isFresh = (id) => { const c = K.cards.get(cardIdFor(id)); return !c || c.state === 'new'; };
 const rawItem = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
-const levelOfItem = (it) => levelOfTag(it.valid[0].code);
-/** A verb form whose level is not open yet is treated as if it were not there: not due, not new, not counted. */
-const itemOf = (id) => { const it = rawItem(id); return it && it.group === 'V' && levelOfItem(it) > formLevel() ? null : it; };
+/** A verb form whose gate is not open (or while verb parsing is off) is treated as if it were not there: not due, not new, not counted. */
+const itemOf = (id) => { const it = rawItem(id); return it && it.group === 'V' && !formOpen(it.valid.map((v) => v.code), it.strongs) ? null : it; };
 /** The forms a verb requires (its chosen forms in each required stem), as form ids; cached per verb. */
 const reqCache = new Map();
 const requiredFormIds = (n) => {
@@ -64,21 +65,10 @@ const requiredFormIds = (n) => {
   if (!r) { r = new Set(); const rs = requiredStems(n); if (rs) for (const s of rs.stems) for (const f of s.forms) for (const row of f.rows) r.add(canon[row]); reqCache.set(n, r); }
   return r;
 };
-/** What the daily sessions may serve: itemOf, and with "Only forms from chart rows I know" on, a verb form waits until its chart row is learned. Practice (a row, a kind, "Parse forms like this") is not held back. */
-const autoItemOf = (id) => { const it = itemOf(id); return it && it.group === 'V' && (miHeld(it.strongs) || !chartAllowsAny(it.valid.map((v) => v.code), it.strongs)) ? null : it; };
+/** What the daily sessions may serve (the same as itemOf: gates decide). */
+const autoItemOf = itemOf;
 const isVerbForm = (id) => { const it = itemOf(id); return !!it && it.group === 'V'; };
 const groupOfItem = (it) => (it.kind === 'verb' ? 'verb' : 'other');
-
-/** Once: fill the per-level accuracy from the review log, so someone who already answers a level well starts past it. */
-export async function bootFamilies() {
-  if (await store.get('famInit')) return;
-  ensureIndex();
-  const log = (await store.allLog()).filter((e) => e.k === 'parse' && typeof e.id === 'string').sort((a, b) => a.t - b.t);
-  const acc = {};
-  for (const e of log) { const id = keyMap.get(e.id); if (id == null) continue; const it = rawItem(id); if (!it || it.group !== 'V') continue; const l = levelOfItem(it); (acc[l] ||= []).push(e.g >= 3 ? 1 : 0); }
-  for (const l of Object.keys(acc)) K.famAcc[l] = acc[l].slice(-40);
-  await store.set('famAcc', K.famAcc); await advanceLevels(); await store.set('famInit', true);
-}
 
 /* ---------- context sentence with the form highlighted ---------- */
 function formContext(id) {
@@ -106,7 +96,7 @@ function candidatePool(scope, kinds) {
   }
   const take = (pred) => { for (const id of members.keys()) { const it = autoItemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
   const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]);        // a verb comes in through the forms it requires; its other forms are practiced, never required
-  take((f) => status(f.an[0].s) !== 'unknown' && mine(f));
+  take((f) => (isVerbForm(f.id) ? status(f.an[0].s) !== 'unknown' : status(f.an[0].s) === 'known') && mine(f));        // a noun, adjective or pronoun form is asked only once you know the word's meaning
   if (out.length < 40) { out.length = 0; take((f) => (D.lexByN.get(f.an[0].s) || { rank: 1e9 }).rank <= 400 && mine(f)); }   // nothing known yet: start with the most common words
   return out;
 }
@@ -144,11 +134,9 @@ export function buildParseSession(opts) {
   const cap = size > 20 ? 3 : 2, per = new Map(), lex = (id) => D.forms[id].an[0].s, picked = [], rest = [];
   let verbRoom = Math.round(want * 0.4), otherRoom = want - verbRoom;
   const nVerbs = ranked.filter((o) => isVerbForm(o.x.id)).length; if (nVerbs < verbRoom) { otherRoom += verbRoom - nVerbs; verbRoom = nVerbs; }
-  // forms of the newest open level are rationed to about one in four of the new verb forms, until you know them
-  const newest = formLevel(), ration = !setting('formsAll') && newest > 1 ? Math.max(1, Math.ceil(verbRoom * 0.25)) : 1e9; let fromNewest = 0;
   for (const o of ranked) {
-    const k = lex(o.x.id), n = per.get(k) || 0, v = isVerbForm(o.x.id), isNew = v && levelOfItem(itemOf(o.x.id)) === newest;
-    if (picked.length < want && n < cap && (v ? verbRoom : otherRoom) > 0 && !(isNew && fromNewest >= ration)) { picked.push(o); per.set(k, n + 1); if (v) verbRoom--; else otherRoom--; if (isNew) fromNewest++; } else rest.push(o);
+    const k = lex(o.x.id), n = per.get(k) || 0, v = isVerbForm(o.x.id);
+    if (picked.length < want && n < cap && (v ? verbRoom : otherRoom) > 0 ) { picked.push(o); per.set(k, n + 1); if (v) verbRoom--; else otherRoom--; } else rest.push(o);
   }
   const rest2 = [];
   for (const o of rest) { const k = lex(o.x.id), n = per.get(k) || 0; if (picked.length < want && n < cap) { picked.push(o); per.set(k, n + 1); } else rest2.push(o); }      // a share that nobody fills goes to whoever is left, still a few per word
@@ -235,7 +223,7 @@ export function moodPool(mood, { anyVerb = false } = {}) {
   const keyOf = { sub: subKey, imp: impKey, inf: infKey }[mood], out = [];
   for (const id of members.keys()) {
     const it = autoItemOf(id); if (!it || it.group !== 'V' || (!anyVerb && status(it.strongs) !== 'known')) continue;
-    let k = null, code = ''; for (const v of it.valid) { const kk = keyOf(v.slots); if (kk && levelOfTag(v.code) <= formLevel()) { k = kk; code = v.code; break; } }      // the mood's own level must be open, even when the same word is also an open indicative form
+    let k = null, code = ''; for (const v of it.valid) { const kk = keyOf(v.slots); if (kk && gateOpen(gateKey(v.slots, v.code, it.strongs))) { k = kk; code = v.code; break; } }      // the mood's own level must be open, even when the same word is also an open indicative form
     if (!k) continue;
     const L = D.lexByN.get(it.strongs);
     out.push({ id, key: k, code, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', count: D.forms[id].count });
@@ -248,7 +236,7 @@ export function ptcPool({ anyVerb = false } = {}) {
   const out = [];
   for (const id of members.keys()) {
     const it = autoItemOf(id); if (!it || it.group !== 'V' || (!anyVerb && status(it.strongs) !== 'known')) continue;
-    let hl = null; for (const v of it.valid) { const x = participleHighlight(v.slots); if (x && x.key && levelOfTag(v.code) <= formLevel()) { hl = x; break; } }
+    let hl = null; for (const v of it.valid) { const x = participleHighlight(v.slots); if (x && x.key && gateOpen(gateKey(v.slots, v.code, it.strongs))) { hl = x; break; } }
     if (!hl) continue;
     const L = D.lexByN.get(it.strongs);
     out.push({ id, key: hl.key, case: hl.case, number: hl.number, gender: hl.gender, w: D.forms[id].w.replace(/[\u00ad\u200b]/g, ''), n: it.strongs, head: L ? L.head : '', count: D.forms[id].count });
@@ -293,7 +281,6 @@ const effectiveMode = (group, st) => { const pref = setting('parseMode'); return
 
 async function recordResult(st, it, res) {
   const g = groupOfItem(it);
-  if (it.group === 'V') { const opened = await noteFamily(levelOfItem(it), res.full); if (opened) toast('New kind of verb form open: ' + levelName(opened) + '. It will appear in verb questions now and then.', 10000); }
   for (const [k, v] of Object.entries(res.perSlot)) { const s = (st.slots[k] ||= [0, 0]); s[1]++; if (v.ok) s[0]++; }
   const rec = (st.recent[g] ||= []); rec.push(res.full ? 1 : 0); if (rec.length > 40) rec.shift();
   st.total = (st.total || 0) + 1;
@@ -309,7 +296,7 @@ async function recordResult(st, it, res) {
 let keyHandler = null;
 const stop = () => { if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } };
 
-function runSession(view, queue, { title, scope, restart, practice = false, back = ['#/parse', 'Back to Verb practice'] }) {
+function runSession(view, queue, { title, scope, restart, practice = false, back = ['#/parse', 'Back to Parsing'] }) {
   const total = queue.length;
   const S = { missed: [], shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {}, hist: [] };
   let st = null, cur = null;
@@ -667,26 +654,12 @@ export function renderParse(view, params) {
     return runSession(view, q, { title: scope ? scopeLabel(scope) : KIND_TITLE[kind], scope, restart: () => renderParse(view, params) });
   }
   if (mode === 'form') return practiceForm(view);
-  if (mode === 'chart') return practiceChart(view);
+  if (mode === 'kinds') return renderKinds(view, rest[0]);
+  if (mode === 'gates') return renderGates(view);
+  if (mode === 'howto') return renderHowto(view);
   landing(view);
 }
 
-/** Which kinds of verb form are open, what is next, and how close you are. */
-function levelsCard(redraw, bare = false) {
-  const lv = formLevel(), all = !!setting('formsAll'), box = h(bare ? 'div.stack' : 'div.card.stack');
-  if (!bare) box.append(h('h2', 'Forms you are working on'));
-  if (setting('formsByChart')) box.append(h('p.muted.small', 'An indicative form also waits until its row on the Master verb chart is learned (Settings, Parsing).'));
-  if (all) { box.append(h('p.muted.small', 'Every kind of form is open, because Show all forms is on in Settings.')); return box; }
-  box.append(h('p.muted.small', 'Only these kinds of verb form appear in questions for now.'),
-    h('div.row.wrap', { style: { gap: '.4rem' } }, Array.from({ length: lv }, (_, i) => h('span.chip.accent', levelName(i + 1)))));
-  if (lv < NLEVELS) {
-    const st = famStats(lv), pc = (x) => Math.round(x * 100) + '%';
-    const how = st.n < FAM_MIN ? 'Answer ' + (FAM_MIN - st.n) + ' more questions on the newest kind above and lexiko will check whether to open the next one.' : 'Opens at ' + pc(FAM_ACC) + ' over your last ' + FAM_WINDOW + ' answers (you: ' + pc(st.acc) + ').';
-    box.append(h('p.small', h('b', 'Next: '), levelName(lv + 1) + '. ' + how),
-      h('div.row.wrap', h('button.btn.sm', { onclick: async () => { await openNextLevel(); redraw(); } }, 'Open it now')));
-  } else box.append(h('p.muted.small', 'Every kind of form is open.'));
-  return box;
-}
 const gk = (t) => h('span', { lang: 'grc' }, t);
 async function landing(view) {
   ensureIndex();
@@ -694,34 +667,23 @@ async function landing(view) {
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
   const sm = smart('parse'), nv = verbsInProgress();
   clear(view).append(
-    backHead('Verb practice', '#/home', 'Home'),
+    backHead('Parsing', '#/home', 'Home'),
     h('div.stack',
       startButton(sm),
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap.links', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots')),
-      h('div.sec', 'Choose a kind of practice'),
+      unlockSection(),
+      h('div.sec', 'Free practice'),
       areaCard({ href: '#/parse/form', ic: 'text', title: 'Practice by form', sub: 'Take real forms apart or put them together', ex: 'Clue hunt · Build the form · Parse from the chart' }),
-      areaCard({ href: '#/parse/chart', ic: 'table', title: 'Drill the chart', sub: 'Learn the tenses, endings and kinds of form', ex: 'Chart squares · participles · subjunctive · more' }),
       areaCard({ href: '#/parts/exercise', ic: 'book', title: 'Principal parts practice', sub: 'Know the principal parts each verb is built from' }),
       areaCard({ href: '#/learn/verbs', ic: 'learn', title: 'Your verbs', sub: 'See how each verb you are learning is going', ex: nv ? nv + (nv === 1 ? ' verb' : ' verbs') + ' in progress' : null }),
-      fold('Forms you are working on', levelsCard(() => landing(view), true), Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null)));
+      Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
 }
 /** Practice by form: three ways to work on real forms. Practice only. */
 function practiceForm(view) {
-  clear(view).append(backHead('Practice by form', '#/parse', 'Verb practice'), h('div.stack',
+  clear(view).append(backHead('Practice by form', '#/parse', 'Parsing'), h('div.stack',
     h('p.muted.small', { style: { margin: 0 } }, 'Real forms from the text. Practice only: nothing here changes your review schedule.'),
     areaCard({ href: '#/parse/run/clues/known', ic: 'text', title: 'Clue hunt', sub: 'Name the form by finding its clues, one at a time', ex: h('span', 'You see ', gk('ἐπίστευσαν'), ' and pick the augment, stem, formative and ending.') }),
     areaCard({ href: '#/parse/run/build/known', ic: 'learn', title: 'Build the form', sub: 'Put a form together from its pieces', ex: h('span', 'You are told “aorist active, 3rd plural of ', gk('πιστεύω'), '” and build it step by step.') }),
     areaCard({ href: '#/learn/charts/pick', ic: 'table', title: 'Parse from the chart', sub: 'Practice the chart rows you choose', ex: 'Pick rows, such as the imperfect, then parse real forms from them.' })));
-}
-/** Drill the chart: the chart squares, and the drills for each kind of form. */
-function practiceChart(view) {
-  const p = chartPlan(), n = p.due.length + p.nw.length;
-  clear(view).append(backHead('Drill the chart', '#/parse', 'Verb practice'), h('div.stack',
-    areaCard({ href: '#/learn/charts/run', ic: 'table', title: 'Chart squares', sub: 'Drill the master verb chart square by square', ex: n ? (p.due.length ? p.due.length + ' due' : '') + (p.due.length && p.nw.length ? ' · ' : '') + (p.nw.length ? p.nw.length + ' new' : '') : 'All caught up' }),
-    h('div.sec', 'By kind of form'),
-    areaCard({ href: '#/learn/charts/participles/run', ic: 'text', title: 'Participles', sub: 'Tell the ten kinds apart' }),
-    areaCard({ href: '#/learn/charts/infinitives/run', ic: 'text', title: 'Infinitives', sub: 'The ten kinds' }),
-    areaCard({ href: '#/learn/charts/subjunctive/run', ic: 'text', title: 'Subjunctive', sub: 'The eight kinds' }),
-    areaCard({ href: '#/learn/charts/imperative/run', ic: 'text', title: 'Imperative', sub: 'The eight kinds' })));
 }

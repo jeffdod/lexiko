@@ -10,7 +10,7 @@ const { chromium } = require('playwright');
       for (const row of r.forms) { if (row.length !== 3) bad.push(r.key + ' row'); for (const f of row) { n++; const s = m.split(f.replace('(ν)', ''), r.key); if (!s || s.stemSkel !== stem || (r.fre && !s.formative)) bad.push(r.key + ':' + f); } } }
     return { n, bad, keys: m.PTC.length }; });
   ok(d.keys === 10 && d.n === 240 && !d.bad.length, 'ten paradigms of 24 forms, each splits into stem, formative and the rest', JSON.stringify(d.bad.slice(0, 5)));
-  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.formLevel = F.NLEVELS; });
+  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.gates = k.allGatesOpen(); });
   await go('#/learn/charts'); ok(await p.locator('a.btn:text-is("Open Participles")').count() === 1, 'Charts page links to Participles');
   await go('#/learn/charts/participles');
   ok(await p.locator('.ptcrow').count() === 10, 'the page lists the ten kinds');
@@ -29,7 +29,7 @@ const { chromium } = require('playwright');
   ok(noContract === 0, '-μι present rows are split by the -μι rules, never by the plain pattern', String(noContract));
   // the quiz
   const before = await p.evaluate(async () => { const k = await import('./js/know.js'); return JSON.stringify([[...k.K.cards.keys()].length, k.K.daily]); });
-  await p.evaluate(async () => { const k = await import('./js/know.js'); k.K.settings.formLevel = 1; });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); k.K.settings.gates = { verbs: true }; });
   await go('#/learn/charts/participles/run'); await p.waitForSelector('.qwrap');
   const total = +(await p.innerText('.qcount')).match(/\/\s*(\d+)/)[1]; ok(total >= 6 && total <= 12, 'a round of up to twelve participles: ' + total);
   ok(await p.locator('.opt').count() === 4, 'four choices');
@@ -60,7 +60,7 @@ const { chromium } = require('playwright');
   const la = await p.evaluate(async () => { const m = await import('./js/participles.js'); let n = 0; for (let i = 0; i < 20; i++) if (m.ptcOptions('pres-act').some((r) => r.key === 'aor2-act')) n++; return n; });
   ok(la === 20, 'a present active always has the 2nd aorist active beside it');
   // parsing route
-  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.formLevel = F.NLEVELS; });
+  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.gates = k.allGatesOpen(); });
   await go('#/parse/run/ptc/all'); await p.waitForSelector('.qwrap');
   ok(/Chart row/.test(await p.innerText('.practice-note')) && /practice only/.test(await p.innerText('.practice-note')), 'Parse some participles: practice only');
   // empty state

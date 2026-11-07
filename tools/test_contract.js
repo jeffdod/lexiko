@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
   const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 420, height: 900 } }); let bad = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : 'FAIL  ') + m + (c ? '' : ' ' + x)); if (!c) bad++; };
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   await p.goto('http://localhost:8123/#/learn'); await p.waitForTimeout(1500);
-  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.formLevel = F.NLEVELS; });
+  await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.gates = k.allGatesOpen(); });
   const u = await p.evaluate(async () => {
     const C = await import('./js/contract.js'), pt = await import('./js/participles.js'), inf = await import('./js/infinitives.js'), sub = await import('./js/subjunctives.js'), imp = await import('./js/imperatives.js'), P = await import('./js/parse.js'), pd = await import('./js/ptcdata.js');
     const known = (w, h, fn, key) => fn({ w, head: h, key });

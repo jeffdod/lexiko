@@ -114,8 +114,8 @@ export function renderHome(view) {
   // 2. the areas
   const area = (href, ic, title, sub, n) => h('a.area', { href }, icon(ic, 30), h('div', h('b', title), h('span', sub)), n ? h('em.due', n + ' due') : null);
   stack.append(area('#/learn/words', 'learn', 'Vocabulary', 'Learn, review, look ahead', cnt.words.due),
-    area('#/parse', 'text', 'Verb practice', 'Parsing, build a form, drills', cnt.parse.due),
-    area('#/reference', 'table', 'Reference', 'Glossary, charts, paradigms'));
+    area('#/parse', 'text', 'Parsing', 'Practice forms and unlock verb types', cnt.parse.due),
+    area('#/reference', 'table', 'Reference', 'Glossary, charts and paradigms'));
   stack.append(h('a.small.center', { href: '#/help', style: { textAlign: 'center' } }, 'How lexiko works ›'));
   clear(view).append(stack);
 }

@@ -5,14 +5,15 @@ import { D, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBoo
 import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
-import { levelOfTag, NLEVELS, CHART_ATTRS, ROW_LEVEL, rowOfTag } from './families.js';
+import { CHART_ATTRS, ROW_LEVEL, rowOfTag } from './families.js';
+import { gateKeyOfTag, allGateKeys } from './kinds.js';
 import { miClass } from './midata.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false, formsByChart: false, holdMi: false, barsDebug: false,
+  readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, gates: {}, verbAsk: { n: 0, t: 0 }, barsDebug: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, gateAcc: {}, ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -29,7 +30,7 @@ export async function initKnow() {
   K.wordsAcc = (await store.get('wordsAcc')) || [];
   K.parseAcc = (await store.get('parseAcc')) || [];
   K.verbParse = (await store.get('verbParse')) || {};
-  K.famAcc = (await store.get('famAcc')) || {};
+  K.gateAcc = (await store.get('gateAcc')) || {};
   K.ready = true;
 }
 
@@ -320,13 +321,13 @@ const formKnown = (rows) => rows.some((i) => cardKnown(K.cards.get(parseId(D.for
 const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 /** δίδωμι, τίθημι, ἵστημι, ἀφίημι, δείκνυμι and their compounds. */
 export const isMiVerb = (n) => { const L = D.lexByN.get(n); return !!L && !!miClass(L.head); };
-/** With "Hold back verbs in -μι" on, these verbs stay out of daily practice and are not required of you. */
-export const miHeld = (n) => !!K.settings.holdMi && isMiVerb(n);
+/** Verbs in -μι stay out of daily practice (and are not required of you) until you tick them in What's open. */
+export const miHeld = (n) => isMiVerb(n) && !(K.settings.gates || {}).mi;
 /** Where one verb stands: its required stems and chosen forms (known or not), and whether its forms are learned. Null for a word with no verb forms. */
 export function verbStatus(n) {
-  if (miHeld(n)) return null;
+  if (!verbsOn() || miHeld(n)) return null;
   const rs = requiredStems(n); if (!rs) return null;
-  const lv = formLevel(), inPlay = (f) => { const tag = D.forms[f.rows[0]].an[0].m; return levelOfTag(tag) <= lv && chartAllows(tag, n); };       // forms of levels you have not opened yet are not required
+  const inPlay = (f) => gateOpen(gateKeyOfTag(D.forms[f.rows[0]].an[0].m, n));       // forms of kinds you have not opened yet are not required
   const stems = rs.stems.map((s) => { const forms = s.forms.filter(inPlay).map((f) => ({ w: f.w, count: f.count, rows: f.rows, known: formKnown(f.rows) })); return { slot: s.slot, name: s.name, share: s.share, forms, known: forms.filter((f) => f.known).length, total: forms.length }; }).filter((s) => s.total > 0);
   const total = stems.reduce((x, s) => x + s.total, 0), known = stems.reduce((x, s) => x + s.known, 0);
   const a = (K.verbParse[n] || []).slice(-LEARNED_WINDOW), acc = a.length ? mean(a) : null;
@@ -391,31 +392,47 @@ export async function rateParse(id, grade, ms = 0, meta = {}) {
   await store.addLog([{ t: now, id, g: grade, k: 'parse', ms, ...meta }]);
   return next;
 }
-/* ---------- verb-form levels: which kinds of form are open in Parsing ---------- */
+/* ---------- gates: which kinds of verb form daily parsing may ask ---------- */
+// Nouns, adjectives, pronouns and articles are never gated: they come with the word. Verbs are held back until you say yes ('verbs'); then present active is on, and every other
+// kind is a gate of its own: a row of the master verb chart (opens when you have learned its squares), or one kind of participle, infinitive, subjunctive or imperative (opens when you
+// pass that kind's drill). You can also tick or untick any gate by hand. 'mi' (verbs in -μι) and 'rare' (optative, future participles and infinitives, pluperfect) are by hand only.
 export const FAM_WINDOW = 20, FAM_MIN = 15, FAM_ACC = 0.85;
-/** The highest open level (all of them with "Show all forms"). */
-export const formLevel = () => (K.settings.formsAll ? NLEVELS : Math.max(1, Math.min(NLEVELS, K.settings.formLevel || 1)));
-export function famStats(l) { const a = (K.famAcc[l] || []).slice(-FAM_WINDOW); return { n: a.length, acc: a.length ? mean(a) : null }; }
-/** Has every square of the master-chart rows of this level been learned? (Learning the chart opens the matching verb forms too.) */
+const gateMap = () => K.settings.gates || {};
+export const verbsOn = () => !!gateMap().verbs;
+/** A square of the chart row is learned when its card is known; a row opens by itself once all of its squares are. */
 export const chartRowKnown = (r) => CHART_ATTRS.every((a) => cardKnown(K.cards.get('c:' + r + ':' + a)));
-export const chartKnown = (l) => { const rows = Object.keys(ROW_LEVEL).filter((r) => ROW_LEVEL[r] === l); return rows.length > 0 && rows.every(chartRowKnown); };
-/** With "Only forms from chart rows I know" on, an indicative verb form comes up only once every square of its master-chart row is learned. Other moods are not on the master chart, so this leaves them alone. */
-export const chartAllows = (tag, n) => { if (!K.settings.formsByChart) return true; const r = rowOfTag(tag, n); return !r || chartRowKnown(r); };
-/** The same for a form with several possible parses (tags): it waits unless some indicative parse has its row learned, or none is indicative. */
-export const chartAllowsAny = (tags, n) => { if (!K.settings.formsByChart) return true; const rs = tags.map((t) => rowOfTag(t, n)).filter(Boolean); return !rs.length || rs.some(chartRowKnown); };
-export const famGate = (l) => { const s = famStats(l); return (s.n >= FAM_MIN && s.acc >= FAM_ACC) || chartKnown(l); };
-/** Open the next level while the newest open one is answered well enough. Returns the new level if any opened. */
-export async function advanceLevels() {
-  let moved = false;
-  while ((K.settings.formLevel || 1) < NLEVELS && famGate(K.settings.formLevel || 1)) { await setSetting('formLevel', (K.settings.formLevel || 1) + 1); moved = true; }
-  return moved ? K.settings.formLevel : 0;
+export function gateOpen(key) {
+  const g = gateMap(); if (!g.verbs) return false;
+  if (key === 'row:pres-act') return true;
+  if (key.startsWith('row:')) return key in g ? !!g[key] : chartRowKnown(key.slice(4));
+  return !!g[key];
 }
-/** Record one answer to a verb form of this level; returns the new level if that opened one. */
-export async function noteFamily(l, ok) {
-  const a = (K.famAcc[l] ||= []); a.push(ok ? 1 : 0); if (a.length > FAM_WINDOW * 2) a.shift();
-  await store.set('famAcc', K.famAcc); return advanceLevels();
+/** Can a form with these parses (RP tags) be asked? Some parse must be in an open gate, and a -μι verb needs its gate too. */
+export const formOpen = (tags, n) => verbsOn() && !miHeld(n) && tags.some((t) => gateOpen(gateKeyOfTag(t, n)));
+export const openGateKeys = () => allGateKeys().filter(gateOpen);
+export async function setGate(key, on) { await setSetting('gates', { ...gateMap(), [key]: !!on }); }
+/** Gate keys that opened between two calls of openGateKeys(): for a message. */
+export const newlyOpen = (before) => openGateKeys().filter((k) => !before.includes(k));
+/** How a kind's drill is going: answers in the last FAM_WINDOW, and the share right. */
+export function gateStats(key) { const a = (K.gateAcc[key] || []).slice(-FAM_WINDOW); return { n: a.length, acc: a.length ? mean(a) : null }; }
+/** Answers needed to pass: FAM_MIN, or fewer (but at least 5) for a kind with only a few forms among the verbs you know, so it cannot get stuck. */
+export const passNeed = (pool) => Math.min(FAM_MIN, Math.max(5, pool == null ? FAM_MIN : pool));
+export const gatePassed = (key, pool) => { const s = gateStats(key); return s.n >= passNeed(pool) && s.acc >= FAM_ACC; };
+/** One first-try answer in a kind's drill. Returns true when that opened the kind. */
+export async function noteDrill(key, ok, pool) {
+  const a = (K.gateAcc[key] ||= []); a.push(ok ? 1 : 0); if (a.length > FAM_WINDOW * 2) a.shift();
+  await store.set('gateAcc', K.gateAcc);
+  if (!gateOpen(key) && gatePassed(key, pool)) { await setGate(key, true); return true; }
+  return false;
 }
-export async function openNextLevel() { if ((K.settings.formLevel || 1) < NLEVELS) await setSetting('formLevel', (K.settings.formLevel || 1) + 1); }
+/** Once: everyone starts with verb parsing off and every gate closed (progress already made is kept). */
+export async function bootGates() {
+  if (await store.get('gatesInit')) return;
+  await setSetting('gates', {}); await setSetting('verbAsk', { n: 0, t: 0 }); await store.set('gatesInit', true);
+}
+/** The question after a quiz: ask once, once more after a week, then never (the Parsing page keeps a button). */
+export function verbAskDue(now = clockNow()) { const a = K.settings.verbAsk || { n: 0, t: 0 }; return !verbsOn() && (a.n === 0 || (a.n === 1 && now - a.t >= 7 * 864e5)); }
+export const noteVerbAsk = (now = clockNow()) => setSetting('verbAsk', { n: ((K.settings.verbAsk || {}).n || 0) + 1, t: now });
 /** A square of the master verb chart (c:row:part) or a personal ending (e:set:person): scheduled like any card, never mixed into word or form sessions. */
 export async function rateChart(id, grade) {
   const now = clockNow(), prev = K.cards.get(id) || F.newCard(id);
@@ -424,7 +441,6 @@ export async function rateChart(id, grade) {
   const d = (K.daily[todayKey()] ||= {}); d.cr = (d.cr || 0) + 1;
   await store.set('daily', K.daily);
   await store.addLog([{ t: now, id, g: grade, k: 'chart' }]);
-  await advanceLevels();
   return next;
 }
 export const chartCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => (c.id.startsWith('c:') || c.id.startsWith('e:')) && c.state !== 'new' && c.due <= now);
@@ -476,3 +492,5 @@ export function troubleCards(prefix, limit = 15) {
 export const studiedCount = (prefix) => { let n = 0; for (const c of K.cards.values()) if (c.id.startsWith(prefix) && c.state !== 'new' && (prefix !== 'w:' || liveWord(c))) n++; return n; };
 
 export { scopeVerses };
+/** Every gate open (verbs on, -μι and rare forms included): used by tests, and handy for a developer. */
+export const allGatesOpen = () => Object.fromEntries([...allGateKeys(), 'verbs', 'mi', 'rare'].map((k) => [k, true]));

@@ -8,7 +8,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: 'dark' });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   await p.goto(URL); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });
-  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(100); await k.setSetting('levelAsked', true); });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(100); await k.setSetting('levelAsked', true); await k.setSetting('gates', k.allGatesOpen()); });
 
   // ---- data + option generators
   const r = await p.evaluate(async () => {

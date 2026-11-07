@@ -45,6 +45,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.goto(URL + '#/parse'); await page.waitForSelector('.start');
   ok(await page.locator('summary:has-text("Study a passage")').count() === 0 && await page.locator('summary:has-text("Options")').count() === 0, 'Parsing page no longer has Study a passage or Options sections');
   ok(await page.locator('a.area').count() >= 0, 'Parsing page loads');
+  await page.evaluate(async () => { const k = await import('./js/know.js'); await k.setSetting('gates', k.allGatesOpen()); });
   { const vb = '#/parse/run/passage/JHN/1/1/1/18/verb';
     await page.goto(URL + vb); await page.waitForSelector('.qcard'); await passVerb(page); ok(/Tense/.test(await page.textContent('#view')), 'verbs-only passage session asks about verbs (tense first)'); }
   // parsing: when the answer is wrong, the right button is lit even for a voice that has no button of its own (middle or passive deponent)

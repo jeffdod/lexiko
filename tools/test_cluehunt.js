@@ -5,17 +5,18 @@ const { chromium } = require('playwright');
   p.on('pageerror', (e) => errs.push(String(e)));
   const ok = (c, m) => { if (!c) { console.log('FAIL: ' + m); process.exitCode = 1; } };
   await p.goto('http://localhost:8123/lexiko/#/parse'); await p.waitForTimeout(1800);
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'); K.K.settings.level = 0; K.K.settings.formLevel = F.NLEVELS; });
-  ok(await p.locator('.pracgrid a[href="#/parse/run/clues/known"]').count() === 1, 'Practice by form links to Clue hunt');
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'); K.K.settings.level = 0; K.K.settings.gates = K.allGatesOpen(); });
+  await p.goto('http://localhost:8123/lexiko/#/parse/form'); await p.waitForTimeout(800);
+  ok(await p.locator('a[href="#/parse/run/clues/known"]').count() === 1, 'Practice by form page links to Clue hunt');
   // queue shape: 10 items, a pair every third, both forms of a pair belong to one verb
   const q = await p.evaluate(async () => { const C = await import('/lexiko/js/cluehunt.js'), { D } = await import('/lexiko/js/data.js'); const out = C.clueQueue(true, 10);
     const pairs = out.filter((x) => x.type === 'pair'); return { n: out.length, pairs: pairs.length, at: out.map((x, i) => x.type === 'pair' ? i : -1).filter((i) => i >= 0), same: pairs.every((x) => D.forms[x.ida].an[0].s === D.forms[x.idb].an[0].s && x.ida !== x.idb), dup: new Set(out.filter((x) => x.type === 'hunt').map((x) => x.id)).size === out.filter((x) => x.type === 'hunt').length }; });
   ok(q.n === 10 && q.pairs >= 2 && q.same && q.dup && q.at.every((i) => i % 3 === 2), 'queue shape: ' + JSON.stringify(q));
-  // gating: with only level 1 open, no form from a later level turns up (perfect rows are level 3, passives level 2)
-  const g = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'), C = await import('/lexiko/js/cluehunt.js'), { D } = await import('/lexiko/js/data.js');
-    K.K.settings.formLevel = 1; const out = []; for (let i = 0; i < 6; i++) out.push(...C.clueQueue(true, 12)); K.K.settings.formLevel = F.NLEVELS;
-    const lv = (id) => Math.max(...D.forms[id].an.slice(0, 1).map((a) => F.levelOfTag(a.m))); return { n: out.length, bad: out.filter((x) => x.type === 'hunt' && lv(x.id) > 1).length + out.filter((x) => x.type === 'pair' && (lv(x.ida) > 1 || lv(x.idb) > 1)).length }; });
-  ok(g.n > 0 && g.bad === 0, 'gated: nothing from a level that is not open yet: ' + JSON.stringify(g));
+  // gating: with only a few rows open, no form from a closed row turns up
+  const g = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/kinds.js'), C = await import('/lexiko/js/cluehunt.js'), { D } = await import('/lexiko/js/data.js');
+    K.K.settings.gates = { verbs: true, 'row:impf-act': true, 'row:fut-act': true, 'row:aor1-act': true }; const open1 = (id) => K.gateOpen(F.gateKeyOfTag(D.forms[id].an[0].m, D.forms[id].an[0].s)); const out = []; for (let i = 0; i < 6; i++) out.push(...C.clueQueue(true, 12)); K.K.settings.gates = K.allGatesOpen();
+    const lv = (id) => (open1(id) ? 1 : 2); return { n: out.length, bad: out.filter((x) => x.type === 'hunt' && lv(x.id) > 1).length + out.filter((x) => x.type === 'pair' && (lv(x.ida) > 1 || lv(x.idb) > 1)).length }; });
+  ok(g.n > 0 && g.bad === 0, 'gated: nothing from a row that is not open yet: ' + JSON.stringify(g));
   // weak spots: when tense is the weak slot, pairs that differ in the tense come up more often than pairs that differ only in the voice, and the reason is shown
   const w = await p.evaluate(async () => { const C = await import('/lexiko/js/cluehunt.js'); const run = (st) => { let tense = 0, voice = 0, reasons = 0; for (let i = 0; i < 80; i++) for (const x of C.clueQueue(true, 10, st).filter((y) => y.type === 'pair')) { const t = x.a.split('-')[0].replace(/\d/, '') !== x.b.split('-')[0].replace(/\d/, ''); t ? tense++ : voice++; if (x.reason) reasons++; } return { tense, voice, reasons }; };
     return { none: run(null), weakTense: run({ slots: { tense: [30, 100], voice: [98, 100] } }), weakVoice: run({ slots: { tense: [98, 100], voice: [30, 100] } }), pw: C.pairWeight('pres-act', 'impf-act', { slots: { tense: [30, 100] } }) }; });
