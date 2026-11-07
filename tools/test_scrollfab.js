@@ -1,0 +1,34 @@
+// The Glossary's scroll button: hidden at first, points the way you scroll, jumps to the ends, fades away. node tools/test_scrollfab.js (server on :8123)
+const { chromium } = require('playwright');
+const URL = 'http://localhost:8123/lexiko/';
+let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAIL ') + m + (x ? ' ' + x : '')); if (!c) fails++; };
+process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.message); process.exit(1); });
+(async () => {
+  const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })).newPage(); const errs = [];
+  p.on('pageerror', (e) => errs.push(e.message));
+  await p.goto(URL); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });
+  await p.evaluate(() => { location.hash = '#/search'; }); await p.waitForSelector('a.li'); await p.waitForTimeout(500);
+  const vis = () => p.evaluate(() => { const e = document.querySelector('.scrollfab'); return !!e && getComputedStyle(e).visibility === 'visible' && getComputedStyle(e).opacity > 0.5; });
+  const label = () => p.getAttribute('.scrollfab', 'aria-label');
+  ok(!(await vis()), 'hidden before any scrolling');
+  await p.mouse.move(200, 400); await p.mouse.wheel(0, 900); await p.waitForTimeout(500);
+  ok(await vis() && /bottom/.test(await label()), 'scrolling down shows it, pointing down (jump to bottom)', await label());
+  await p.mouse.wheel(0, -300); await p.waitForTimeout(500);
+  ok(await vis() && /top/.test(await label()), 'scrolling up turns it round (jump to top)', await label());
+  await p.waitForTimeout(3200);
+  ok(!(await vis()), 'it fades away when scrolling stops');
+  await p.mouse.wheel(0, 200); await p.waitForTimeout(400);
+  await p.click('.scrollfab'); await p.waitForTimeout(500);
+  ok(await p.evaluate(() => scrollY + innerHeight >= document.documentElement.scrollHeight - 60), 'tapping the down arrow jumps to the bottom');
+  await p.waitForTimeout(300);
+  ok(/top/.test(await label()), 'at the bottom it points up', await label());
+  await p.click('.scrollfab'); await p.waitForTimeout(500);
+  ok(await p.evaluate(() => scrollY < 10), 'tapping the up arrow jumps to the top');
+  ok(!!(await p.$('button.scrollfab')), 'still one button'); ok((await p.$$('button.scrollfab')).length === 1, 'exactly one button');
+  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('h1'); await p.waitForTimeout(300);
+  ok(!(await p.$('button.scrollfab')), 'the button is removed when you leave the page');
+  await p.evaluate(() => { location.hash = '#/search'; }); await p.waitForSelector('a.li'); await p.waitForTimeout(300);
+  ok((await p.$$('button.scrollfab')).length === 1, 'coming back gives exactly one button, not two');
+  ok(errs.length === 0, 'no page errors', errs.join('|'));
+  await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
+})();

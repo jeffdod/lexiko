@@ -4,7 +4,7 @@ import { D, lexeme, chapterVerses, senseNs, tokenForm, refLabel, unpack } from '
 import { decode } from './morph.js';
 import { status, markKnown, markLearning, K } from './know.js';
 import { readHref, statusChip } from './reader.js';
-import { h, clear, toAcute, toast, icon, fmt, knowButtons, backHead } from './util.js';
+import { h, clear, toAcute, toast, icon, fmt, knowButtons, backHead, scrollButton } from './util.js';
 
 const GREEK = /[Ͱ-Ͽἀ-῿]/;
 /** Compare Greek without accents, breathings or case; final sigma = sigma. */
@@ -187,4 +187,5 @@ export function renderSearch(view, params = []) {
   input.addEventListener('input', draw);
   clear(view).append(h('div.stack', backHead('Glossary', '#/reference', 'Reference'), input, controls, h('div.row.wrap.between', hint, h('button.btn.ghost.sm', { onclick: showBetaHelp }, 'What is Beta Code?')), out));
   draw();
+  return scrollButton();
 }

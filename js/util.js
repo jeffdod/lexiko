@@ -80,7 +80,7 @@ const ICONS = {
   progress: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
   clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
-  chevL: 'M15 18l-6-6 6-6',
+  chevL: 'M15 18l-6-6 6-6', chevU: 'M6 15l6-6 6 6', chevD: 'M6 9l6 6 6-6',
   chevR: 'M9 18l6-6-6-6',
   close: 'M6 6l12 12M18 6L6 18',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
@@ -156,4 +156,25 @@ export function readBack() {
 /** A page heading with a visible way back, for when there is no browser back button (installed app). */
 export function backHead(title, href, label) {
   return h('div.pagehead', h('a.btn.ghost.icon.sm', { href, 'aria-label': 'Back to ' + label, title: 'Back to ' + label }, icon('chevL', 22)), h('h1', title));
+}
+
+/** A round button at the lower right of a long page: the arrow points the way you last scrolled, a tap jumps to the top or bottom,
+ *  and it fades away when you stop scrolling. Returns a function that removes it (hand that back as the route's cleanup). */
+export function scrollButton() {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const doc = document.documentElement, b = h('button.scrollfab', { type: 'button' });
+  let dir = 'down', last = scrollY, timer = 0;
+  const atTop = () => scrollY < 40, atEnd = () => scrollY + innerHeight >= doc.scrollHeight - 40, tall = () => doc.scrollHeight > innerHeight * 1.6;
+  const paint = () => { clear(b).append(icon(dir === 'up' ? 'chevU' : 'chevD', 24)); b.setAttribute('aria-label', dir === 'up' ? 'Jump to top' : 'Jump to bottom'); };
+  const hide = () => { b.classList.remove('on'); };
+  const wake = (ms = 2200) => { if (!tall()) return hide(); b.classList.add('on'); clearTimeout(timer); timer = setTimeout(() => { if (!b.matches(':focus-visible')) hide(); }, ms); };
+  const onScroll = () => {
+    const dy = scrollY - last; if (Math.abs(dy) < 4) return; last = scrollY;
+    dir = dy > 0 ? 'down' : 'up'; if (atTop()) dir = 'down'; if (atEnd()) dir = 'up';
+    paint(); wake();
+  };
+  b.addEventListener('click', () => { scrollTo({ top: dir === 'up' ? 0 : doc.scrollHeight, behavior: reduce ? 'auto' : 'smooth' }); });
+  b.addEventListener('focus', () => wake(4000));
+  paint(); document.body.append(b); addEventListener('scroll', onScroll, { passive: true });
+  return () => { clearTimeout(timer); removeEventListener('scroll', onScroll); b.remove(); };
 }
