@@ -63,7 +63,7 @@ Skills that carry the detailed procedures: `lexiko-testing`, `lexiko-shipping`, 
 - The Stop hook may ask to commit and push; follow rule 7.
 - Settings still contain the "Erase ALL progress and settings" button in the "About lexiko" fold; do not remove it.
 - Do not reproduce long passages of copyrighted text; the Greek text is public domain (RP 2026), the lexicon is Dodson (CC0), the font is OFL (see README).
-- `js/families.js` still has some helpers from the old level system, now unused (`NLEVELS`, `levelOfTag`, `laterOrder`, `levelName`). `ROW_LEVEL`, `rowOfTag`, `CHART_ATTRS` and `isLiquidVerb` are still used.
+- `js/families.js` now holds only chart helpers (`ROW_LEVEL`, `rowOfTag`, `CHART_ATTRS`, `isLiquidVerb`); the old level helpers were removed.
 
 ## Open ideas and loose ends
 - None queued. Ask the owner what is next, and propose design before building.
