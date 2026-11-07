@@ -16,6 +16,7 @@ A free, offline-first Progressive Web App for learning Greek vocabulary and read
 8. **List everything removed or moved** (settings, buttons, screens) before or when delivering, so nothing disappears silently.
 9. **Keep it quick.** Never run the whole test suite; run only the tests related to the change, with a time cap. Do not leave the owner waiting on hung tests.
 10. Ask one short question only when the answer changes what you build; otherwise pick the sensible default and say so.
+11. **Clean separation of code.** HTML files contain only HTML: no `<style>` blocks, no `style="..."` attributes, no inline event-handler attributes (`onclick` and the like), and no inline `<script>` blocks. JavaScript lives in `js/*.js` and CSS in `css/*.css`. JavaScript may still set a dynamic style value at runtime (for example a progress bar width). The one allowed exception is the short theme script in the `<head>` of `index.html`: it has to run before the page first paints so a manually chosen theme never flashes the wrong colors, and an external file would add a request before that first paint. Do not add other inline scripts. Before delivering a change that touches an HTML file, search it for inline `<script`, `<style`, `style=` and `on...=` attributes.
 
 Skills that carry the detailed procedures: `lexiko-testing`, `lexiko-shipping`, `lexiko-design-and-rules`.
 
@@ -27,6 +28,7 @@ Skills that carry the detailed procedures: `lexiko-testing`, `lexiko-shipping`, 
 
 ## Architecture in one page
 - `index.html`, `css/app.css`, `sw.js`, `sw-assets.js`, `manifest.webmanifest`; app code in `js/*.js`; data in `data/` (built by `tools/build_*.py` from `sources/`, see the README).
+- `js/boot.js` is the loading-screen helper (it explains a `file://` open and a slow load). It is a classic script, not a module, on purpose: browsers refuse to load ES modules from `file://`, and this script is what explains that.
 - **Routing:** hash routes in `js/app.js` (`routes` object; bottom bar: Home, Read, Progress, Settings). A route renderer gets `(view, parts)`. Navigating to the same hash does not re-render.
 - **Data:** `js/data.js` loads the lexicon (5,381 lexemes keyed by **Strong's number**), word forms (20,591, each with Robinson-Pierpont morphology tags) and the text. `js/morph.js` decodes RP tags.
 - **Knowledge model:** `js/know.js` (`K` state, settings, cards, gates, pace). A word is *known* when it has a mature SRS card, or (no card yet) its frequency meets the level the user declared. `js/fsrs.js` is the FSRS-4.5 scheduler; `js/store.js` is IndexedDB (settings, cards, review log, backup/restore); `js/clock.js` is the app's "now" (use it, not `Date.now()`, so time travel for testing works).
