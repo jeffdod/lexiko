@@ -12,11 +12,21 @@ const getJSON = async (p) => {
 
 export const D = {
   lex: [], lexByN: new Map(), parts: new Map(), forms: [], books: [], bookByCode: new Map(), text: {},
+  english: {},          // book code -> Map(chapter -> Map(verse -> English text)), filled one book at a time by loadEnglish()
   chap: new Map(),      // 'JHN:1' -> {book, ch, strongs:Int32Array, verses:n}
   occ: new Map(),       // strongs -> [packed bookIdx*1e5+ch*1e3+vs]
   periList: [], periAt: new Map(),   // sections (pericopes): list, and 'MAT:1:18' -> section starting at that verse
   totalTokens: 0, ready: false,
 };
+
+/** The English translation of one book (data/english/<code>.json), loaded when the reader first needs it and kept for the session. */
+export async function loadEnglish(code) {
+  if (D.english[code]) return D.english[code];
+  const rows = await getJSON('english/' + code + '.json');
+  return (D.english[code] = new Map(rows.map(([c, vs]) => [c, new Map(vs)])));
+}
+/** English text of a verse, or '' when the book is not loaded or the verse has none (the few verse numbers the Greek leaves empty). */
+export const englishVerse = (code, ch, vs) => { const b = D.english[code], c = b && b.get(ch); return (c && c.get(vs)) || ''; };
 
 /** Words the text tags as verb forms but which are used as interjections ('Lo! Behold!': ἰδού, ἴδε). They are learned as vocabulary words only: no parsing, and no verb stems. */
 export const NOT_PARSED = new Set([2400, 2396]);
