@@ -1,5 +1,6 @@
 // The screens of the gating: the Unlock list on Parsing, a page per kind of form, the "What's open" checklist, the how-to screen, and the verb question.
-import { K, setGate, gateOpen, verbsOn, openGateKeys, chartRowKnown, gateStats, passNeed, verbAskDue, noteVerbAsk, FAM_ACC } from './know.js';
+import { K, setGate, gateOpen, verbsOn, openGateKeys, chartRowKnown, chartRowSquares, gateStats, passNeed, verbAskDue, noteVerbAsk, FAM_ACC } from './know.js';
+import { CHART_ATTRS } from './families.js';
 import { ROWS, plan as chartPlan } from './chartdrill.js';
 import { FAMILIES, FAMILY, ROW_KEYS, kindName } from './kinds.js';
 import { poolOf } from './gatenote.js';
@@ -24,9 +25,27 @@ export function unlockSection() {
     h('div.sec', 'Unlock verb forms'),
     h('p.muted.small', 'Present active is already on. Pass a drill to start getting that type of verb form in your daily parsing.'),
     h('div.list',
-      row('#/learn/charts/run', 'Indicative, the rest of the chart', rows + ' of ' + ROW_KEYS.length + ' rows open' + (n ? ', ' + (p.due.length ? p.due.length + ' due' : p.nw.length + ' new') : '')),
+      row('#/parse/kinds/ind', 'Indicative', rows + ' of ' + ROW_KEYS.length + ' rows open' + (n ? ', ' + (p.due.length ? p.due.length + ' due' : p.nw.length + ' new') : '')),
       ...FAMILIES.map((f) => row('#/parse/kinds/' + f.id, f.name, nOpen(f) + ' of ' + f.kinds.length + ' kinds open'))),
     h('p.small', h('a', { href: '#/parse/gates' }, 'What’s open ›')));
+}
+
+const longName = (n) => n.replace('mid/pas', 'middle/passive').replace(/\bfut\b/, 'future').replace(/\bact\b/, 'active').replace(/\bmid\b/, 'middle').replace(/\bpas\b/, 'passive').replace(/^./, (c) => c.toUpperCase());
+const TENSES = [['pres', 'Present'], ['impf', 'Imperfect'], ['fut', 'Future'], ['aor', 'Aorist'], ['perf', 'Perfect']];
+/** The indicative: the rows of the master verb chart, grouped by tense; a row opens when its squares are learned. */
+export function renderRows(view) {
+  const p = chartPlan(), due = p.due.length;
+  clear(view).append(backHead('Indicative', '#/parse', 'Parsing'), h('div.stack',
+    h('p.muted.small', 'A row opens in daily parsing when you have learned its squares on the master verb chart. Present active is always open.'),
+    h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run' }, 'Drill all rows' + (due ? ' (' + due + ' due)' : '')), h('a.btn.ghost', { href: '#/learn/charts' }, 'Study the chart')),
+    ...TENSES.flatMap(([pre, title]) => {
+      const rs = ROWS.filter((r) => r.key.startsWith(pre));
+      return rs.length ? [h('div.sec', title), h('div.list', rs.map((r) => {
+        const on = gateOpen('row:' + r.key), got = chartRowSquares(r.key);
+        return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', longName(r.name)), h('div.muted.small', on ? 'Open in daily parsing' : got + ' of ' + CHART_ATTRS.length + ' squares learned')),
+          chip(on), h('a.btn.sm', { href: '#/learn/charts/run/' + r.key }, 'Drill'));
+      }))] : [];
+    })));
 }
 
 /** One family: its kinds, each open or locked, with a drill. */

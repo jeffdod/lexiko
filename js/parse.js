@@ -21,7 +21,7 @@ import { requiredStems } from './stems.js';
 import { currentGoal, goalWords, formOpen, gateOpen } from './know.js';
 import { isLiquidVerb } from './families.js';
 import { gateKey } from './kinds.js';
-import { unlockSection, renderKinds, renderGates, renderHowto } from './gatesui.js';
+import { unlockSection, renderKinds, renderRows, renderGates, renderHowto } from './gatesui.js';
 import { store } from './store.js';
 import { renderClues } from './cluehunt.js';
 import { renderBuild } from './buildform.js';
@@ -653,7 +653,7 @@ export function renderParse(view, params) {
     return runSession(view, q, { title: scope ? scopeLabel(scope) : KIND_TITLE[kind], scope, restart: () => renderParse(view, params) });
   }
   if (mode === 'form') return practiceForm(view);
-  if (mode === 'kinds') return renderKinds(view, rest[0]);
+  if (mode === 'kinds') return rest[0] === 'ind' ? renderRows(view) : renderKinds(view, rest[0]);
   if (mode === 'gates') return renderGates(view);
   if (mode === 'howto') return renderHowto(view);
   landing(view);

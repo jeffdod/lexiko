@@ -36,7 +36,7 @@ const { chromium } = require('playwright');
     await K.setGate('verbs', false); await K.setSetting('verbAsk', { n: 0, t: 0 });
     const t0 = 1e12; o.ask = [K.verbAskDue(t0)]; await K.noteVerbAsk(t0); o.ask.push(K.verbAskDue(t0 + 864e5), K.verbAskDue(t0 + 8 * 864e5)); await K.noteVerbAsk(t0 + 8 * 864e5); o.ask.push(K.verbAskDue(t0 + 99 * 864e5));
     // verbs off: no verb form in a daily session
-    await K.setSetting('gates', {}); let verbForms = 0, all = 0;
+    await K.setSetting('gates', {}); await K.setSetting('level', 50); let verbForms = 0, all = 0;
     K.K.settings.sessionSize = 60; K.K.settings.parseNewPerDay = 60;
     for (let i = 0; i < 5; i++) for (const x of P.buildParseSession({})) { all++; const L = Dm.lexByN.get(Dm.forms[x.id].an[0].s); if (L && L.verb) verbForms++; }
     o.session = [verbForms, all];
@@ -64,6 +64,14 @@ const { chromium } = require('playwright');
   ok(r.session[1] > 0 && r.session[0] === 0, 'no verb form in a session while verbs are off: ' + r.session);
   ok(r.clean[0] === 0 && r.clean[1] === true, 'the clean start resets the gates: ' + r.clean);
   ok(r.keys === 56, 'gate keys: ' + r.keys);
+  // the Indicative page: every chart row, grouped, each with its own drill
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setSetting('gates', { verbs: true }); });
+  await p.goto('http://localhost:8123/lexiko/#/home'); await p.waitForTimeout(500); await p.goto('http://localhost:8123/lexiko/#/parse'); await p.waitForTimeout(1200);
+  const link = await p.locator('a.li:has-text("Indicative")').getAttribute('href');
+  await p.goto('http://localhost:8123/lexiko/' + link); await p.waitForTimeout(800);
+  const ind = await p.evaluate(() => ({ h: location.hash, rows: document.querySelectorAll('#view .list .li').length, drills: [...document.querySelectorAll('#view .list a.btn')].map((a) => a.getAttribute('href')), open: [...document.querySelectorAll('#view .chip.good')].length, text: document.getElementById('view').innerText }));
+  ok(link === '#/parse/kinds/ind' && ind.rows === 20 && ind.drills.length === 20 && ind.drills.every((d) => /^#\/learn\/charts\/run\/[a-z0-9-]+$/.test(d)), 'the Indicative page lists the 20 chart rows, each with a drill: ' + JSON.stringify({ link, rows: ind.rows }));
+  ok(ind.open === 1 && /Present active/.test(ind.text) && /0 of 5 squares learned/.test(ind.text), 'only present active is open at first, and progress reads "0 of 5 squares learned"');
   ok(!errs.length, 'page errors: ' + errs.join('|'));
   console.log(process.exitCode ? 'FAILED' : 'ALL OK'); await b.close();
 })();
