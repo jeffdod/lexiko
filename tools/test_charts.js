@@ -59,12 +59,12 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     return { same: k.dueTotal() === t0 && P.parseDueCount() === pd, chartDue: k.chartCardsDue().length, sessionHasChart: [...k.dueCards().map((c) => c.id), ...k.parseCardsDue().map((c) => c.id)].some((id) => /^[ce]:/.test(id)) }; });
   ok(mix.chartDue === 20 && mix.same && !mix.sessionHasChart, 'chart squares are not counted in word or form reviews', JSON.stringify(mix));
 
-  // learning a level of the chart opens the verb forms
-  const u = await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/fsrs.js'), L = await import('./js/families.js'); await k.setSetting('formLevel', 1); k.K.famAcc = {};
-    const lv3 = Object.keys(L.ROW_LEVEL).filter((r) => L.ROW_LEVEL[r] === 1); const before = k.formLevel();
-    for (const r of lv3) for (const a of L.CHART_ATTRS) { const id = 'c:' + r + ':' + a; k.K.cards.set(id, { ...F.newCard(id), state: 'review', stability: 20, reps: 4, last: Date.now(), due: Date.now() + 864e5 }); }
-    const known = k.chartKnown(1); await k.advanceLevels(); return { known, before, after: k.formLevel() }; });
-  ok(u.known && u.before === 1 && u.after >= 2, 'knowing every square of level 1 rows opens the next kind of verb form', JSON.stringify(u));
+  // learning a row of the chart opens that row's verb forms (once verb parsing is on)
+  const u = await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/fsrs.js'), L = await import('./js/families.js'); await k.setSetting('gates', { verbs: true });
+    const before = k.gateOpen('row:impf-act');
+    for (const a of L.CHART_ATTRS) { const id = 'c:impf-act:' + a; k.K.cards.set(id, { ...F.newCard(id), state: 'review', stability: 20, reps: 4, last: Date.now(), due: Date.now() + 864e5 }); }
+    return { before, after: k.gateOpen('row:impf-act'), other: k.gateOpen('row:aor1-act') }; });
+  ok(u.before === false && u.after === true && u.other === false, 'knowing every square of a chart row opens that row', JSON.stringify(u));
   // paradigms
   const pg = await p.evaluate(async () => { const P = await import('./js/paradigms.js'), C = await import('./js/chartdrill.js'), D = (await import('./js/data.js')).D; const out = { rows: 0, none: [], fullRows: 0, bad: [] }; const all = new Set(D.forms.map((f) => f.w.replace(/\u00ad/g, '')));
     for (const r of C.ROWS) { const x = P.paradigm(r.key); if (!x) { out.none.push(r.key); continue; } out.rows++; if (x.attested === 6) out.fullRows++;

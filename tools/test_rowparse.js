@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
   const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 420, height: 900 } }); let bad = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : 'FAIL  ') + m + (c ? '' : ' ' + x)); if (!c) bad++; };
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   await p.goto('http://localhost:8123/#/learn'); await p.waitForTimeout(1500);
-  const setup = await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.formLevel = F.NLEVELS; return true; });
+  const setup = await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.level = 0; k.K.settings.gates = k.allGatesOpen(); return true; });
   const pool = await p.evaluate(async () => { const P = await import('./js/parse.js'); const o = {}; for (const r of ['aor1-pas', 'pres-act', 'fut-act', 'fut-liq-act', 'aor1-act', 'aor-liq-act', 'perf2-act']) o[r] = P.rowPool(r).length; return o; });
   ok(pool['aor1-pas'] > 20 && pool['pres-act'] > 20, 'rows have forms from known verbs ' + JSON.stringify(pool));
   ok(pool['fut-liq-act'] > 0 && pool['aor-liq-act'] > 0, 'liquid rows have forms (liquid verbs only)');

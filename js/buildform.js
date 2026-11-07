@@ -543,7 +543,7 @@ export function moodSteps(d) {
 }
 
 export function renderBuild(view, mode, forced = null) {          // `forced`: a ready queue of decomposed forms (for tests and screenshots)
-  const any = mode === 'any', queue = forced || buildQueue(any), back = ['#/parse', 'Back to Verb practice'];
+  const any = mode === 'any', queue = forced || buildQueue(any), back = ['#/parse', 'Back to Parsing'];
   if (!queue.length) { clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.card.stack', h('p', 'There are no forms to build yet' + (any ? '' : ' in verbs you know') + '. Forms open up as you learn the chart rows and the verbs. Verbs with contracted or irregular stems are left out.'), any ? null : h('a.btn', { href: '#/parse/run/build/any' }, 'Try with any verb'), ...backLinks(...back))); return; }
   const tally = [0, 0], missed = {}; let at = 0, strip = { states: [''], titles: [] }, stripEl = null, shownAt = 0;
   const done = () => clear(view).append(backHead('Build the form', '#/parse', 'Parsing'), h('div.card.stack', h('h2', 'Practice complete'), h('p.muted.small', 'Practice only: nothing here changes your review schedule.'),

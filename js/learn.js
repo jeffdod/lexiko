@@ -10,6 +10,7 @@ import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore } from './retry.js';
 import { h, clear, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
+import { verbQuestion } from './gatesui.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
@@ -111,6 +112,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         practice ? null : h('div.kpi', h('b', stats.fresh), h('span', 'new words started')),
         stats.probes ? h('div.kpi', h('b', stats.probes - stats.probeMiss + '/' + stats.probes), h('span', 'check-ins held')) : null),
         stats.probeMiss ? h('p.muted', stats.probeMiss + ' word' + (stats.probeMiss > 1 ? 's' : '') + ' you’d assumed you knew slipped; they’re back in your review pile.') : null,
+        !practice && items.some((i) => { const L = lexeme(i.n); return L && L.verb; }) ? verbQuestion() : null,
         missedBlock([...missed].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: L.brief }; }),
           () => runSession(view, [...missed].map((m) => ({ ...m, type: 'practice', seen: false, retry: false })), { title, scope, back, practice: true })),
         h('div.row.wrap', addBtn, scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null,

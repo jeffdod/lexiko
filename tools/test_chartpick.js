@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
   const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 390, height: 860 } }); const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
   const ok = (c, m) => { if (!c) { console.log('FAIL: ' + m); process.exitCode = 1; } };
-  const know = (lvl) => p.evaluate(async (lvl) => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'); K.K.settings.level = lvl; K.K.settings.formLevel = F.NLEVELS; }, lvl);
+  const know = (lvl) => p.evaluate(async (lvl) => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'); K.K.settings.level = lvl; K.K.settings.gates = K.allGatesOpen(); }, lvl);
   await p.goto('http://localhost:8123/lexiko/#/learn/charts'); await p.waitForTimeout(1800); await know(0);
   // the entry point, inside the Master verb chart card
   ok(await p.locator('.card:has(h2:text("Master verb chart")) a[href="#/learn/charts/pick"]').count() === 1, 'the Master verb chart card has a "Parse from this chart" button');

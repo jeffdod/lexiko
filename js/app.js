@@ -7,7 +7,8 @@ import { upcoming, whenText, counts, smartAll } from './smart.js';
 import { renderReader } from './reader.js';
 import { renderLearn } from './learn.js';
 import { renderProgress } from './progress.js';
-import { renderParse, bootFamilies } from './parse.js';
+import { renderParse } from './parse.js';
+import { bootGates } from './know.js';
 import { renderParts } from './parts.js';
 import { renderReference } from './reference.js';
 import { renderSearch } from './search.js';
@@ -93,7 +94,7 @@ async function boot() {
   }
   applyTheme(K.settings.theme);
   try { localStorage.setItem('lexiko-theme', K.settings.theme); } catch { /* ignore */ }
-  try { await bootFamilies(); } catch (e) { console.warn('form levels:', e); }
+  try { await bootGates(); } catch (e) { console.warn('gates:', e); }
   buildNav(); startAutoBackup();
   window.addEventListener('hashchange', route);
   travelBar();
