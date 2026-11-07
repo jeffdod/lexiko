@@ -16,6 +16,7 @@ Open `https://lexiko.org/` and "Add to Home Screen" / "Install app". It then run
 ```
 python3 tools/build_data.py sources/rp sources/lexicon/Dodson-Ulrik.txt sources/lexicon/user-lexicon.txt data   # RP + lexicon -> data/*.json
 python3 tools/build_pericopes.py sources/pericopes/kretzmann.txt data                                  # section headings -> data/pericopes.json
+python3 tools/build_english.py                                                                         # English text (sources/english) -> data/english/*.json; run after build_data.py, it checks every verse against the Greek
 python3 tools/make_fonts.py <GentiumPorsonic dir> fonts                                               # subset + rename + woff2
 python3 tools/make_icons.py && node tools/render_icons.js                                              # icons, favicon, social card
 python3 tools/build_sw.py        # ALWAYS run after changing any app file: regenerates the offline precache list/version
@@ -32,7 +33,7 @@ node tools/test_a11y.js          # names, tap targets and contrast, light and da
 Users get new versions automatically: the service worker notices a changed `sw-assets.js`, downloads the update, and shows an "Update ready — Reload" banner.
 
 ## How it works
-* `data/` – `lexicon.json` (5,381 lexemes: Strong's no., headword, gloss, frequency), `forms.json` (20,591 distinct word forms with soft hyphens and RP parsing; alternate parsings kept), `text/XXX.json` (one token stream per book, ints = form id × 16 + punctuation (0–4) + 8 if an em-dash follows the word; in the Beta source a trailing `-` or `_` marks that dash, and the following space is dropped). `pericopes.json` holds 589 section headings; each runs to the verse before the next heading.
+* `data/` – `lexicon.json` (5,381 lexemes: Strong's no., headword, gloss, frequency), `forms.json` (20,591 distinct word forms with soft hyphens and RP parsing; alternate parsings kept), `text/XXX.json` (one token stream per book, ints = form id × 16 + punctuation (0–4) + 8 if an em-dash follows the word; in the Beta source a trailing `-` or `_` marks that dash, and the following space is dropped). `pericopes.json` holds 589 section headings; each runs to the verse before the next heading. `english/XXX.json` (built by `tools/build_english.py` from `sources/english/`) holds the English of one book as `[[chapter, [[verse, "text"], ...]], ...]`; the reader loads a book's English only when the English translation switch is on. Words in `[square brackets]` were supplied by the translators and show in italics.
 * Words are keyed by **Strong's number**; frequencies are counted from the RP text itself.
 * A word is *known* if you have a mature SRS card for it, or (no card yet) its frequency ≥ your declared level. Missing a "known" word in a check-in demotes it to learning.
 * Passage readiness = share of the running words you know. ≥98 % Ready · 95–98 % Comfortable · 90–95 % Stretch · 80–90 % Challenging.
@@ -55,6 +56,7 @@ Parsing a passage (Study a passage) has two one-click buttons for the same text:
 
 ## Sources and licences
 * **Greek text:** Robinson–Pierpont Byzantine Textform (CCAT Beta Code with Strong's and RP morphology codes) — the 2026 edition, released into the **public domain on 16 Aug 2026**, so the full text is published here (`sources/rp/`).
+* **English:** American Standard Version Byzantine Text. The ASV is in the public domain; Adam Boyd's changes were dedicated to the public domain in 2021 (ebible.org/engasvbt/copyright.htm). This copy follows the RP verse divisions and includes later corrections by Adam Boyd, so it differs from the eBible edition in places.
 * **Section headings:** Kretzmann pericope list (`sources/pericopes/kretzmann.txt`), supplied by the project owner.
 * **Glosses:** the project owner's lexicon, a derivative of the **Dodson Greek–English Lexicon** (public domain / CC0, via biblicalhumanities/Dodson-Greek-Lexicon). Long definitions come from Dodson.
 * **Font:** Gentium Porsonic © SIL Global, **SIL Open Font License 1.1** (`fonts/OFL.txt`). The woff2 files are a modified subset, so the OFL's reserved names "Gentium"/"SIL" are not used: the web family is called **Lexiko Serif**; copyright and licence text remain inside the font files.

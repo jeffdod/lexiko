@@ -1,5 +1,5 @@
 // The reader: Greek text with tap/click word popups, optional glosses for unknown words, readiness per chapter.
-import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange } from './data.js';
+import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange, loadEnglish, englishVerse } from './data.js';
 import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal } from './know.js';
 import { partsGrid } from './partforms.js';
@@ -9,6 +9,8 @@ import { rowOfTag } from './families.js';
 import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/** A verse's English as HTML. [Bracketed] words are words the translators supplied; they show in italics, without the brackets. */
+const englishHTML = (t) => esc(t).replace(/\[([^\]]*)\]/g, '<i>$1</i>');
 
 export const readHref = (code, ch, vs) => '#/read/' + code + '/' + ch + (vs ? '/' + vs : '');
 
@@ -71,7 +73,7 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
       if (L.verb && rowOfTag(a.m, a.s)) act.append(h('button.btn.sm', { onclick: () => {
         const vs = popAnchor && popAnchor.isConnected ? popAnchor.closest('.verse') : null;
         clueRef.back = location.hash; clueRef.verse = null;
-        if (vs) { const c = vs.cloneNode(true); c.querySelectorAll('.vn, .gl').forEach((e) => e.remove()); clueRef.verse = c.textContent.replace(/\u00ad/g, '').replace(/\s+/g, ' ').trim(); }
+        if (vs) { const c = vs.cloneNode(true); c.querySelectorAll('.vn, .gl, .en').forEach((e) => e.remove()); clueRef.verse = c.textContent.replace(/\u00ad/g, '').replace(/\s+/g, ' ').trim(); }
         location.hash = '#/parse/run/clues/form/' + (token >> 4) + '/' + f.an.indexOf(a);
       } }, 'Find the clues'));
       if (status(L.n) === 'known') act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to words to review'); onStatus && onStatus(); } }, '↺ Review this'));
@@ -101,6 +103,7 @@ function showPop(el, pinned, rerender) {
 /* ---------------- text rendering ---------------- */
 function verseHTML(vs, toks, seenGloss, opts) {
   let out = '<span class="verse" id="v' + vs + '">';
+  if (opts.english) out += '<span class="gk">';           // the Greek in one piece, so the English can sit under it (or beside it on a wide screen)
   if (opts.verseNums) out += '<span class="vn">' + vs + '</span>';
   const sn = senseNs(toks);
   for (let k = 0; k < toks.length; k++) {
@@ -114,6 +117,11 @@ function verseHTML(vs, toks, seenGloss, opts) {
       seenGloss.add(s); glossed = true; out += ' <span class="gl">(' + esc(lexeme(s).short) + ')</span>';
     }
     out += dash && !glossed ? '' : ' ';
+  }
+  if (opts.english) {
+    out += '</span>';
+    const en = opts.english(vs);
+    if (en) out += '<span class="en" lang="en">' + englishHTML(en) + '</span>';
   }
   return out + '</span> ';
 }
@@ -148,9 +156,11 @@ export function renderReader(view, params) {
   const meta = h('div.row.wrap.between', { style: { margin: '.2rem 0 .6rem' } });
   const foot = h('div');
   const draw = () => {
-    const opts = { verseNums: setting('verseNums'), gloss: setting('glossMode'), glossRepeat: setting('glossRepeat') };
+    const eng = setting('english') && D.english[book.code];            // this book's English, once it has loaded
+    const opts = { verseNums: setting('verseNums'), gloss: setting('glossMode'), glossRepeat: setting('glossRepeat'), english: eng ? (vs) => englishVerse(book.code, ch, vs) : null };
     view.style.setProperty('--reader-size', setting('readerSize') + 'rem');
     body.classList.toggle('hl', !!setting('highlight'));
+    body.classList.toggle('par', !!eng);
     const seen = new Set(); let html = '', open = false;
     for (const [vs, toks] of chapterVerses(book.code, ch)) {
       const sec = D.periAt.get(book.code + ':' + ch + ':' + vs);
@@ -191,13 +201,16 @@ export function renderReader(view, params) {
   };
   const options = () => {
     const dlg = h('dialog');
-    const sw = (label, desc, key) => h('label.switch', h('span', h('div.t', label), h('div.d', desc)),
-      h('input', { type: 'checkbox', checked: !!setting(key), onchange: async (e) => { await setSetting(key, e.target.checked); draw(); } }));
+    const sw = (label, desc, key, before) => h('label.switch', h('span', h('div.t', label), h('div.d', desc)),
+      h('input', { type: 'checkbox', checked: !!setting(key), onchange: async (e) => { await setSetting(key, e.target.checked); if (before) await before(e.target.checked); draw(); } }));
     dlg.append(h('div.row.between', h('h2', 'Reading options'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close', onclick: () => dlg.close() }, icon('close', 18))),
       sw('Glosses for unknown words', 'Show a short gloss in parentheses after words you don’t know yet.', 'glossMode'),
       sw('Repeat glosses', 'Show the gloss on every occurrence, not just the first in the chapter.', 'glossRepeat'),
       sw('Underline unknown words', 'Dotted = new to you, dashed = still learning.', 'highlight'),
       sw('Verse numbers', '', 'verseNums'),
+      sw('English translation', 'Show the American Standard Version Byzantine Text with each verse.', 'english', async (on) => {
+        if (on && !D.english[book.code]) { try { await loadEnglish(book.code); } catch { toast('The English translation could not be loaded'); } }
+      }),
       h('div.row.between', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('span.t', { style: { fontWeight: 600 } }, 'Text size'),
         h('span.row', h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.max(0.95, +(setting('readerSize') - 0.1).toFixed(2))); draw(); } }, 'A−'),
           h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.min(2.4, +(setting('readerSize') + 0.1).toFixed(2))); draw(); } }, 'A+'))));
@@ -255,6 +268,17 @@ export function renderReader(view, params) {
   const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) hold(4000); };
   addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
 
-  if (vsS) { const v = body.querySelector('#v' + (+vsS)); if (v) { v.classList.add('focus'); requestAnimationFrame(() => v.scrollIntoView({ block: 'center' })); } } else scrollTo(0, 0);
-  return () => { hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  const placeVerse = () => { const v = body.querySelector('#v' + (+vsS)); if (v) { v.classList.add('focus'); requestAnimationFrame(() => v.scrollIntoView({ block: 'center' })); } };
+  if (vsS) placeVerse(); else scrollTo(0, 0);
+  // The route renderer is synchronous, so the Greek shows first and this book's English folds in when it has loaded.
+  let alive = true;
+  if (setting('english') && !D.english[book.code]) {
+    loadEnglish(book.code).then(() => {
+      if (!alive) return;
+      calm = performance.now() + 500;
+      const y = scrollY; draw();
+      if (vsS && y < 80) placeVerse(); else scrollTo(0, y);
+    }).catch(() => toast('The English translation could not be loaded'));
+  }
+  return () => { alive = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }
