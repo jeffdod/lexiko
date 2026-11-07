@@ -10,11 +10,12 @@ export const TOPICS = {
 };
 const ORDER = ['words', 'parse'];
 
+const parseReady = () => K.settings.level != null || studiedCount('w:') > 0;
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
   return {
     words: { due: dueCards().length, fresh: wordsPace().left, studied: studiedCount('w:') },
-    parse: { due: parseDueCount(), fresh: parsePace().left, studied: studiedCount('f:') },
+    parse: { due: parseDueCount(), fresh: parseReady() ? parsePace().left : 0, studied: studiedCount('f:') },      // nothing to parse until you know some words (a level you chose counts)
   };
 }
 

@@ -6,7 +6,7 @@ import { goalLabel } from './know.js';
 import { goalPicker, previewLine, miniGoalCard } from './goals.js';
 import { h, clear, add, pct, fmt, icon } from './util.js';
 import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
-import { counts } from './smart.js';
+import { counts, smart } from './smart.js';
 import { renderWelcome } from './welcome.js';
 import { readHref } from './reader.js';
 
@@ -75,6 +75,10 @@ export function goalDetailCard(redraw) {
 }
 
 /** The goal on Home: a short summary. A tap opens Progress; Change › opens the picker in place. */
+/** For a new person, until the first session is finished: one clear next step. */
+const startHere = (n) => h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Start here'),
+  h('p.muted.small', { style: { margin: 0 } }, (n ? fmt(n) + ' new ' + (n === 1 ? 'word is' : 'words are') + ' ready.' : 'Today’s new words are ready.') + ' Start with a short session.'),
+  h('div.row', h('a.btn.primary', { href: smart('words').href }, 'Start with today’s new words')));
 function goalSummary(view) {
   if (K.goal && goalFinished(currentGoal())) return finishedCard(() => renderHome(view));
   const box = h('div.card.stack'), g = currentGoal();
@@ -109,12 +113,15 @@ export function renderHome(view) {
       h('div.row.wrap', { style: { marginTop: '.6rem' } }, h('button.btn.primary.sm', { onclick: async () => { if (await runBackup()) renderHome(view); } }, 'Back up now'), h('button.btn.sm', { onclick: async () => { await snoozeBackupReminder(); renderHome(view); } }, 'Not now'))))); }
 
   // 1. the goal: a summary, and a tap opens Progress
+  if (!cnt.words.studied && !cnt.words.due) stack.append(startHere(cnt.words.fresh));
   stack.append(goalSummary(view));
 
   // 2. the areas
-  const area = (href, ic, title, sub, n) => h('a.area', { href }, icon(ic, 30), h('div', h('b', title), h('span', sub)), n ? h('em.due', n + ' due') : null);
-  stack.append(area('#/learn/words', 'learn', 'Vocabulary', 'Learn, review, look ahead', cnt.words.due),
-    area('#/parse', 'text', 'Parsing', 'Practice forms and unlock verb types', cnt.parse.due),
+  const area = (href, ic, title, sub, badge) => h('a.area', { href }, icon(ic, 30), h('div', h('b', title), h('span', sub)), badge ? h('em.due', badge) : null);
+  const wordsBadge = cnt.words.due ? cnt.words.due + ' due' : cnt.words.fresh ? cnt.words.fresh + ' new' : null;      // nothing due yet: say how many new words are ready
+  const nothingYet = !cnt.words.studied && !cnt.parse.due && !cnt.parse.fresh;
+  stack.append(area('#/learn/words', 'learn', 'Vocabulary', 'Learn, review, look ahead', wordsBadge),
+    area('#/parse', 'text', 'Parsing', nothingYet ? 'Opens as you learn words' : 'Practice forms and unlock verb types', cnt.parse.due ? cnt.parse.due + ' due' : cnt.parse.fresh ? cnt.parse.fresh + ' to practice' : null),
     area('#/reference', 'table', 'Reference', 'Glossary, charts and paradigms'));
   stack.append(h('a.small.center', { href: '#/help', style: { textAlign: 'center' } }, 'How lexiko works ›'));
   clear(view).append(stack);

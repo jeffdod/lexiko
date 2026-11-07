@@ -20,6 +20,10 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   });
   ok(r.had && r.st === 'learning' && r.gone, 'a word you have only just started supplies no forms', JSON.stringify(r));
   ok(r.allKnown, 'every new noun-type form comes from a known word', String(r.n));
+  // a true beginner (no level, nothing studied): no parsing at all until some words are known
+  const nb = await p.evaluate(async () => { const k = await import('./js/know.js'), pm = await import('./js/parse.js'), sm = await import('./js/smart.js'); await k.setSetting('level', null);
+    const o = { session: pm.buildParseSession({}).length, fresh: sm.counts().parse.fresh }; await k.setSetting('level', 50); o.withLevel = sm.counts().parse.fresh; return o; });
+  ok(nb.session === 0 && nb.fresh === 0 && nb.withLevel > 0, 'a beginner is asked no parsing questions yet', JSON.stringify(nb));
   ok(errs.length === 0, 'no page errors', errs.join('|'));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();
