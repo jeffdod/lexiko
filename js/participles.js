@@ -2,12 +2,13 @@
 // on real participles from verbs you know. Practice only: nothing here touches the review schedule.
 import { D } from './data.js';
 import { participleForms } from './parse.js';
+import { noteParticiple, ptcDrillStats, ptcDrillKnown, formLevel, ptcLevel } from './know.js';
 import { openCharts } from './charts.js';
 import { PTC, PTCB, CELL_ROWS, modelForm, split, skel, chars, isLiquid, aoristNotes, FORMATIVE_MEANING, MORPHEME_MEANING, LOOKALIKE } from './ptcdata.js';
 import { contractType, contractSplit, pairsFrom, contractNote } from './contract.js';
 import { miClass, miSplit, explainMi } from './midata.js';
 import { tailsOf } from './ptcdata.js';
-import { h, clear, icon, pct, shuffle, missedBlock, backHead, backLinks } from './util.js';
+import { h, clear, icon, pct, shuffle, missedBlock, backHead, backLinks, toast } from './util.js';
 
 const lg = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
 const stemOf = (r) => chars(r.forms[0][0]).slice(0, r.stemLen).join('');
@@ -101,6 +102,13 @@ export function explain(x) {
   return bits;
 }
 
+/** Where you stand on opening participles in daily parsing. */
+function gateLine() {
+  if (formLevel() >= ptcLevel()) return h('p.muted.small', 'Participles are open in daily parsing.');
+  const s = ptcDrillStats(), need = Math.max(0, 15 - s.n);
+  return h('p.small', h('b', 'Opening participles in daily parsing: '), need ? 'answer ' + need + ' more participles here, then lexiko checks whether you are at 85% or better.' : 'you are at ' + pct(s.acc) + ' over your last ' + s.n + ' answers. At 85% or better they open.');
+}
+
 export function runPtcDrill(view, only = null) {
   const queue = ptcQueue(only).map((x) => ({ x, tries: 0 }));
   if (!queue.length) {
@@ -112,7 +120,7 @@ export function runPtcDrill(view, only = null) {
   const finish = () => {
     stop();
     clear(view).append(h('div.pagehead', h('h1', 'Practice complete')),
-      h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'),
+      h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'), gateLine(),
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'participles')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((x) => ({ word: x.w, greek: true, sub: PTCB.get(x.key).name, why: null })), () => { const again = S.missed.map((x) => ({ x, tries: 1 })); S.missed = []; queue.length = 0; queue.push(...again); S.shown = 0; S.round = 0; next(); }),
         h('div.row.wrap', h('a.btn.primary', { href: only ? '#/learn/charts/participle/' + only : '#/learn/charts/participles' }, only ? 'Back to the paradigm' : 'Back to Participles'), ...backLinks('#/home', 'Back to Home'))));
@@ -126,7 +134,10 @@ export function runPtcDrill(view, only = null) {
   };
   const after = (c, right) => {
     const ok = right && !c.peek;                                      // the second hint counts as a miss
-    if (c.tries === 0) { S.done++; if (ok) S.good++; else { S.missed.push(c.x); retryQ.push({ x: c.x, tries: 1 }); } }
+    if (c.tries === 0) {
+      S.done++; if (ok) S.good++; else { S.missed.push(c.x); retryQ.push({ x: c.x, tries: 1 }); }
+      noteParticiple(ok).then((lv) => { if (lv) toast('Participles are now open in daily parsing.', 8000); });
+    }
     next();
   };
   function show(c) {

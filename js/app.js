@@ -1,6 +1,6 @@
 // lexiko — app shell: loading, routing, navigation, service worker, install prompt.
 import { loadData } from './data.js';
-import { initKnow, K } from './know.js';
+import { initKnow, K, bootParticipleGate } from './know.js';
 import { requestPersistence } from './store.js';
 import { renderHome } from './home.js';
 import { upcoming, whenText, counts, smartAll } from './smart.js';
@@ -93,7 +93,7 @@ async function boot() {
   }
   applyTheme(K.settings.theme);
   try { localStorage.setItem('lexiko-theme', K.settings.theme); } catch { /* ignore */ }
-  try { await bootFamilies(); } catch (e) { console.warn('form levels:', e); }
+  try { await bootFamilies(); await bootParticipleGate(); } catch (e) { console.warn('form levels:', e); }
   buildNav(); startAutoBackup();
   window.addEventListener('hashchange', route);
   travelBar();

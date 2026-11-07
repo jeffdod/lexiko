@@ -18,7 +18,7 @@ import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
-import { currentGoal, goalWords, formLevel, chartAllowsAny, miHeld, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW } from './know.js';
+import { currentGoal, goalWords, formLevel, chartAllowsAny, miHeld, noteFamily, advanceLevels, famStats, openNextLevel, FAM_MIN, FAM_ACC, FAM_WINDOW, ptcLevel, ptcDrillStats } from './know.js';
 import { levelOfTag, NLEVELS, levelName, isLiquidVerb } from './families.js';
 import { store } from './store.js';
 import { renderClues } from './cluehunt.js';
@@ -681,9 +681,10 @@ function levelsCard(redraw, bare = false) {
     h('div.row.wrap', { style: { gap: '.4rem' } }, Array.from({ length: lv }, (_, i) => h('span.chip.accent', levelName(i + 1)))));
   if (lv < NLEVELS) {
     const st = famStats(lv), pc = (x) => Math.round(x * 100) + '%';
-    const how = st.n < FAM_MIN ? 'Answer ' + (FAM_MIN - st.n) + ' more questions on the newest kind above and lexiko will check whether to open the next one.' : 'Opens at ' + pc(FAM_ACC) + ' over your last ' + FAM_WINDOW + ' answers (you: ' + pc(st.acc) + ').';
+    const ptcNext = lv + 1 === ptcLevel(), ps = ptcDrillStats();
+    const how = ptcNext ? 'They open once you answer ' + pc(FAM_ACC) + ' right over your last ' + FAM_WINDOW + ' in the participle drill' + (ps.n >= FAM_MIN ? ' (you: ' + pc(ps.acc) + ').' : ps.n ? ' (you have answered ' + ps.n + ' so far; it needs at least ' + FAM_MIN + ').' : '.') : st.n < FAM_MIN ? 'Answer ' + (FAM_MIN - st.n) + ' more questions on the newest kind above and lexiko will check whether to open the next one.' : 'Opens at ' + pc(FAM_ACC) + ' over your last ' + FAM_WINDOW + ' answers (you: ' + pc(st.acc) + ').';
     box.append(h('p.small', h('b', 'Next: '), levelName(lv + 1) + '. ' + how),
-      h('div.row.wrap', h('button.btn.sm', { onclick: async () => { await openNextLevel(); redraw(); } }, 'Open it now')));
+      h('div.row.wrap', ptcNext ? h('a.btn.sm.primary', { href: '#/learn/charts/participles/run' }, 'Practice participles ›') : null, h('button.btn.sm', { onclick: async () => { await openNextLevel(); redraw(); } }, 'Open it now')));
   } else box.append(h('p.muted.small', 'Every kind of form is open.'));
   return box;
 }

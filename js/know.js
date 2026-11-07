@@ -5,14 +5,14 @@ import { D, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBoo
 import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
-import { levelOfTag, NLEVELS, CHART_ATTRS, ROW_LEVEL, rowOfTag } from './families.js';
+import { levelOfTag, NLEVELS, CHART_ATTRS, ROW_LEVEL, rowOfTag, laterOrder } from './families.js';
 import { miClass } from './midata.js';
 
 export const DEFAULTS = {
   theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
   readerSize: 1.35, verseNums: true, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, formLevel: 1, formsAll: false, formsByChart: false, holdMi: false, barsDebug: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, famAcc: {}, ptcAcc: [], ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -30,6 +30,7 @@ export async function initKnow() {
   K.parseAcc = (await store.get('parseAcc')) || [];
   K.verbParse = (await store.get('verbParse')) || {};
   K.famAcc = (await store.get('famAcc')) || {};
+  K.ptcAcc = (await store.get('ptcAcc')) || [];
   K.ready = true;
 }
 
@@ -404,11 +405,27 @@ export const chartAllows = (tag, n) => { if (!K.settings.formsByChart) return tr
 /** The same for a form with several possible parses (tags): it waits unless some indicative parse has its row learned, or none is indicative. */
 export const chartAllowsAny = (tags, n) => { if (!K.settings.formsByChart) return true; const rs = tags.map((t) => rowOfTag(t, n)).filter(Boolean); return !rs.length || rs.some(chartRowKnown); };
 export const famGate = (l) => { const s = famStats(l); return (s.n >= FAM_MIN && s.acc >= FAM_ACC) || chartKnown(l); };
-/** Open the next level while the newest open one is answered well enough. Returns the new level if any opened. */
+/** The level of participles (they come after the indicative, ordered by how often they occur in the text). */
+export const ptcLevel = () => 4 + laterOrder().indexOf('P');
+/** Participles do not open on their own until the participle drill ("Which kind is it?") shows you know the basic kinds: right at the same rate as any other level, over its own last answers. */
+export function ptcDrillStats() { const a = K.ptcAcc.slice(-FAM_WINDOW); return { n: a.length, acc: a.length ? mean(a) : null }; }
+export const ptcDrillKnown = () => { const s = ptcDrillStats(); return s.n >= FAM_MIN && s.acc >= FAM_ACC; };
+/** Open the next level while the newest open one is answered well enough (participles also wait for the participle drill). Returns the new level if any opened. */
 export async function advanceLevels() {
   let moved = false;
-  while ((K.settings.formLevel || 1) < NLEVELS && famGate(K.settings.formLevel || 1)) { await setSetting('formLevel', (K.settings.formLevel || 1) + 1); moved = true; }
+  while ((K.settings.formLevel || 1) < NLEVELS && famGate(K.settings.formLevel || 1) && ((K.settings.formLevel || 1) + 1 !== ptcLevel() || ptcDrillKnown())) { await setSetting('formLevel', (K.settings.formLevel || 1) + 1); moved = true; }
   return moved ? K.settings.formLevel : 0;
+}
+/** One answer in the participle drill (the first try at each participle). Returns the new level if that opened participles. */
+export async function noteParticiple(ok) {
+  K.ptcAcc.push(ok ? 1 : 0); if (K.ptcAcc.length > FAM_WINDOW * 2) K.ptcAcc.shift();
+  await store.set('ptcAcc', K.ptcAcc); return advanceLevels();
+}
+/** Once: participles used to open on their own. Where they are open but the participle drill has not shown you know them, close them again; "Open it now" or the drill brings them back. */
+export async function bootParticipleGate() {
+  if (await store.get('ptcGate')) return;
+  if (!K.settings.formsAll && (K.settings.formLevel || 1) >= ptcLevel() && !ptcDrillKnown()) await setSetting('formLevel', ptcLevel() - 1);
+  await store.set('ptcGate', true);
 }
 /** Record one answer to a verb form of this level; returns the new level if that opened one. */
 export async function noteFamily(l, ok) {
