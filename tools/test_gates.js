@@ -71,6 +71,7 @@ const { chromium } = require('playwright');
   await p.goto('http://localhost:8123/lexiko/' + link); await p.waitForTimeout(800);
   const ind = await p.evaluate(() => ({ h: location.hash, rows: document.querySelectorAll('#view .list .li').length, drills: [...document.querySelectorAll('#view .list a.btn')].map((a) => a.getAttribute('href')), open: [...document.querySelectorAll('#view .chip.good')].length, text: document.getElementById('view').innerText }));
   ok(link === '#/parse/kinds/ind' && ind.rows === 20 && ind.drills.length === 20 && ind.drills.every((d) => /^#\/learn\/charts\/run\/[a-z0-9-]+$/.test(d)), 'the Indicative page lists the 20 chart rows, each with a drill: ' + JSON.stringify({ link, rows: ind.rows }));
+  ok(!/\bdue\b/.test(ind.text), 'chart squares are not called "due" on the Indicative page: ' + ind.text.slice(0, 160).replace(/\n/g, ' | '));
   ok(ind.open === 1 && /Present active/.test(ind.text) && /0 of 5 squares learned/.test(ind.text), 'only present active is open at first, and progress reads "0 of 5 squares learned"');
   ok(!errs.length, 'page errors: ' + errs.join('|'));
   console.log(process.exitCode ? 'FAILED' : 'ALL OK'); await b.close();
