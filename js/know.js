@@ -400,7 +400,8 @@ export const FAM_WINDOW = 20, FAM_MIN = 15, FAM_ACC = 0.85;
 const gateMap = () => K.settings.gates || {};
 export const verbsOn = () => !!gateMap().verbs;
 /** A square of the chart row is learned when its card is known; a row opens by itself once all of its squares are. */
-export const chartRowKnown = (r) => CHART_ATTRS.every((a) => cardKnown(K.cards.get('c:' + r + ':' + a)));
+export const chartRowSquares = (r) => CHART_ATTRS.filter((a) => cardKnown(K.cards.get('c:' + r + ':' + a))).length;       // how many of a row's squares are learned
+export const chartRowKnown = (r) => chartRowSquares(r) === CHART_ATTRS.length;
 export function gateOpen(key) {
   const g = gateMap(); if (!g.verbs) return false;
   if (key === 'row:pres-act') return true;
