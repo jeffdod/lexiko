@@ -11,7 +11,7 @@ import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore } from './retry.js';
 import { h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { verbQuestion } from './gatesui.js';
-import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards, counts as sessionCounts } from './smart.js';
+import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards, newLimitNote, counts as sessionCounts } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
 import { runDrill, renderChartsPage, renderParadigm, counts as chartCounts } from './chartdrill.js';
@@ -271,7 +271,7 @@ const bandLabel = ([lo, hi]) => hi >= 1e9 ? 'Words used ' + lo.toLocaleString('e
 /** Shown on the Vocabulary page when the verb brake is on. */
 function verbHold() {
   const b = verbBrake(); if (!b.braked) return null;
-  return h('div.card.small', h('b', 'New verbs are paused.'), ' ' + b.why + ' Other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See your verbs →')));
+  return h('div.card.small', h('b', b.why), ' Other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See your verbs →')));
 }
 
 /** One plain sentence on what a check-in is, shown only when today's session has some. */
@@ -284,6 +284,7 @@ function wordsPage(view) {
     h('div.stack',
       ...(doneCards('words') || [startButton(sm)]),
       checkinNote(),
+      newLimitNote('words') ? h('div.small.muted', newLimitNote('words')) : null,
       paceNote(wordsPace(), 'words'),
       verbHold(),
       goalDetailCard(() => wordsPage(view)),

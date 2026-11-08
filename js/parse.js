@@ -2,7 +2,7 @@
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, sameSpelledMP, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
@@ -13,7 +13,7 @@ import { INFB, infKey } from './infdata.js';
 import { SUBB, subKey } from './subdata.js';
 import { IMPB, impKey } from './impdata.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
-import { smart, TOPICS, doneCards } from './smart.js';
+import { smart, TOPICS, doneCards, newLimitNote } from './smart.js';
 import { miniGoalCard } from './goals.js';
 import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
@@ -109,6 +109,12 @@ export function parseDueCount(now = clockNow()) {
   return seen.size;
 }
 setParseDueCounter(parseDueCount);
+let freshMemo = null;      // cached for a few seconds: building the pool is not free, and Home asks often
+setParseFreshCounter(() => {
+  const key = [K.cards.size, K.settings.level, JSON.stringify(K.settings.gates || null), Math.floor(clockNow() / 3000)].join('|');
+  if (!freshMemo || freshMemo.key !== key) { ensureIndex(); freshMemo = { key, n: planParseSession({}).fresh.length }; }
+  return freshMemo.n;
+});
 
 /** What a session would contain right now: the due forms, then new ones up to the daily allowance. */
 export function planParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
@@ -694,6 +700,7 @@ async function landing(view) {
     h('div.stack',
       ...(doneCards('parse') || [startButton(sm)]),
       paceNote(parsePace(), 'forms'),
+      newLimitNote('parse') ? h('div.small.muted', newLimitNote('parse')) : null,
       h('div.row.wrap.links', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots')),
       unlockSection(),
       h('div.sec', 'Free practice'),

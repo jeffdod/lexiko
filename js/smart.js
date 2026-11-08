@@ -1,7 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
 import { clockNow } from './clock.js';
-import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, verbBrake, setting, dueCards, dueToday, withMore, moreUnlocked, unlockMore, newToday, parseDueCount, parseNewToday, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, buildSession, verbBrake, setting, dueCards, dueToday, withMore, moreUnlocked, unlockMore, newToday, parseDueCount, parseFreshCount, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
 export const TOPICS = {
@@ -20,7 +20,7 @@ function wordsCounts() {
 export function counts() {
   return {
     words: wordsCounts(),
-    parse: { due: parseDueCount(), fresh: parseReady() ? parsePace().left : 0, studied: studiedCount('f:') },      // nothing to parse until you know some words (a level you chose counts)
+    parse: { due: parseDueCount(), fresh: parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0, studied: studiedCount('f:') },      // nothing to parse until you know some words (a level you chose counts)
   };
 }
 
@@ -113,7 +113,8 @@ export function moreReady(topic) {
   const count = topic === 'words' ? () => dueCards().length : () => parseDueCount();
   const reviews = moreUnlocked() ? 0 : withMore(count) - count();
   const max = Math.max(0, setting(topic === 'words' ? 'newPerDay' : 'parseNewPerDay'));
-  const fresh = setting(topic + 'Pause') || (topic === 'parse' && !parseReady()) ? 0 : max;
+  const fresh = setting(topic + 'Pause') || (topic === 'parse' && !parseReady()) ? 0
+    : topic === 'words' ? buildSession({ kind: 'daily', newLimit: max }).filter((x) => x.type === 'new').length : Math.min(max, parseFreshCount());      // what could really be taught, not just the daily limit
   return { reviews, fresh };
 }
 
@@ -130,4 +131,14 @@ export function doneCards(topic) {
   out.push(h('div.card.stack', h('b', 'Want to keep going?'), h('div.small.muted', body),
     h('button.btn.primary.block', { onclick: async () => { await unlockMore(); location.hash = T.go; } }, 'Study ' + nn(total))));
   return out;
+}
+
+/** Why today's new count is below the daily limit (words already learned today, or nothing more to teach), or null when it is not. */
+export function newLimitNote(topic) {
+  const p = topic === 'words' ? wordsPace() : parsePace(), c = counts()[topic], T = TOPICS[topic];
+  if (p.paused || !p.n || p.left <= 0) return null;      // limit used up: the done card says so
+  const done = p.n - p.left, unavailable = p.left - c.fresh, bits = [];
+  if (done > 0) bits.push(done + ' already ' + (topic === 'words' ? 'learned' : 'practiced') + ' today');
+  if (unavailable > 0) bits.push(topic === 'words' ? (verbBrake().braked ? 'new verbs are paused' : 'that’s all that’s left to teach') : 'that’s all that’s available right now');
+  return bits.length ? 'Today’s limit is ' + p.n + ' new ' + T.noun + ': ' + bits.join('; ') + '.' : null;
 }

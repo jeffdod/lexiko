@@ -6,7 +6,7 @@ import { goalLabel } from './know.js';
 import { goalPicker, previewLine, miniGoalCard } from './goals.js';
 import { h, clear, add, pct, fmt, icon } from './util.js';
 import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
-import { counts, smart } from './smart.js';
+import { counts, smart, newLimitNote } from './smart.js';
 import { renderWelcome } from './welcome.js';
 import { readHref } from './reader.js';
 
@@ -118,8 +118,8 @@ export function renderHome(view) {
   const area = (href, ic, title, sub, badges = []) => { const bs = badges.filter(Boolean); return h('a.area', { href }, icon(ic, 30), h('div', h('b', title), h('span', sub)), bs.length ? h('div.badges', bs.map((t) => h('em.due', t))) : null); };
   const ci = cnt.words.checkins, wordsBadges = [cnt.words.due ? cnt.words.due + ' due' : '', cnt.words.fresh ? cnt.words.fresh + ' new' : '', ci ? ci + (ci === 1 ? ' check-in' : ' check-ins') : ''];      // every part of the coming session, so nothing is a surprise
   const nothingYet = !cnt.words.studied && !cnt.parse.due && !cnt.parse.fresh;
-  stack.append(area('#/learn/words', 'learn', 'Vocabulary', 'Learn, review, look ahead', wordsBadges),
-    area('#/parse', 'text', 'Parsing', nothingYet ? 'Opens as you learn words' : 'Practice forms and unlock verb types', [cnt.parse.due ? cnt.parse.due + ' due' : '', cnt.parse.fresh ? cnt.parse.fresh + ' new' : '']),
+  stack.append(area('#/learn/words', 'learn', 'Vocabulary', newLimitNote('words') || 'Learn, review, look ahead', wordsBadges),
+    area('#/parse', 'text', 'Parsing', nothingYet ? 'Opens as you learn words' : newLimitNote('parse') || 'Practice forms and unlock verb types', [cnt.parse.due ? cnt.parse.due + ' due' : '', cnt.parse.fresh ? cnt.parse.fresh + ' new' : '']),
     area('#/reference', 'table', 'Reference', 'Glossary, charts and paradigms'));
   stack.append(h('a.small.center', { href: '#/help', style: { textAlign: 'center' } }, 'How lexiko works ›'));
   clear(view).append(stack);
