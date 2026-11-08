@@ -474,3 +474,13 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .scrollfab { position: fixed; z-index: 19; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px); width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 14px rgba(0,0,0,.28); cursor: pointer; opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s; }
 .scrollfab.on { opacity: 1; visibility: visible; transition: opacity .2s ease; }
 @media (prefers-reduced-motion: reduce) { .scrollfab, .scrollfab.on { transition: none; } }
+
+/* "Where did this go wrong?" fold under a missed verb parsing */
+.whyfold { margin-top: .6rem; width: 100%; text-align: left; } .whyfold summary { cursor: pointer; font-size: .85rem; color: var(--accent); font-weight: 700; text-align: center; }
+.whybody { margin-top: .5rem; display: grid; gap: .6rem; }
+.whyblock { background: var(--surface-2); border-radius: 10px; padding: .55rem .75rem; }
+.whylabel { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--muted); }
+.whyparse { font-weight: 700; font-size: .9rem; margin: .1rem 0 .2rem; }
+.whyword { font-size: 1.35rem; }
+.whyword .dif { background: var(--warn-soft); color: var(--warn); border-radius: 4px; padding: 0 .1rem; font-weight: 700; }
+.whyrule { font-size: .9rem; color: var(--ink-2); }

@@ -7,6 +7,7 @@ import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, s
 import { h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
 import { verbsInProgress } from './verbs.js';
+import { whyWrong } from './whywrong.js';
 import { PTCB } from './ptcdata.js';
 import { INFB, infKey } from './infdata.js';
 import { SUBB, subKey } from './subdata.js';
@@ -379,6 +380,7 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
       others.length ? h('div.small.muted', 'Also valid: ' + others.map((o) => describe(o) + ' (' + o.code + ')').join(' · ')) : null,
       h('div.pslots', chips),
       mpNote ? h('div.small.muted', mpNote) : soft.length ? h('div.small.muted', 'Accepted: the Robinson–Pierpont code marks this as ' + labelOf('voice', best.slots.voice).toLowerCase() + ' — a middle/passive form that may be read either way.') : null,
+      whyWrong(it, res),
       chartLink(it, best.d));
     const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
     (view.querySelector('.qwrap') || view).append(fb, go);
