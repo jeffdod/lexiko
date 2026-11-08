@@ -102,6 +102,9 @@ export function icon(name, size = 22) {
   return svg;
 }
 
+/** "Read in context →" under a verse in a quiz. It leaves the quiz, so it is a small target (the words only) and asks first. */
+export const readInContext = (href) => h('div.ctxread', h('a.small', { href, onclick: (e) => { if (!confirm('Leave this quiz to read in context? You won’t come back to this round.')) e.preventDefault(); } }, 'Read in context →'));
+
 /** Shown on Extra practice screens: nothing answered here touches the review schedule. */
 export const practiceBanner = (preview, recent = false, row = false) => h('div.practice-note', h('b', preview ? 'Look ahead' : recent ? 'Refresher' : row ? 'Chart practice' : 'Strengthen'), ' — ' + (preview ? 'a look at new material; it won’t change your schedule.' : row ? 'real forms from the text, in verbs you know; practice only, so it won’t change your review schedule.' : recent ? 'words you started recently; practice only, so it won’t change your review schedule.' : 'practice only; it won’t change your review schedule.'));
 

@@ -9,7 +9,7 @@ import { verbBrake } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore } from './retry.js';
-import { h, clear, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
+import { h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { verbQuestion } from './gatesui.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
 import { readHref } from './reader.js';
@@ -67,7 +67,7 @@ export function contextFor(n, scope) {
     const f = tokenForm(t), w = f.w, hit = ens[k] === n;
     el.append(hit ? h('mark', w) : w, tokenPunct(t) + (tokenFlag(t) ? '\u2014' : ' '));
   });
-  el.append(h('a.small', { href: readHref(best.code, best.ch, best.vs), style: { display: 'block', fontFamily: 'var(--ui)', marginTop: '.3rem' } }, 'Read in context →'));
+  el.append(readInContext(readHref(best.code, best.ch, best.vs)));
   return el;
 }
 
