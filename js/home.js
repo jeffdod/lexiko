@@ -6,7 +6,7 @@ import { goalLabel } from './know.js';
 import { goalPicker, previewLine, miniGoalCard } from './goals.js';
 import { h, clear, add, pct, fmt, icon } from './util.js';
 import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
-import { counts, smart, newLimitNote } from './smart.js';
+import { counts, smart } from './smart.js';
 import { renderWelcome } from './welcome.js';
 import { readHref } from './reader.js';
 
@@ -77,7 +77,7 @@ export function goalDetailCard(redraw) {
 /** The goal on Home: a short summary. A tap opens Progress; Change › opens the picker in place. */
 /** For a new person, until the first session is finished: one clear next step. */
 const startHere = (n, ci = 0) => h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Start here'),
-  h('p.muted.small', { style: { margin: 0 } }, (n ? fmt(n) + ' new ' + (n === 1 ? 'word is' : 'words are') + ' ready' : 'Today’s new words are ready') + (ci ? ', plus ' + fmt(ci) + (ci === 1 ? ' check-in' : ' check-ins') : '') + '. Start with a short session.'),
+  h('p.muted.small', { style: { margin: 0 } }, (ci ? fmt(n + ci) + ' words are ready (' + fmt(n) + ' new · ' + fmt(ci) + (ci === 1 ? ' check-in' : ' check-ins') + ')' : n ? fmt(n) + ' new ' + (n === 1 ? 'word is' : 'words are') + ' ready' : 'Today’s new words are ready') + '. Start with a short session.'),
   h('div.row', h('a.btn.primary', { href: smart('words').href }, 'Start with today’s new words')));
 function goalSummary(view) {
   if (K.goal && goalFinished(currentGoal())) return finishedCard(() => renderHome(view));
@@ -116,10 +116,10 @@ export function renderHome(view) {
 
   // 2. the areas
   const area = (href, ic, title, sub, badges = []) => { const bs = badges.filter(Boolean); return h('a.area', { href }, icon(ic, 30), h('div', h('b', title), h('span', sub)), bs.length ? h('div.badges', bs.map((t) => h('em.due', t))) : null); };
-  const ci = cnt.words.checkins, wordsBadges = [cnt.words.due ? cnt.words.due + ' due' : '', cnt.words.fresh ? cnt.words.fresh + ' new' : '', ci ? ci + (ci === 1 ? ' check-in' : ' check-ins') : ''];      // every part of the coming session, so nothing is a surprise
+  const wordsBadges = [cnt.words.total ? cnt.words.total + (cnt.words.total === 1 ? ' word' : ' words') : ''];      // one total, always the same as the count inside the session
   const nothingYet = !cnt.words.studied && !cnt.parse.due && !cnt.parse.fresh;
-  stack.append(area('#/learn/words', 'learn', 'Vocabulary', newLimitNote('words') || 'Learn, review, look ahead', wordsBadges),
-    area('#/parse', 'text', 'Parsing', nothingYet ? 'Opens as you learn words' : newLimitNote('parse') || 'Practice forms and unlock verb types', [cnt.parse.due ? cnt.parse.due + ' due' : '', cnt.parse.fresh ? cnt.parse.fresh + ' new' : '']),
+  stack.append(area('#/learn/words', 'learn', 'Vocabulary', 'Learn, review, look ahead', wordsBadges),
+    area('#/parse', 'text', 'Parsing', nothingYet ? 'Opens as you learn words' : 'Practice forms and unlock verb types', [cnt.parse.total ? cnt.parse.total + (cnt.parse.total === 1 ? ' form' : ' forms') : '']),
     area('#/reference', 'table', 'Reference', 'Glossary, charts and paradigms'));
   stack.append(h('a.small.center', { href: '#/help', style: { textAlign: 'center' } }, 'How lexiko works ›'));
   clear(view).append(stack);
