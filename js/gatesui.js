@@ -43,8 +43,8 @@ export function renderRows(view) {
       const rs = ROWS.filter((r) => r.key.startsWith(pre));
       return rs.length ? [h('div.sec', title), h('div.list', rs.map((r) => {
         const on = gateOpen('row:' + r.key), got = chartRowSquares(r.key);
-        return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', longName(r.name)), h('div.muted.small', on ? 'Open in daily parsing' : got + ' of ' + CHART_ATTRS.length + ' squares learned')),
-          chip(on), h('a.btn.sm', { href: '#/learn/charts/run/' + r.key }, 'Drill'));
+        return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', longName(r.name)), h('div.muted.small', on ? 'Open in daily parsing' : got + ' of ' + CHART_ATTRS.length + ' learned')),
+          chip(on), h('a.btn.sm', { href: '#/learn/charts/run/' + r.key }, 'Drill'), h('a.btn.sm', { href: '#/parse/run/row/' + r.key }, 'Parse'));
       }))] : [];
     })));
 }

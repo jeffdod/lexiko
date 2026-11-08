@@ -131,7 +131,10 @@ export function noteRoute(hash) {
   origin.prev = cur;
 }
 const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/progress/, 'Back to Progress'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Home'],
-  [/^#\/parse(\/(form|chart))?$/, 'Back to Parsing'], [/^#\/reference/, 'Back to Reference'], [/^#\/learn\/verbs?(\/|$)/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to Glossary']];
+  [/^#\/parse(\/(form|chart))?$/, 'Back to Parsing'], [/^#\/reference/, 'Back to Reference'], [/^#\/learn\/verbs?(\/|$)/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to Glossary'],
+  [/^#\/parse\/kinds\/ind/, 'Back to Indicative'], [/^#\/parse\/kinds\/ptc/, 'Back to Participles'], [/^#\/parse\/kinds\/inf/, 'Back to Infinitives'], [/^#\/parse\/kinds\/sub/, 'Back to Subjunctive'], [/^#\/parse\/kinds\/imp/, 'Back to Imperative']];
+/** True when the drill that just ended was started from one of the "Unlock verb forms" pages (Indicative, Participles, ...). */
+export const startedFromKinds = () => /^#\/parse\/kinds\//.test(origin.href || '');
 /** The usual "Back to <topic page>" button, preceded by one to wherever the quiz was started from when that is somewhere else. */
 export function backLinks(defaultHref, defaultLabel, primary = false) {
   const o = origin.href, hit = o && o !== defaultHref && ORIGIN_LABEL.find(([re]) => re.test(o));
