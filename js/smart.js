@@ -1,7 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
 import { clockNow } from './clock.js';
-import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, verbBrake, setting, dueCards, dueToday, withMore, moreUnlocked, unlockMore, newToday, parseDueCount, parseNewToday, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, verbBrake, setting, dueCards, dueToday, withMore, moreUnlocked, unlockMore, newToday, parseDueCount, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
 export const TOPICS = {
@@ -11,10 +11,15 @@ export const TOPICS = {
 const ORDER = ['words', 'parse'];
 
 const parseReady = () => K.settings.level != null || studiedCount('w:') > 0;
+/** Vocabulary: what is due in all, and what a session will really hold (new words and spot-checks are counted from the session, not estimated). */
+function wordsCounts() {
+  const due = dueCards().length, plan = dailyPlan();
+  return { due, fresh: plan.fresh, checkins: plan.checkins, sessionDue: plan.due, studied: studiedCount('w:') };
+}
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
   return {
-    words: { due: dueCards().length, fresh: wordsPace().left, studied: studiedCount('w:') },
+    words: wordsCounts(),
     parse: { due: parseDueCount(), fresh: parseReady() ? parsePace().left : 0, studied: studiedCount('f:') },      // nothing to parse until you know some words (a level you chose counts)
   };
 }
@@ -73,12 +78,7 @@ const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Le
 
 /** Everything a normal session will contain, so the button never promises less than it delivers. Vocabulary sessions also slip in a few check-ins on words you said you already know. */
 const work = (c, topic = 'words') => {
-  const parts = [c.due ? c.due + ' to review' : '', c.fresh ? c.fresh + ' new' : ''];
-  if (topic === 'words' && (c.due || c.fresh) && setting('level') != null) {
-    const items = Math.min(c.due, Math.max(setting('sessionSize'), 30)) + c.fresh, rate = setting('probeRate');
-    const n = Math.round(items * rate / (1 - rate)) || (items ? 1 : 0);
-    if (n) parts.push(n + (n > 1 ? ' check-ins' : ' check-in'));
-  }
+  const parts = [topic === 'words' ? (c.sessionDue ? c.sessionDue + ' to review' : '') : (c.due ? c.due + ' to review' : ''), c.fresh ? c.fresh + ' new' : '', c.checkins ? c.checkins + (c.checkins > 1 ? ' check-ins' : ' check-in') : ''];
   if (topic === 'words' && c.fresh && verbBrake().braked) parts[1] += ' (no new verbs)';
   return parts.filter(Boolean).join(' + ');
 };

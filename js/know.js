@@ -325,6 +325,18 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
   return mixed.slice(0, scope || only ? 400 : Math.max(size, 40));
 }
 
+/** What the normal Vocabulary session will actually contain, counted from the session itself (reviews, new words, spot-checks), so a summary never promises less than it delivers.
+ *  Cached for a few seconds and re-worked whenever anything that shapes a session changes. */
+let planMemo = null;
+export function dailyPlan() {
+  const key = [dueCards().length, wordsPace().left, K.cards.size, K.settings.level, K.settings.newPerDay, K.settings.sessionSize, K.settings.probeRate, JSON.stringify(K.goal || null), Math.floor(clockNow() / 3000)].join('|');
+  if (planMemo && planMemo.key === key) return planMemo.plan;
+  const items = buildSession({ kind: 'daily' }), n = (t) => items.filter((x) => x.type === t).length;
+  const plan = { due: n('review'), fresh: n('new'), checkins: n('probe') };
+  planMemo = { key, plan };
+  return plan;
+}
+
 /* ---------- verbs: what you must know, when the forms are learned, and how new verbs arrive ---------- */
 export const LEARNED_ACC = 0.9, LEARNED_WINDOW = 10;          // a verb's forms are learned at 90% right over your last 10 answers (and each chosen form known)
 export const BRAKE_ACC = 0.75, BRAKE_WINDOW = 20, BRAKE_MIN = 15, UNLEARNED_MAX = 5;   // new verbs pause under 75% right over the last 20 verb-form answers, or when more than 5 verbs are unlearned
