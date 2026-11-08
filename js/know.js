@@ -404,6 +404,10 @@ let dueCounter = null;
 export const setParseDueCounter = (fn) => { dueCounter = fn; };
 export const parseDueCount = (now = clockNow()) => dueCounter ? dueCounter(now) : parseCardsDue(now).length;
 export const parseCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && dueToday(c, now));
+/** How many new forms could be taught right now (the Parsing pool, after gates and known words). parse.js registers the real counter. */
+let freshCounter = null;
+export const setParseFreshCounter = (fn) => { freshCounter = fn; };
+export const parseFreshCount = () => (freshCounter ? freshCounter() : Infinity);
 export const parseNewToday = () => (K.daily[todayKey()] || {}).pn || 0;
 export async function rateParse(id, grade, ms = 0, meta = {}) {
   const now = clockNow();
