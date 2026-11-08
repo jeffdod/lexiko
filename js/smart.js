@@ -14,13 +14,17 @@ const parseReady = () => K.settings.level != null || studiedCount('w:') > 0;
 /** Vocabulary: what is due in all, and what a session will really hold (new words and spot-checks are counted from the session, not estimated). */
 function wordsCounts() {
   const due = dueCards().length, plan = dailyPlan();
-  return { due, fresh: plan.fresh, checkins: plan.checkins, sessionDue: plan.due, studied: studiedCount('w:') };
+  return { due, fresh: plan.fresh, checkins: plan.checkins, sessionDue: plan.due, total: plan.due + plan.fresh + plan.checkins, studied: studiedCount('w:') };
+}
+function parseCounts() {
+  const due = parseDueCount(), fresh = parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0;
+  return { due, fresh, total: due + fresh, studied: studiedCount('f:') };      // nothing to parse until you know some words (a level you chose counts)
 }
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
   return {
     words: wordsCounts(),
-    parse: { due: parseDueCount(), fresh: parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0, studied: studiedCount('f:') },      // nothing to parse until you know some words (a level you chose counts)
+    parse: parseCounts(),      // nothing to parse until you know some words (a level you chose counts)
   };
 }
 
@@ -74,13 +78,17 @@ export function tileNext(u, k) {
 }
 
 /** What the big button says for a topic's normal session: names the activity instead of just "Start". */
-const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Learn new words') : 'Practice parsing';
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+/** One total for the whole session, always the same as the count shown in the session itself. */
+const GO_LABEL = (topic, c) => topic === 'words' ? 'Study ' + plural(c.total, 'word', 'words') : 'Practice ' + plural(c.total, 'form', 'forms');
 
 /** Everything a normal session will contain, so the button never promises less than it delivers. Vocabulary sessions also slip in a few check-ins on words you said you already know. */
+export const CHECKIN_NOTE = 'Check-ins are quick spot-checks of words you said you already know.';
+const checkinText = (n) => plural(n, 'check-in', 'check-ins');
+/** The one breakdown line, always written the same way: "1 due · 20 new · 5 check-ins". */
 const work = (c, topic = 'words') => {
-  const parts = [topic === 'words' ? (c.sessionDue ? c.sessionDue + (c.sessionDue < c.due ? ' of ' + c.due : '') + ' due' : '') : (c.due ? c.due + ' due' : ''), c.fresh ? c.fresh + ' new' : '', c.checkins ? c.checkins + (c.checkins > 1 ? ' check-ins' : ' check-in') : ''];
-  if (topic === 'words' && c.fresh && verbBrake().braked) parts[1] += ' (no new verbs)';
-  return parts.filter(Boolean).join(' + ');
+  const due = topic === 'words' ? c.sessionDue : c.due;
+  return [due ? due + ' due' : '', c.fresh ? c.fresh + ' new' : '', c.checkins ? checkinText(c.checkins) : ''].filter(Boolean).join(' · ');
 };
 
 /** The best next step for one topic: { href, label, sub, kind: 'go' | 'reinforce' | 'preview' }. */
@@ -108,37 +116,27 @@ export function smartAll() {
 /** Short status for a topic card: only says something when there is something to say. */
 export function topicNote(topic) { const c = counts()[topic]; return c.due || c.fresh ? work(c, topic) : TOPICS[topic].blurb; }
 
-/** How much extra is ready if the learner asks for more today: reviews that came due again after being seen today, plus another allowance of new items. */
+/** What the session would hold if the learner asks for more today, counted from that session itself (reviews, new, check-ins), so the offer and the session always agree. */
 export function moreReady(topic) {
-  const count = topic === 'words' ? () => dueCards().length : () => parseDueCount();
-  const reviews = moreUnlocked() ? 0 : withMore(count) - count();
-  const max = Math.max(0, setting(topic === 'words' ? 'newPerDay' : 'parseNewPerDay'));
-  const fresh = setting(topic + 'Pause') || (topic === 'parse' && !parseReady()) ? 0
-    : topic === 'words' ? buildSession({ kind: 'daily', newLimit: max }).filter((x) => x.type === 'new').length : Math.min(max, parseFreshCount());      // what could really be taught, not just the daily limit
-  return { reviews, fresh };
+  const paused = setting(topic + 'Pause') || (topic === 'parse' && !parseReady()), max = Math.max(0, setting(topic === 'words' ? 'newPerDay' : 'parseNewPerDay'));
+  if (topic === 'words') {
+    const items = withMore(() => buildSession({ kind: 'daily', newLimit: paused ? 0 : wordsPace().left + max })), n = (t) => items.filter((x) => x.type === t).length;
+    return { reviews: n('review'), fresh: n('new'), checkins: n('probe') };
+  }
+  const reviews = moreUnlocked() ? 0 : withMore(() => parseDueCount()) - parseDueCount();
+  return { reviews, fresh: paused ? 0 : Math.min(max, parseFreshCount()), checkins: 0 };
 }
 
 /** "You're done for today" and, when there is more to do, a button to ask for it. Null unless the topic really is finished for today and has studied items. */
 export function doneCards(topic) {
   const c = counts()[topic], T = TOPICS[topic];
   if (c.due || c.fresh || !c.studied) return null;
-  const one = T.noun.slice(0, -1), nn = (n) => n + ' more ' + (n === 1 ? one : T.noun), m = moreReady(topic), total = m.reviews + m.fresh;
+  const one = T.noun.slice(0, -1), m = moreReady(topic), total = m.reviews + m.fresh + m.checkins;
   const out = [h('div.card.stack', h('b', 'You’re done for today.'), h('div.small.muted', 'Everything that was due today is finished.'), nextLine(upcoming(), 0))];
   if (!total) return out;
-  const isAre = (n) => (n === 1 ? ' is' : ' are'), np = m.fresh + ' more new ' + (m.fresh === 1 ? one : T.noun);
-  const rev = nn(m.reviews) + isAre(m.reviews) + ' ready to review: ' + T.noun + ' you saw earlier today that are due again.';
-  const body = m.reviews && m.fresh ? rev + ' You can also add ' + np + '.' : m.reviews ? rev : np.charAt(0).toUpperCase() + np.slice(1) + isAre(m.fresh) + ' ready to add.';
-  out.push(h('div.card.stack', h('b', 'Want to keep going?'), h('div.small.muted', body),
-    h('button.btn.primary.block', { onclick: async () => { await unlockMore(); location.hash = T.go; } }, 'Study ' + nn(total))));
+  out.push(h('div.card.stack', h('b', 'Want to keep going?'),
+    h('div.small.muted', plural(total, one, T.noun).replace(/^(\d+)/, '$1 more') + (total === 1 ? ' is' : ' are') + ' ready: ' + work({ due: m.reviews, sessionDue: m.reviews, fresh: m.fresh, checkins: m.checkins }, topic) + '.'),
+    h('button.btn.primary.block', { onclick: async () => { await unlockMore(); location.hash = T.go; } }, 'Study ' + plural(total, 'more ' + one, 'more ' + T.noun)),
+    m.checkins ? h('div.small.muted', CHECKIN_NOTE) : null));
   return out;
-}
-
-/** Why today's new count is below the daily limit (words already learned today, or nothing more to teach), or null when it is not. */
-export function newLimitNote(topic) {
-  const p = topic === 'words' ? wordsPace() : parsePace(), c = counts()[topic], T = TOPICS[topic];
-  if (p.paused || !p.n || p.left <= 0) return null;      // limit used up: the done card says so
-  const done = p.n - p.left, unavailable = p.left - c.fresh, bits = [];
-  if (done > 0) bits.push(done + ' already ' + (topic === 'words' ? 'learned' : 'practiced') + ' today');
-  if (unavailable > 0) bits.push(topic === 'words' ? (verbBrake().braked ? 'new verbs are paused' : 'that’s all that’s left to teach') : 'that’s all that’s available right now');
-  return bits.length ? 'Today’s limit is ' + p.n + ' new ' + T.noun + ': ' + bits.join('; ') + '.' : null;
 }

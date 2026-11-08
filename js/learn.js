@@ -11,7 +11,7 @@ import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore } from './retry.js';
 import { h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { verbQuestion } from './gatesui.js';
-import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards, newLimitNote, counts as sessionCounts } from './smart.js';
+import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards, CHECKIN_NOTE, counts as sessionCounts } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
 import { runDrill, renderChartsPage, renderParadigm, counts as chartCounts } from './chartdrill.js';
@@ -275,7 +275,7 @@ function verbHold() {
 }
 
 /** One plain sentence on what a check-in is, shown only when today's session has some. */
-const checkinNote = () => (smart('words').kind === 'go' && sessionCounts().words.checkins ? h('div.small.muted', 'Check-ins are quick spot-checks of words you said you already know.') : null);
+const checkinNote = () => (smart('words').kind === 'go' && sessionCounts().words.checkins ? h('div.small.muted', CHECKIN_NOTE) : null);
 
 function wordsPage(view) {
   const sm = smart('words');
@@ -284,7 +284,6 @@ function wordsPage(view) {
     h('div.stack',
       ...(doneCards('words') || [startButton(sm)]),
       checkinNote(),
-      newLimitNote('words') ? h('div.small.muted', newLimitNote('words')) : null,
       paceNote(wordsPace(), 'words'),
       verbHold(),
       goalDetailCard(() => wordsPage(view)),
