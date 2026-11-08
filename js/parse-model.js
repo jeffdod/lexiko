@@ -124,8 +124,13 @@ export function buildItem(form) {
   return { form, strongs: first.s, group, valid, kind: d0.pos === 'V' ? 'verb' : 'nominal' };
 }
 
-/** Is this voice answer acceptable for the RP voice code? (Deponents and "middle or passive" forms accept their plain equivalents.) */
-export function voiceOK(user, key) {
+/** Tenses whose middle and passive forms are spelled exactly alike: present, imperfect, perfect, pluperfect. (Future and aorist differ.) */
+export const MP_SAME_TENSES = 'PIRL';
+/** Is this form one whose middle and passive spellings are identical, so the text's choice of voice rests on the verse? */
+export const sameSpelledMP = (slots) => (slots.voice === 'M' || slots.voice === 'P') && MP_SAME_TENSES.includes(slots.tense);
+/** Is this voice answer acceptable for the RP voice code? (Deponents and "middle or passive" forms accept their plain equivalents;
+ *  where middle and passive are spelled alike, "Middle or passive" is accepted too.) */
+export function voiceOK(user, key, tense) {
   switch (key) {
     case 'E': return 'EMP'.includes(user);
     case 'D': return user === 'D' || user === 'M';
@@ -133,6 +138,7 @@ export function voiceOK(user, key) {
     case 'N': return 'EDOMP'.includes(user);
     case 'Q': return user === 'A' || user === 'Q';
     case 'X': return true;
+    case 'M': case 'P': return user === key || (user === 'E' && MP_SAME_TENSES.includes(tense));
     default: return user === key;
   }
 }
@@ -141,7 +147,7 @@ export function slotOK(slot, user, cand) {
   const key = cand.slots[slot];
   if (user === key) return true;
   if (user == null) return false;
-  if (slot === 'voice') return voiceOK(user, key);
+  if (slot === 'voice') return voiceOK(user, key, cand.slots.tense);
   if (slot === 'case' && cand.slots.number === 'P') return (user === 'N' && key === 'V') || (user === 'V' && key === 'N');   // plural vocative = nominative
   return false;
 }
