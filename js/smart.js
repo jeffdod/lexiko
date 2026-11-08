@@ -130,7 +130,8 @@ export function doneCards(topic) {
   const c = counts()[topic], T = TOPICS[topic];
   if (c.due || c.fresh || !c.studied) return null;
   const one = T.noun.slice(0, -1), m = moreReady(topic), total = m.reviews + m.fresh + m.checkins;
-  const out = [h('div.card.stack', h('b', 'You’re done for today.'), h('div.small.muted', 'Everything that was due today is finished.'), nextLine(upcoming(), 0))];
+  const u = upcoming(), eod = new Date(clockNow()).setHours(24, 0, 0, 0), waiting = isFinite(u.all.next) && u.all.next < eod;      // words just studied that come back later today
+  const out = [h('div.card.stack', h('b', waiting ? 'Almost done.' : 'You’re done for today.'), h('div.small.muted', waiting ? 'Cards you just studied come back soon.' : 'Everything that was due today is finished.'), nextLine(u, 0))];
   if (!total) return out;
   out.push(h('div.card.stack', h('b', 'Want to keep going?'),
     h('div.small.muted', plural(total, one, T.noun).replace(/^(\d+)/, '$1 more') + (total === 1 ? ' is' : ' are') + ' ready: ' + work({ due: m.reviews, sessionDue: m.reviews, fresh: m.fresh, checkins: m.checkins }, topic) + '.'),

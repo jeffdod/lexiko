@@ -219,11 +219,13 @@ const dayEnd = (now) => { const d = new Date(now); d.setHours(24, 0, 0, 0); retu
 let forceMore = false;
 /** True once the learner has pressed "Study more today": from then on everything that is due right now counts. */
 export const moreUnlocked = () => forceMore || !!(K.daily[todayKey()] || {}).more;
-/** Is this studied card part of today's work? Due before midnight and not already reviewed today. The one-minute and six-minute returns of
- *  words you just missed or learned are handled inside the session, so they never reappear as new work afterward. */
+/** Is this studied card part of today's work? Due before midnight and not already reviewed today, or a word still being learned (it comes back within minutes,
+ *  and the done card says so while it waits). A word already reviewed today and scheduled for later is not new work. */
 export function dueToday(c, now = clockNow()) {
   if (c.state === 'new') return false;
-  return moreUnlocked() ? c.due <= now : c.due < dayEnd(now) && (c.last || 0) < dayStart(now);
+  if (moreUnlocked()) return c.due <= now;
+  if (c.state === 'learning' || c.state === 'relearning') return c.due <= now;      // words just missed or found hard come back within minutes: part of today's work once their time comes
+  return c.due < dayEnd(now) && (c.last || 0) < dayStart(now);
 }
 /** Run a count as if "more" were unlocked (to say how much extra is ready). */
 export const withMore = (fn) => { const was = forceMore; forceMore = true; try { return fn(); } finally { forceMore = was; } };
