@@ -158,7 +158,7 @@ export function renderParadigm(view, key) {
 const square = (id, label) => h('i.sq.' + stateOf(id), { title: label });
 export function renderChartsPage(view) {
   const c = counts(), p = plan();
-  const sub = p.due.length || p.nw.length ? [p.due.length ? p.due.length + ' due' : null, p.nw.length ? p.nw.length + ' new' : null].filter(Boolean).join(' + ') : 'All caught up';
+  const sub = p.due.length || p.nw.length ? [p.due.length ? p.due.length + ' to review' : null, p.nw.length ? p.nw.length + ' new' : null].filter(Boolean).join(' + ') : 'All caught up';
   const start = h('div.row.wrap', { style: { alignItems: 'center' } }, h('a.btn.sm.practice', { href: '#/learn/charts/run' }, 'Practice this chart ›'), h('span.muted.small', sub));
   const head = h('div.sqrow.head', h('span'), CHART_ATTRS.map((a) => h('span', ATTR_LABEL[a])));
   const rows = [];
