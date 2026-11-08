@@ -11,7 +11,7 @@ import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore } from './retry.js';
 import { h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { verbQuestion } from './gatesui.js';
-import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext } from './smart.js';
+import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards } from './smart.js';
 import { readHref } from './reader.js';
 import { chartsButton } from './charts.js';
 import { runDrill, renderChartsPage, renderParadigm, counts as chartCounts } from './chartdrill.js';
@@ -279,7 +279,7 @@ function wordsPage(view) {
   clear(view).append(
     backHead('Vocabulary', '#/home', 'Home'),
     h('div.stack',
-      startButton(sm),
+      ...(doneCards('words') || [startButton(sm)]),
       paceNote(wordsPace(), 'words'),
       verbHold(),
       goalDetailCard(() => wordsPage(view)),

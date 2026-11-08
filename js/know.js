@@ -213,9 +213,23 @@ export const readinessClass = (p) => (p >= 0.98 ? 'r4' : p >= 0.95 ? 'r3' : p >=
 
 /** A word card that is still in use (a preposition that is now reviewed per case no longer uses its old single card). */
 export const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const L = D.lexByN.get(+c.id.slice(2)); return !L || !L.senses; };
+/* ---------- "done for today": the day's work is fixed, extra work is something the learner asks for ---------- */
+const dayStart = (now) => { const d = new Date(now); d.setHours(0, 0, 0, 0); return +d; };
+const dayEnd = (now) => { const d = new Date(now); d.setHours(24, 0, 0, 0); return +d; };
+let forceMore = false;
+/** True once the learner has pressed "Study more today": from then on everything that is due right now counts. */
+export const moreUnlocked = () => forceMore || !!(K.daily[todayKey()] || {}).more;
+/** Is this studied card part of today's work? Due before midnight and not already reviewed today. The one-minute and six-minute returns of
+ *  words you just missed or learned are handled inside the session, so they never reappear as new work afterward. */
+export function dueToday(c, now = clockNow()) {
+  if (c.state === 'new') return false;
+  return moreUnlocked() ? c.due <= now : c.due < dayEnd(now) && (c.last || 0) < dayStart(now);
+}
+/** Run a count as if "more" were unlocked (to say how much extra is ready). */
+export const withMore = (fn) => { const was = forceMore; forceMore = true; try { return fn(); } finally { forceMore = was; } };
 export function dueCards(now = clockNow()) {
   const out = [];
-  for (const c of K.cards.values()) if (liveWord(c) && c.state !== 'new' && c.due <= now) out.push(c);
+  for (const c of K.cards.values()) if (liveWord(c) && dueToday(c, now)) out.push(c);
   return out.sort((a, b) => a.due - b.due);
 }
 export function newToday() { return (K.daily[todayKey()] || {}).n || 0; }
@@ -253,7 +267,7 @@ export function waitNote(ps, now = clockNow()) {
 const whenIn = (t, now) => { const m = Math.round((t - now) / 6e4); return m < 60 ? 'in ' + Math.max(1, m) + ' min' : m < 1440 ? 'in ' + Math.round(m / 60) + ' h' : 'in ' + Math.round(m / 1440) + ' days'; };
 /** What studying a passage can actually deliver right now, and why the rest can't be studied yet (read-only). */
 export function passageStudy(scope, now = clockNow()) {
-  const dueSet = new Set(dueCards().map((c) => +c.id.slice(2)));
+  const dueSet = new Set(withMore(() => dueCards()).map((c) => +c.id.slice(2)));
   let fresh = [], due = 0, started = 0, soonest = Infinity;
   for (const { n } of passageWords(scope)) {
     const c = K.cards.get('w:' + n);
@@ -289,7 +303,7 @@ export function probeCandidates(limit, exclude = new Set()) {
 export function buildSession({ scope = null, only = null, kind = 'daily', size = K.settings.sessionSize, newLimit = null }) {
   const items = []; const seen = new Set();
   const push = (n, type) => { if (!seen.has(n)) { seen.add(n); items.push({ n, type }); } };
-  const due = dueCards().map((c) => +c.id.slice(2));
+  const due = (scope || only ? withMore(() => dueCards()) : dueCards()).map((c) => +c.id.slice(2));      // a passage or group the learner picked by hand takes everything due right now
   const inScope = scope ? new Set(scopeCounts(scope).keys()) : null;
   const dueList = inScope ? due.filter((n) => inScope.has(n)) : only ? due.filter((n) => only.has(n)) : due;
   let fresh;
@@ -377,7 +391,7 @@ export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;
 let dueCounter = null;
 export const setParseDueCounter = (fn) => { dueCounter = fn; };
 export const parseDueCount = (now = clockNow()) => dueCounter ? dueCounter(now) : parseCardsDue(now).length;
-export const parseCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && c.state !== 'new' && c.due <= now);
+export const parseCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && dueToday(c, now));
 export const parseNewToday = () => (K.daily[todayKey()] || {}).pn || 0;
 export async function rateParse(id, grade, ms = 0, meta = {}) {
   const now = clockNow();
@@ -453,7 +467,24 @@ export const saveParseStats = (st) => store.set('parseStats', st);
 export const OVERLOAD = 40;                                   // reviews due across both topics before no new items start anywhere
 export const dueTotal = (now = clockNow()) => dueCards(now).length + parseDueCount(now);
 const meanOf = (a) => (a.length >= 15 ? a.reduce((x, y) => x + y, 0) / a.length : null);
+/** The day's new-item allowance is worked out once, the first time it is asked for, so finishing reviews never raises it. It is re-worked only if the learner changes the daily limit. */
 function itemPace(topic, now = clockNow()) {
+  const r = paceNow(topic, now), words = topic === 'words', f = words ? 'wc' : 'pc', d = (K.daily[todayKey(now)] ||= {});
+  const max = Math.max(0, setting(words ? 'newPerDay' : 'parseNewPerDay'));
+  if (r.paused) return r;                                                    // pausing always takes effect at once
+  if (d[f] == null || d[f + 'm'] !== max) { d[f] = r.n; d[f + 'm'] = max; store.set('daily', K.daily); }
+  return { ...r, n: d[f], left: Math.max(0, d[f] - (words ? newToday() : parseNewToday())) };
+}
+/** Press "Study more today": everything due now counts, and another daily allowance of new items opens. */
+export async function unlockMore() {
+  const now = clockNow(), d = (K.daily[todayKey(now)] ||= {});
+  const w = wordsPace(now), p = parsePace(now);
+  d.more = true;
+  if (!w.paused) d.wc = (d.wc || 0) + Math.max(0, setting('newPerDay'));
+  if (!p.paused) d.pc = (d.pc || 0) + Math.max(0, setting('parseNewPerDay'));
+  await store.set('daily', K.daily);
+}
+function paceNow(topic, now = clockNow()) {
   const words = topic === 'words', noun = words ? 'words' : 'forms', pre = topic;
   const max = Math.max(0, setting(words ? 'newPerDay' : 'parseNewPerDay')), today = words ? newToday() : parseNewToday(), due = words ? dueCards(now).length : parseDueCount(now);
   const out = (n, why, extra = {}) => ({ n, left: Math.max(0, n - today), due, why, auto: setting(pre + 'Pace') !== 'fixed', ...extra });

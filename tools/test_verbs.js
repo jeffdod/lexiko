@@ -34,13 +34,14 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   // ---- automatic pace for new words and new forms, and the overload rule
   const np = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const o = {}; const S = k.K.settings, keep = { ...S }, kc = new Map(k.K.cards);
     S.wordsPace = 'auto'; S.parsePace = 'auto'; S.wordsPause = false; S.parsePause = false; S.newPerDay = 10; S.parseNewPerDay = 10; k.K.wordsAcc = []; k.K.parseAcc = [];
-    o.base = [k.wordsPace().n, k.parsePace().n];
-    k.K.wordsAcc = Array(20).fill(0).map((_, i) => i % 2); o.weak = k.wordsPace().n; k.K.wordsAcc = [];
+    const unpin = () => { for (const d of Object.values(k.K.daily)) { delete d.wc; delete d.pc; delete d.wcm; delete d.pcm; } };      // the day's allowance is pinned once; clear it to probe each rule
+    unpin(); o.base = [k.wordsPace().n, k.parsePace().n];
+    k.K.wordsAcc = Array(20).fill(0).map((_, i) => i % 2); unpin(); o.weak = k.wordsPace().n; k.K.wordsAcc = [];
     const mk = (pre, i) => { const c = f.review(f.newCard(pre + i), 3, Date.now() - 864e6, 0.9); c.due = 1; k.K.cards.set(c.id, c); };
-    for (let i = 0; i < 30; i++) mk('w:9', 100 + i); o.due30 = k.wordsPace().n;                        // more than a session due
-    { const { D } = await import('./js/data.js'); await import('./js/parse.js'); D.forms.filter((x) => x.an[0] && /^N-[NGDA][SP][MFN]$/.test(x.an[0].m) && x.count > 20).slice(0, 25).forEach((x) => mk(k.parseId(x), '')); } o.overload = [k.wordsPace().n, k.parsePace().n, !!k.wordsPace().overload];
-    S.wordsPace = 'fixed'; o.fixed = k.wordsPace().n; S.wordsPace = 'auto'; S.wordsPause = true; o.paused = k.wordsPace().n;
-    k.K.cards.clear(); for (const [id, c] of kc) k.K.cards.set(id, c); Object.assign(S, keep); return o; });
+    for (let i = 0; i < 30; i++) mk('w:9', 100 + i); unpin(); o.due30 = k.wordsPace().n;                        // more than a session due
+    { const { D } = await import('./js/data.js'); await import('./js/parse.js'); D.forms.filter((x) => x.an[0] && /^N-[NGDA][SP][MFN]$/.test(x.an[0].m) && x.count > 20).slice(0, 25).forEach((x) => mk(k.parseId(x), '')); } unpin(); o.overload = [k.wordsPace().n, k.parsePace().n, !!k.wordsPace().overload];
+    S.wordsPace = 'fixed'; unpin(); o.fixed = k.wordsPace().n; S.wordsPace = 'auto'; S.wordsPause = true; o.paused = k.wordsPace().n;
+    k.K.cards.clear(); for (const [id, c] of kc) k.K.cards.set(id, c); Object.assign(S, keep); unpin(); return o; });
   ok(np.base[0] === 10 && np.base[1] === 10 && np.weak < 10 && np.weak >= 1 && np.due30 <= 1 && np.overload[0] === 0 && np.overload[1] === 0 && np.overload[2] && np.fixed === 10 && np.paused === 0, 'new words and forms slow when reviews pile up or accuracy slips, stop at overload, and honor Fixed and Pause', JSON.stringify(np));
   // ---- review what I just learned: words started in the last few days, not older ones
   const rw = await p.evaluate(async () => { const k = await import('./js/know.js'); const f = await import('./js/fsrs.js'); const saved = new Map(k.K.cards);

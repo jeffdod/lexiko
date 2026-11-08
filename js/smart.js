@@ -1,7 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
 import { clockNow } from './clock.js';
-import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, verbBrake, setting, dueCards, newToday, parseDueCount, parseNewToday, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, verbBrake, setting, dueCards, dueToday, withMore, moreUnlocked, unlockMore, newToday, parseDueCount, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
 export const TOPICS = {
@@ -28,7 +28,8 @@ export function upcoming(now = clockNow()) {
     const t = c.id[0] === 'w' ? 'words' : c.id[0] === 'f' ? 'parse' : null;
     if (!t || c.state === 'new' || c.src === 'probe' || (t === 'words' && !liveWord(c))) continue;
     for (const o of [out[t], out.all]) {
-      if (c.due <= now) { o.due++; continue; }
+      if (dueToday(c, now)) { o.due++; continue; }
+      if (c.due <= now) { o.today++; continue; }               // seen earlier today and due again: waits for "Study more today"
       if (c.due < o.next) { o.next = c.due; o.nextCount = 1; } else if (c.due - o.next < 36e5) o.nextCount++;      // cards due within the hour after the first
       if (c.due < today) o.today++; else if (c.due < tomorrow) o.tomorrow++;
       if (c.due < week) o.week++;
@@ -106,3 +107,27 @@ export function smartAll() {
 
 /** Short status for a topic card: only says something when there is something to say. */
 export function topicNote(topic) { const c = counts()[topic]; return c.due || c.fresh ? work(c, topic) : TOPICS[topic].blurb; }
+
+/** How much extra is ready if the learner asks for more today: reviews that came due again after being seen today, plus another allowance of new items. */
+export function moreReady(topic) {
+  const count = topic === 'words' ? () => dueCards().length : () => parseDueCount();
+  const reviews = moreUnlocked() ? 0 : withMore(count) - count();
+  const max = Math.max(0, setting(topic === 'words' ? 'newPerDay' : 'parseNewPerDay'));
+  const fresh = setting(topic + 'Pause') || (topic === 'parse' && !parseReady()) ? 0 : max;
+  return { reviews, fresh };
+}
+
+/** "You're done for today" and, when there is more to do, a button to ask for it. Null unless the topic really is finished for today and has studied items. */
+export function doneCards(topic) {
+  const c = counts()[topic], T = TOPICS[topic];
+  if (c.due || c.fresh || !c.studied) return null;
+  const one = T.noun.slice(0, -1), nn = (n) => n + ' more ' + (n === 1 ? one : T.noun), m = moreReady(topic), total = m.reviews + m.fresh;
+  const out = [h('div.card.stack', h('b', 'You’re done for today.'), h('div.small.muted', 'Everything that was due today is finished.'), nextLine(upcoming(), 0))];
+  if (!total) return out;
+  const isAre = (n) => (n === 1 ? ' is' : ' are'), np = m.fresh + ' more new ' + (m.fresh === 1 ? one : T.noun);
+  const rev = nn(m.reviews) + isAre(m.reviews) + ' ready to review: ' + T.noun + ' you saw earlier today that are due again.';
+  const body = m.reviews && m.fresh ? rev + ' You can also add ' + np + '.' : m.reviews ? rev : np.charAt(0).toUpperCase() + np.slice(1) + isAre(m.fresh) + ' ready to add.';
+  out.push(h('div.card.stack', h('b', 'Want to keep going?'), h('div.small.muted', body),
+    h('button.btn.primary.block', { onclick: async () => { await unlockMore(); location.hash = T.go; } }, 'Study ' + nn(total))));
+  return out;
+}

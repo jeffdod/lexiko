@@ -134,7 +134,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   // a frequency group still starts a session (reached from goals and direct links); the Vocabulary page itself is kept simple
   await page.goto(URL + '#/learn/words'); await page.waitForSelector('.start');
   ok(await page.locator('summary:has-text("Study by how common")').count() === 0 && await page.locator('summary:has-text("Study a passage")').count() === 0 && await page.locator('summary:has-text("Options")').count() === 0, 'Vocabulary page has no extra sections');
-  await page.goto(URL + '#/learn/set/50/99'); await page.waitForSelector('.qcard'); ok(true, 'a frequency group starts a session (50–99)');
+  await page.goto(URL + '#/learn/set/10/19'); await page.waitForSelector('.qcard'); ok(true, 'a frequency group starts a session (10–19)');
 
   // growth chart: appears after two days of study data
   await page.goto(URL + '#/progress'); await page.waitForSelector('h1');
