@@ -63,6 +63,7 @@ Skills that carry the detailed procedures: `lexiko-testing`, `lexiko-shipping`, 
 - A fresh browser profile shows the welcome screen unless `level` or `levelAsked` is set; verb parsing is off unless `gates` says otherwise; tests set these through `K.setSetting` and `K.allGatesOpen()`.
 - The service worker caches aggressively: new builds may need two reloads.
 - The Stop hook may ask to commit and push; follow rule 7.
+- The Stop hook may also say a branch has "unpushed commits and no remote branch" when it is already pushed. Cause: a fresh clone fetches only `main` (`remote.origin.fetch` maps just `refs/heads/main`), so a push never records `origin/<branch>`. Fix once per clone: `git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*' && git fetch origin`. Check with `git ls-remote origin refs/heads/<branch>`.
 - Settings still contain the "Erase ALL progress and settings" button in the "About lexiko" fold; do not remove it.
 - Do not reproduce long passages of copyrighted text; the Greek text is public domain (RP 2026), the lexicon is Dodson (CC0), the font is OFL (see README).
 - `js/families.js` now holds only chart helpers (`ROW_LEVEL`, `rowOfTag`, `CHART_ATTRS`, `isLiquidVerb`); the old level helpers were removed.
