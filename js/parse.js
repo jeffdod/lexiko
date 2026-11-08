@@ -4,7 +4,7 @@ import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
+import { h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
 import { verbsInProgress } from './verbs.js';
 import { PTCB } from './ptcdata.js';
@@ -81,7 +81,7 @@ function formContext(id) {
   if (!best) return null;
   const el = h('div.qctx', { lang: 'grc' }, h('span.ref', D.bookByCode.get(best.code).name + ' ' + best.ch + ':' + best.vs));
   best.toks.forEach((t) => { const f = D.forms[t >> 4]; el.append(canon[t >> 4] === id ? h('mark', f.w) : f.w, tokenPunct(t) + (tokenFlag(t) ? '—' : ' ')); });
-  el.append(h('a.small', { href: readHref(best.code, best.ch, best.vs), style: { display: 'block', fontFamily: 'var(--ui)', marginTop: '.3rem' } }, 'Read in context →'));
+  el.append(readInContext(readHref(best.code, best.ch, best.vs)));
   return el;
 }
 
