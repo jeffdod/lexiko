@@ -484,3 +484,8 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .whyword { font-size: 1.35rem; }
 .whyword .dif { background: var(--warn-soft); color: var(--warn); border-radius: 4px; padding: 0 .1rem; font-weight: 700; }
 .whyrule { font-size: .9rem; color: var(--ink-2); }
+
+/* Home tiles: one badge per part of the coming session (due, new, check-ins) */
+.area .badges { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex: none; }
+.area .badges .due { margin-left: 0; }
+@media (min-width: 640px) { .area .badges { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; } }
