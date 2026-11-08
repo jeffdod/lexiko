@@ -3,7 +3,7 @@
 import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
-import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
+import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, sameSpelledMP, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
 import { verbsInProgress } from './verbs.js';
@@ -366,13 +366,19 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
         const others = it.valid.filter((v) => v !== best);
     const soft = Object.entries(res.perSlot).filter(([, v]) => v.soft);
     const head = res.full ? ['ok', 'Correct'] : res.wrong.length === 1 && res.total >= 3 ? ['mid', 'Almost — one part off'] : ['bad', 'Not quite'];
-    const chips = Object.entries(res.perSlot).map(([k, v]) => h('span.pslot.' + (v.ok ? 'ok' : 'bad'), h('small', SLOT_TITLE[k]), v.ok ? labelOf(k, v.expected) : (v.user ? labelOf(k, v.user) + ' → ' : '') + labelOf(k, v.expected), v.ok ? ' ✓' : ''));
+    // middle and passive spelled alike: say so, point to the verse, and open it
+    const v = res.perSlot.voice, SAME = 'Middle and passive are spelled the same in the present, imperfect and perfect. ';
+    const mpNote = v && sameSpelledMP(best.slots) ? (!v.ok ? SAME + 'The Greek text marks it ' + labelOf('voice', v.expected).toLowerCase() + ' here. The verse is what tells them apart.'
+      : v.user === 'E' ? 'Accepted: ' + SAME.charAt(0).toLowerCase() + SAME.slice(1) + 'The Greek text marks it ' + labelOf('voice', v.expected).toLowerCase() + ' here. The verse is what tells them apart.'
+      : SAME + 'The verse is what tells them apart.') : null;
+    if (mpNote) { const det = view.querySelector('details.ctxfold'); if (det) det.open = true; }
+    const chips = Object.entries(res.perSlot).map(([k, v]) => h('span.pslot.' + (v.ok ? 'ok' : 'bad'), h('small', SLOT_TITLE[k]), v.ok ? labelOf(k, k === 'voice' && mpNote && v.user === 'E' ? 'E' : v.expected) : (v.user ? labelOf(k, v.user) + ' → ' : '') + labelOf(k, v.expected), v.ok ? ' ✓' : ''));
     const fb = h('div.fb.' + head[0],
       h('div.row.between', h('b', head[1]), first && next ? h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow())) : h('span.small.muted', 'practice only')),
       h('div.parsed', describe(best), ' ', h('span.chip', best.code)),
       others.length ? h('div.small.muted', 'Also valid: ' + others.map((o) => describe(o) + ' (' + o.code + ')').join(' · ')) : null,
       h('div.pslots', chips),
-      soft.length ? h('div.small.muted', 'Accepted: the Robinson–Pierpont code marks this as ' + labelOf('voice', best.slots.voice).toLowerCase() + ' — a middle/passive form that may be read either way.') : null,
+      mpNote ? h('div.small.muted', mpNote) : soft.length ? h('div.small.muted', 'Accepted: the Robinson–Pierpont code marks this as ' + labelOf('voice', best.slots.voice).toLowerCase() + ' — a middle/passive form that may be read either way.') : null,
       chartLink(it, best.d));
     const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
     (view.querySelector('.qwrap') || view).append(fb, go);
