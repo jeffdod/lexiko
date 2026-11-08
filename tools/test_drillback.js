@@ -44,8 +44,7 @@ const { chromium } = require('playwright');
 
   // "Drill all rows" from Indicative
   await p.locator('a.btn:text-is("Drill all rows")').click(); await p.waitForSelector('.qwrap'); await endNow();
-  t = await btns(); ok(t.includes('Back to Indicative') && !t.includes('Back to Charts'), 'drill all rows: Back to Indicative (' + t.join(' | ') + ')');
-  await p.locator('a.btn.primary:text-is("Back to Indicative")').count().then((n) => ok(n === 1, 'Back to Indicative is primary there'));
+  t = await btns(); ok(t[0] === 'Parse real words from open rows' && t.includes('Back to Indicative') && !t.includes('Back to Charts'), 'drill all rows: (' + t.join(' | ') + ')');
 
   // from the paradigm page: unchanged, plus Parse
   await go('#/learn/charts/paradigm/aor1-act');
@@ -55,17 +54,21 @@ const { chromium } = require('playwright');
   // a family page
   await go('#/parse/kinds/ptc');
   await p.locator('#view .li a:text-is("Drill")').first().click(); await p.waitForSelector('.qwrap'); await endNow();
-  t = await btns(); ok(t[0] === 'Parse some participles' && t.includes('Back to Participles') && t.filter((x) => x === 'Back to Participles').length === 1 && !t.includes('Back to the paradigm'), 'participles: (' + t.join(' | ') + ')');
+  t = await btns(); ok(!t.some((x) => /^Parse/.test(x)) && t.includes('Back to Participles') && t.filter((x) => x === 'Back to Participles').length === 1 && !t.includes('Back to the paradigm'), 'participles, kind still locked: no Parse button (' + t.join(' | ') + ')');
   await p.locator('a.btn:text-is("Back to Participles")').click(); await p.waitForTimeout(300);
   ok(await p.evaluate(() => location.hash) === '#/parse/kinds/ptc', 'Back to Participles returns to the kinds page');
   await p.locator('a.btn:text-is("Drill all kinds")').click(); await p.waitForSelector('.qwrap'); await endNow();
-  t = await btns(); ok(t[0] === 'Parse some participles', 'drill all kinds: Parse some participles');
+  t = await btns(); ok(t[0] === 'Parse real words from open kinds', 'drill all kinds: ' + t.join(' | '));
   for (const [fam, word, label] of [['sub', 'subjunctives', 'Back to Subjunctive'], ['imp', 'imperatives', 'Back to Imperative']]) {
     await go('#/parse/kinds/' + fam); await p.locator('#view .li a:text-is("Drill")').first().click(); await p.waitForSelector('.qwrap'); await endNow();
-    t = await btns(); ok(t[0] === 'Parse some ' + word && t.includes(label), fam + ': (' + t.join(' | ') + ')');
+    t = await btns(); ok(t.includes(label) && !t.some((x) => /^Parse/.test(x)), fam + ' (locked kind): (' + t.join(' | ') + ')');
   }
   await go('#/parse/kinds/inf'); await p.locator('a.btn:text-is("Drill all kinds")').click(); await p.waitForSelector('.qwrap'); await endNow();
-  t = await btns(); ok(t[0] === 'Parse some infinitives' && t.includes('Back to Infinitives'), 'infinitives: (' + t.join(' | ') + ')');
+  t = await btns(); ok(t[0] === 'Parse real words from open kinds' && t.includes('Back to Infinitives'), 'infinitives: (' + t.join(' | ') + ')');
+  // a kind that is open offers "Parse some ..."
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setSetting('gates', K.allGatesOpen()); });
+  await go('#/parse/kinds/ptc'); await p.locator('#view .li a:text-is("Drill")').first().click(); await p.waitForSelector('.qwrap'); await endNow();
+  t = await btns(); ok(t[0] === 'Parse some participles', 'participles, kind open: (' + t.join(' | ') + ')');
 
   ok(errs.length === 0, 'no page errors: ' + errs.join(' | '));
   await b.close(); console.log(process.exitCode ? 'drillback: FAILED' : 'drillback: ok');

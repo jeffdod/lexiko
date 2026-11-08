@@ -79,9 +79,9 @@ export function runDrill(view, rowKey = null) {
     clear(view).append(h('div.pagehead', h('h1', 'Chart practice complete')),
       h('div.card.stack', h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'squares done')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((it) => { const q = question(it); return { word: q.main + ' ' + q.sub.replace('?', ''), greek: false, sub: it.kind === 'square' ? ATTR_LABEL[it.attr] : 'ending', why: null }; }), () => { const again = S.missed.map((it) => ({ it, tries: 1 })); S.missed = []; runList(again); }),
-        h('div.row.wrap', rowKey ? h('a.btn' + (S.missed.length ? '' : '.primary'), { href: '#/parse/run/row/' + rowKey }, 'Parse real words from this row') : null,
-          viaList ? null : h('a.btn' + (rowKey ? '' : '.primary'), { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'),      // from the Indicative list, "Back to Indicative" (below) replaces it
-          ...backLinks('#/home', 'Back to Home', viaList && !rowKey))));
+        h('div.row.wrap', h('a.btn' + (S.missed.length ? '' : '.primary'), { href: rowKey ? '#/parse/run/row/' + rowKey : '#/parse/run/open/ind' }, rowKey ? 'Parse real words from this row' : 'Parse real words from open rows'),
+          viaList ? null : h('a.btn', { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'),      // from the Indicative list, "Back to Indicative" (below) replaces it
+          ...backLinks('#/home', 'Back to Home'))));
   };
   const runList = (list) => { queue.length = 0; queue.push(...list); S.shown = 0; S.round = 0; next(); };
   const next = () => {
