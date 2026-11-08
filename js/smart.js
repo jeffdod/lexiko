@@ -78,7 +78,7 @@ const GO_LABEL = (topic, c) => topic === 'words' ? (c.due ? 'Review words' : 'Le
 
 /** Everything a normal session will contain, so the button never promises less than it delivers. Vocabulary sessions also slip in a few check-ins on words you said you already know. */
 const work = (c, topic = 'words') => {
-  const parts = [topic === 'words' ? (c.sessionDue ? c.sessionDue + ' to review' : '') : (c.due ? c.due + ' to review' : ''), c.fresh ? c.fresh + ' new' : '', c.checkins ? c.checkins + (c.checkins > 1 ? ' check-ins' : ' check-in') : ''];
+  const parts = [topic === 'words' ? (c.sessionDue ? c.sessionDue + (c.sessionDue < c.due ? ' of ' + c.due : '') + ' due' : '') : (c.due ? c.due + ' due' : ''), c.fresh ? c.fresh + ' new' : '', c.checkins ? c.checkins + (c.checkins > 1 ? ' check-ins' : ' check-in') : ''];
   if (topic === 'words' && c.fresh && verbBrake().braked) parts[1] += ' (no new verbs)';
   return parts.filter(Boolean).join(' + ');
 };

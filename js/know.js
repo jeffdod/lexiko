@@ -508,8 +508,8 @@ function paceNow(topic, now = clockNow()) {
   const last = Object.keys(K.daily).filter((k) => (K.daily[k][field] || 0) > 0).sort().pop();
   const gap = last ? (new Date(todayKey()) - new Date(last)) / 864e5 : 99;
   let n = max, why = '', slow = false;
-  if (due > cap) { n = 0; slow = true; why = 'You have ' + due + ' to review, so new ' + noun + ' wait until you catch up.'; }
-  else if (due > cap / 2) { n = Math.max(1, Math.round(max / 3)); slow = true; why = 'You have ' + due + ' to review, so new ' + noun + ' are slowed until you catch up.'; }
+  if (due > cap) { n = 0; slow = true; why = 'You have ' + due + ' ' + noun + ' due, so new ' + noun + ' wait until you catch up.'; }
+  else if (due > cap / 2) { n = Math.max(1, Math.round(max / 3)); slow = true; why = 'You have ' + due + ' ' + noun + ' due, so new ' + noun + ' are slowed until you catch up.'; }
   else if (acc != null && acc < 0.75) { n = Math.max(1, Math.round(max / 3)); slow = true; why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new ' + noun + ' are slowed while these settle.'; }
   if (n === 0 && today === 0 && gap >= 3 && max > 0) { n = 1; why = 'It’s been a few days, so one new ' + noun.slice(0, -1) + ' keeps things moving. ' + why; }
   return out(Math.min(n, max), why, { acc, slow });
