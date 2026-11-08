@@ -13,7 +13,7 @@ import { INFB, infKey } from './infdata.js';
 import { SUBB, subKey } from './subdata.js';
 import { IMPB, impKey } from './impdata.js';
 import { chartsButton, openCharts, chartRowForSlots, participleHighlight, infinitiveHighlight } from './charts.js';
-import { smart, TOPICS } from './smart.js';
+import { smart, TOPICS, doneCards } from './smart.js';
 import { miniGoalCard } from './goals.js';
 import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
@@ -692,7 +692,7 @@ async function landing(view) {
   clear(view).append(
     backHead('Parsing', '#/home', 'Home'),
     h('div.stack',
-      startButton(sm),
+      ...(doneCards('parse') || [startButton(sm)]),
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap.links', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots')),
       unlockSection(),
