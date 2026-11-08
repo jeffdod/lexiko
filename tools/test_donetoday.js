@@ -47,6 +47,24 @@ const { chromium } = require('playwright');
   const box = await btn.evaluate((e) => { const r = document.createRange(); r.selectNodeContents(e); const a = r.getBoundingClientRect(), c = e.getBoundingClientRect(); return [(a.top + a.bottom) / 2 - (c.top + c.bottom) / 2, (a.left + a.right) / 2 - (c.left + c.right) / 2]; });
   ok(Math.abs(box[0]) <= 2 && Math.abs(box[1]) <= 2, 'button text is centered ' + JSON.stringify(box));
   await btn.click(); await p.waitForSelector('.qcard', { timeout: 8000 }); ok(/#\/learn\/daily/.test(p.url()), 'the button starts the daily session');
+
+  // a word studied minutes ago comes back soon: the card says "Almost done", not "done", and the word counts as due once its time comes
+  const L = await p.evaluate(async () => {
+    const k = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/fsrs.js'), S = await import('/lexiko/js/smart.js'), now = Date.now();
+    const learn = (n, due) => k.K.cards.set('w:' + n, { ...F.newCard('w:' + n), state: 'learning', stability: 1, reps: 1, last: now - 60000, due });
+    for (const n of [2316, 1722, 3004, 1510, 1063]) k.K.cards.delete('w:' + n);
+    learn(2316, now + 180000);                                       // due in 3 minutes
+    const waiting = { due: k.dueCards().length, next: S.upcoming().words.next - now };
+    learn(2316, now - 1000);                                         // its time has come
+    return { waiting, ready: k.dueCards().length };
+  });
+  ok(L.waiting.due === 0 && L.waiting.next > 0 && L.waiting.next <= 181000, 'a word due in minutes is not due yet but is the next review: ' + JSON.stringify(L.waiting));
+  ok(L.ready === 1, 'once its time comes it counts as due, even though it was studied today');
+  await p.evaluate(async () => { const k = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/fsrs.js'), now = Date.now(); k.K.cards.set('w:2316', { ...F.newCard('w:2316'), state: 'learning', stability: 1, reps: 1, last: now - 60000, due: now + 180000 });
+    const { todayKey } = await import('/lexiko/js/util.js'), d = k.K.daily[todayKey()]; delete d.more; delete d.wc; delete d.wcm; d.n = 10; });      // the earlier button press had asked for more: start the day over
+  await p.goto(U + '#/home'); await p.waitForTimeout(150); await p.goto(U + '#/learn/words'); await p.waitForTimeout(600);
+  const t2 = await p.locator('body').innerText();
+  ok(/Almost done\./.test(t2) && /Cards you just studied come back soon\./.test(t2) && /Next review in/.test(t2) && !/You’re done for today\./.test(t2), 'the card says "Almost done" while a word is waiting: ' + t2.slice(0, 200).replace(/\n/g, '|'));
   ok(errs.length === 0, 'no page errors: ' + errs.join(' | '));
   await b.close(); console.log(process.exitCode ? 'donetoday: FAILED' : 'donetoday: ok');
 })();
