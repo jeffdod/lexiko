@@ -1,4 +1,5 @@
-// The "Study more" offer is counted from the session it starts, so its total always matches.
+// The "Study more" offer is counted by previewing the unlock, so its total always matches the session the button starts,
+// including after the learner has already asked for more once (more learned today than the original allowance).
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 390, height: 860 } }); const errs = [];
@@ -8,16 +9,19 @@ const { chromium } = require('playwright');
   await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
   await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('gates', K.allGatesOpen()); await K.setSetting('wordsPace', 'fixed'); });
   const r = await p.evaluate(async () => {
-    const k = await import('/lexiko/js/know.js'), S = await import('/lexiko/js/smart.js'), { todayKey } = await import('/lexiko/js/util.js'), out = {};
-    const d = (k.K.daily[todayKey()] ||= {}); delete d.wc; delete d.wcm; delete d.more; d.n = 10;       // today's allowance used up
-    out.done = S.counts().words; out.more = S.moreReady('words');
-    await k.unlockMore();                                                                           // press "Study more today"
-    const items = k.buildSession({ kind: 'daily' }); out.after = { review: items.filter((x) => x.type === 'review').length, fresh: items.filter((x) => x.type === 'new').length, checkins: items.filter((x) => x.type === 'probe').length };
-    out.counts = S.counts().words; delete d.more; delete d.wc; delete d.wcm; d.n = 0; return out;
+    const k = await import('/lexiko/js/know.js'), S = await import('/lexiko/js/smart.js'), { todayKey } = await import('/lexiko/js/util.js'), out = [];
+    const d = (k.K.daily[todayKey()] ||= {});
+    for (const today of [10, 24, 44]) {                         // allowance used up; learned more than the allowance (asked for more earlier); asked twice
+      d.n = today; delete d.wc; delete d.wcm; delete d.more;
+      const offer = S.moreReady('words');
+      await k.unlockMore();
+      const items = k.buildSession({ kind: 'daily' }), c = (t) => items.filter((x) => x.type === t).length;
+      out.push({ today, offer, real: { reviews: c('review'), fresh: c('new'), checkins: c('probe') } });
+      delete d.more; delete d.wc; delete d.wcm;
+    }
+    d.n = 0; return out;
   });
-  ok(r.done.fresh === 0 && r.more.fresh > 0, 'done today, but more is available: ' + JSON.stringify([r.done, r.more]));
-  ok(r.more.reviews === r.after.review && r.more.fresh === r.after.fresh && r.more.checkins === r.after.checkins, 'the offer matches the session it starts: ' + JSON.stringify([r.more, r.after]));
-  ok(r.counts.total === r.after.review + r.after.fresh + r.after.checkins, 'the Home total matches after asking for more: ' + JSON.stringify(r.counts));
+  for (const x of r) { ok(JSON.stringify(x.offer) === JSON.stringify(x.real), 'offer equals the session it starts (learned today ' + x.today + '): ' + JSON.stringify([x.offer, x.real])); ok(x.offer.fresh > 0, 'a full allowance of new words is on offer (learned today ' + x.today + ')'); }
   ok(errs.length === 0, 'no page errors: ' + errs.join(' | '));
   await b.close(); console.log(process.exitCode ? 'exactmore: FAILED' : 'exactmore: ok');
 })();

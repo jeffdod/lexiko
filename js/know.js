@@ -491,14 +491,24 @@ function itemPace(topic, now = clockNow()) {
   if (d[f] == null || d[f + 'm'] !== max) { d[f] = r.n; d[f + 'm'] = max; store.set('daily', K.daily); }
   return { ...r, n: d[f], left: Math.max(0, d[f] - (words ? newToday() : parseNewToday())) };
 }
-/** Press "Study more today": everything due now counts, and another daily allowance of new items opens. */
-export async function unlockMore() {
-  const now = clockNow(), d = (K.daily[todayKey(now)] ||= {});
+/** What "Study more today" does to today's record: everything due now counts, and a fresh daily allowance of new items opens on top of whatever was already learned today. */
+function applyUnlock(d, now) {
   const w = wordsPace(now), p = parsePace(now);
   d.more = true;
-  if (!w.paused) d.wc = (d.wc || 0) + Math.max(0, setting('newPerDay'));
-  if (!p.paused) d.pc = (d.pc || 0) + Math.max(0, setting('parseNewPerDay'));
+  if (!w.paused) d.wc = Math.max(d.wc || 0, newToday()) + Math.max(0, setting('newPerDay'));
+  if (!p.paused) d.pc = Math.max(d.pc || 0, parseNewToday()) + Math.max(0, setting('parseNewPerDay'));
+}
+/** Press "Study more today". */
+export async function unlockMore() {
+  const now = clockNow(), d = (K.daily[todayKey(now)] ||= {});
+  applyUnlock(d, now);
   await store.set('daily', K.daily);
+}
+/** Run fn as if "Study more today" had been pressed, then put today's record back exactly as it was. The offer is counted this way, so it cannot disagree with the session the button starts. */
+export function previewUnlock(fn) {
+  const now = clockNow(), d = (K.daily[todayKey(now)] ||= {}), keys = ['more', 'wc', 'wcm', 'pc', 'pcm'], keep = Object.fromEntries(keys.map((k) => [k, d[k]]));
+  try { applyUnlock(d, now); return fn(); }
+  finally { for (const k of keys) { if (keep[k] === undefined) delete d[k]; else d[k] = keep[k]; } }
 }
 function paceNow(topic, now = clockNow()) {
   const words = topic === 'words', noun = words ? 'words' : 'forms', pre = topic;

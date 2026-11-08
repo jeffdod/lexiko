@@ -1,7 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
 import { clockNow } from './clock.js';
-import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, buildSession, verbBrake, setting, dueCards, dueToday, withMore, moreUnlocked, unlockMore, newToday, parseDueCount, parseFreshCount, parseNewToday, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, buildSession, verbBrake, setting, dueCards, dueToday, unlockMore, previewUnlock, newToday, parseDueCount, parseFreshCount, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
 export const TOPICS = {
@@ -118,13 +118,11 @@ export function topicNote(topic) { const c = counts()[topic]; return c.due || c.
 
 /** What the session would hold if the learner asks for more today, counted from that session itself (reviews, new, check-ins), so the offer and the session always agree. */
 export function moreReady(topic) {
-  const paused = setting(topic + 'Pause') || (topic === 'parse' && !parseReady()), max = Math.max(0, setting(topic === 'words' ? 'newPerDay' : 'parseNewPerDay'));
   if (topic === 'words') {
-    const items = withMore(() => buildSession({ kind: 'daily', newLimit: paused ? 0 : wordsPace().left + max })), n = (t) => items.filter((x) => x.type === t).length;
+    const items = previewUnlock(() => buildSession({ kind: 'daily' })), n = (t) => items.filter((x) => x.type === t).length;
     return { reviews: n('review'), fresh: n('new'), checkins: n('probe') };
   }
-  const reviews = moreUnlocked() ? 0 : withMore(() => parseDueCount()) - parseDueCount();
-  return { reviews, fresh: paused ? 0 : Math.min(max, parseFreshCount()), checkins: 0 };
+  return previewUnlock(() => ({ reviews: parseDueCount(), fresh: parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0, checkins: 0 }));
 }
 
 /** "You're done for today" and, when there is more to do, a button to ask for it. Null unless the topic really is finished for today and has studied items. */
