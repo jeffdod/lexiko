@@ -247,8 +247,8 @@ export function ptcPool({ anyVerb = false } = {}) {
 export const rowsLength = (n) => Math.max(8, n);
 export function rowsPools(keys, anyVerb = false) { return keys.map((k) => rowPool(k, { ignoreLevel: true, anyVerb })); }
 /** At least 8 forms, and at least one per row you picked: rows are dealt from in turn so each is represented, with no form twice, and no more than there are. */
-export function rowsQueue(keys, anyVerb = false, pools = rowsPools(keys, anyVerb)) {
-  const lists = pools.map((p) => shuffle(p.slice().sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 40))), at = lists.map(() => 0), seen = new Set(), out = [], total = rowsLength(keys.length);
+export function rowsQueue(keys, anyVerb = false, pools = rowsPools(keys, anyVerb), total = rowsLength(keys.length)) {
+  const lists = pools.map((p) => shuffle(p.slice().sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 40))), at = lists.map(() => 0), seen = new Set(), out = [];
   for (let live = true; live && out.length < total;) {
     live = false;
     for (let j = 0; j < lists.length && out.length < total; j++) {
@@ -258,6 +258,9 @@ export function rowsQueue(keys, anyVerb = false, pools = rowsPools(keys, anyVerb
   }
   return shuffle(out).map((id) => ({ id, type: 'row' }));
 }
+/** Why a family practice round is empty: nothing is open (or this kind is not), or no known verb has such a form. */
+const emptyNote = (locked, key, what) => locked ? (key ? 'This kind is not open yet. It opens when you pass its “Which kind is it?” drill.' : 'No kinds are open yet. A kind opens when you pass its “Which kind is it?” drill.')
+  : 'There are no ' + what + (key ? ' of this kind' : '') + ' in verbs you know yet. They appear as you learn more vocabulary.';
 /** One row's practice round. Practice only, so a row that is still locked can be practiced too; any = verbs you don't know yet count. */
 const rowQueue = (key, any = false) => shuffle(rowPool(key, { ignoreLevel: true, anyVerb: any }).sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 30)).slice(0, 12).map((id) => ({ id, type: 'row' }));
 
@@ -327,7 +330,7 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
   };
 
   function frame(c, inner) {
-    const tag = c.rescue ? ['gold', 'One more try'] : c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Refresher'] : c.type === 'row' ? ['', 'Chart row'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
+    const tag = c.rescue ? ['gold', 'One more try'] : c.retry ? ['warn', 'Once more'] : c.type === 'new' ? ['accent', 'New'] : c.type === 'recent' ? ['', 'Refresher'] : c.type === 'row' ? ['', 'Chart practice'] : c.type === 'practice' ? ['', 'Strengthen'] : c.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
     clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
         h('div.bar.accent.grow', h('i', { style: { width: (100 * (S.round ? S.rk / S.R : S.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': S.round ? 'Retry ' + S.rk + ' of ' + S.R : 'Item ' + S.shown + ' of ' + total }, S.round ? '↻ ' + S.rk + ' / ' + S.R : S.shown + ' / ' + total), chartsButton(), h('span.chip' + (tag[0] ? '.' + tag[0] : ''), tag[1])),
@@ -568,6 +571,17 @@ export function renderParse(view, params) {
       if (!q.length) { clear(view).append(backHead('Parse from the chart', '#/learn/charts/pick', 'Back'), h('div.card.stack', h('p', 'There are no forms of these rows in ' + (any ? 'the text' : 'verbs you know yet') + '.'), h('a.btn', { href: '#/learn/charts/pick' }, 'Back to the picker'))); return; }
       return runSession(view, q, { title: 'Parse from the chart', practice: true, back: ['#/learn/charts/pick', 'Back to the picker'], restart: () => renderParse(view, params) });
     }
+    if (rest[0] === 'open' && rest[1] === 'ind') {               // forms from all the open indicative rows, mixed, practice only
+      const any = rest[2] === 'any', keys = shuffle(ROWS.filter((r) => gateOpen('row:' + r.key)).map((r) => r.key)), back = '#/parse/kinds/ind';
+      const q = keys.length ? rowsQueue(keys, any, undefined, 12) : [];
+      if (!q.length) {
+        clear(view).append(backHead('Open rows', back, 'Indicative'), h('div.card.stack',
+          h('p', !keys.length ? 'No rows are open yet. Present active opens when verb parsing is on; the other rows open when you learn their squares on the master verb chart.' : any ? 'There are no forms of the open rows in the text.' : 'There are no forms of the open rows in verbs you know yet. They appear as you learn more vocabulary.'),
+          keys.length && !any ? h('a.btn', { href: '#/parse/run/open/ind/any' }, 'Try with any verb') : null, h('a.btn', { href: back }, 'Back to Indicative')));
+        return;
+      }
+      return runSession(view, q, { title: 'Open rows', practice: true, back: [back, 'Back to Indicative'], restart: () => renderParse(view, params) });
+    }
     if (rest[0] === 'row') {                                      // from the charts: forms of one row, practice only
       const r = ROWS.find((x) => x.key === rest[1]); if (!r) { location.hash = '#/learn/charts'; return; }
       const title = say(r.name).replace(/^./, (c) => c.toUpperCase()), any = rest[2] === 'any', q = rowQueue(r.key, any);
@@ -587,7 +601,7 @@ export function renderParse(view, params) {
       if (!q.length) {
         const locked = participleForms(key, { ignoreLevel: true }).length > 0;
         clear(view).append(backHead(title, back, 'Participles'), h('div.card.stack',
-          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no participles of this kind in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('p', emptyNote(locked, key, 'participles')),
           h('a.btn', { href: back }, 'Back')));
         return;
       }
@@ -600,7 +614,7 @@ export function renderParse(view, params) {
       if (!q.length) {
         const locked = infinitiveForms(key, { ignoreLevel: true }).length > 0;
         clear(view).append(backHead(title, back, 'Infinitives'), h('div.card.stack',
-          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no infinitives of this kind in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('p', emptyNote(locked, key, 'infinitives')),
           h('a.btn', { href: back }, 'Back')));
         return;
       }
@@ -613,7 +627,7 @@ export function renderParse(view, params) {
       if (!q.length) {
         const locked = subjunctiveForms(key, { ignoreLevel: true }).length > 0;
         clear(view).append(backHead(title, back, 'Subjunctive'), h('div.card.stack',
-          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no subjunctives of this kind in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('p', emptyNote(locked, key, 'subjunctives')),
           h('a.btn', { href: back }, 'Back')));
         return;
       }
@@ -626,7 +640,7 @@ export function renderParse(view, params) {
       if (!q.length) {
         const locked = imperativeForms(key, { ignoreLevel: true }).length > 0;
         clear(view).append(backHead(title, back, 'Imperative'), h('div.card.stack',
-          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no imperatives of this kind in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('p', emptyNote(locked, key, 'imperatives')),
           h('a.btn', { href: back }, 'Back')));
         return;
       }

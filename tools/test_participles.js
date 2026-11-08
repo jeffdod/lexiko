@@ -62,7 +62,7 @@ const { chromium } = require('playwright');
   // parsing route
   await p.evaluate(async () => { const k = await import('./js/know.js'), F = await import('./js/families.js'); k.K.settings.gates = k.allGatesOpen(); });
   await go('#/parse/run/ptc/all'); await p.waitForSelector('.qwrap');
-  ok(/Chart row/.test(await p.innerText('.practice-note')) && /practice only/.test(await p.innerText('.practice-note')), 'Parse some participles: practice only');
+  ok(/Chart practice/.test(await p.innerText('.practice-note')) && /practice only/.test(await p.innerText('.practice-note')), 'Parse some participles: practice only');
   // empty state
   await p.evaluate(async () => { const k = await import('./js/know.js'); k.K.settings.level = null; });
   await go('#/learn/charts/participles/run'); ok(/no participles to practice yet/.test(await p.innerText('#view')), 'empty state is explained');

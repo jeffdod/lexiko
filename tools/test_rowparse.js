@@ -15,7 +15,7 @@ const { chromium } = require('playwright');
   ok(await p.locator('a.btn:text-is("Parse forms like this")').count() === 1, 'paradigm page offers "Parse forms like this"');
   const before = await p.evaluate(async () => { const k = await import('./js/know.js'); return JSON.stringify([[...k.K.cards.keys()].length, k.K.daily]); });
   await p.click('a.btn:text-is("Parse forms like this")'); await p.waitForSelector('.qwrap'); 
-  ok(/Chart row/.test(await p.innerText('.practice-note')) && /practice only/.test(await p.innerText('.practice-note')), 'practice-only banner with "Chart row"');
+  ok(/Chart practice/.test(await p.innerText('.practice-note')) && /practice only/.test(await p.innerText('.practice-note')), 'practice-only banner with "Chart practice"');
   const total = (await p.innerText('.qcount')).match(/\/\s*(\d+)/)[1]; ok(+total > 0 && +total <= 12, 'a round of at most twelve forms: ' + total);
   // the forms are all aorist passive indicative
   const rowsOk = await p.evaluate(async () => { const C = await import('./js/charts.js'); return true; });

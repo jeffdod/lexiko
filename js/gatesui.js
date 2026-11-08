@@ -38,7 +38,7 @@ export function renderRows(view) {
   const p = chartPlan(), due = p.due.length;
   clear(view).append(backHead('Indicative', '#/parse', 'Parsing'), h('div.stack',
     h('p.muted.small', 'A row opens in daily parsing when you have learned its squares on the master verb chart. Present active is always open.'),
-    h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run' }, 'Drill all rows' + (due ? ' (' + sq(due) + ' to review)' : '')), h('a.btn.ghost', { href: '#/learn/charts' }, 'Study the chart')),
+    h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run' }, 'Drill all rows' + (due ? ' (' + sq(due) + ' to review)' : '')), h('a.btn', { href: '#/parse/run/open/ind' }, 'Parse open rows'), h('a.btn.ghost', { href: '#/learn/charts' }, 'Study the chart')),
     ...TENSES.flatMap(([pre, title]) => {
       const rs = ROWS.filter((r) => r.key.startsWith(pre));
       return rs.length ? [h('div.sec', title), h('div.list', rs.map((r) => {
@@ -55,7 +55,7 @@ export function renderKinds(view, id) {
   const base = '#/learn/charts/' + f.path + '/run';
   clear(view).append(backHead(f.name, '#/parse', 'Parsing'), h('div.stack',
     h('p.muted.small', 'A kind opens in daily parsing when you pass its “Which kind is it?” drill: about ' + Math.round(FAM_ACC * 100) + '% right over your last 20 answers.'),
-    h('div.row.wrap', h('a.btn.primary', { href: base }, 'Drill all kinds'), h('a.btn.ghost', { href: f.study }, 'Study ' + f.name.toLowerCase())),
+    h('div.row.wrap', h('a.btn.primary', { href: base }, 'Drill all kinds'), h('a.btn', { href: '#/parse/run/' + f.id + '/all' }, 'Parse open kinds'), h('a.btn.ghost', { href: f.study }, 'Study ' + f.name.toLowerCase())),
     h('div.list', f.kinds.map((k) => {
       const key = f.id + ':' + k.key, on = gateOpen(key), s = gateStats(key), need = passNeed(poolOf(f.id, k.key));
       return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', k.name), h('div.muted.small', on ? 'Open in daily parsing' : s.n >= need ? 'Not quite yet: ' + Math.round(s.acc * 100) + '%' : s.n + ' of ' + need + ' answers')),
