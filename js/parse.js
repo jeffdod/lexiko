@@ -258,7 +258,8 @@ export function rowsQueue(keys, anyVerb = false, pools = rowsPools(keys, anyVerb
   }
   return shuffle(out).map((id) => ({ id, type: 'row' }));
 }
-const rowQueue = (key) => shuffle(rowPool(key).sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 30)).slice(0, 12).map((id) => ({ id, type: 'row' }));
+/** One row's practice round. Practice only, so a row that is still locked can be practiced too; any = verbs you don't know yet count. */
+const rowQueue = (key, any = false) => shuffle(rowPool(key, { ignoreLevel: true, anyVerb: any }).sort((a, b) => D.forms[b].count - D.forms[a].count).slice(0, 30)).slice(0, 12).map((id) => ({ id, type: 'row' }));
 
 /** Extra practice: never scheduled. 'trouble' = your shakiest forms; 'preview' = a few frequent forms you haven't started. */
 export function buildParseExtra(kind) {
@@ -299,6 +300,7 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
   const total = queue.length;
   const S = { missed: [], shown: 0, round: 0, rk: 0, R: 0, done: 0, full: 0, fresh: 0, slots: {}, hist: [] };
   let st = null, cur = null;
+  const itemFor = (id) => (practice ? rawItem(id) : itemOf(id));      // practice is never scheduled, so a form whose gate is still closed can be asked
 
   const finish = () => {
     stop();
@@ -309,7 +311,7 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'forms parsed')), h('div.kpi', h('b', S.done ? pct(S.full / S.done) : '—'), h('span', 'fully correct')), practice ? null : h('div.kpi', h('b', S.fresh), h('span', 'new forms'))),
         Object.keys(S.slots).length ? h('div', h('b', 'Accuracy by part'), slotBars(S.slots)) : null,
         weakest && weakest[1] < 0.8 ? h('p.muted', 'Most slips this time: ' + SLOT_TITLE[weakest[0]].toLowerCase() + '. It will keep coming back until it sticks.') : null,
-        missedBlock(S.missed.map((m) => { const it = itemOf(m.id), L = it && D.lexByN.get(it.strongs); return { greek: true, word: D.forms[m.id].plain, sub: L ? L.head + ' · ' + L.brief : '', why: m.wrong.length ? 'Missed: ' + m.wrong.map((k) => (SLOT_TITLE[k] || k).toLowerCase()).join(', ') : '' }; }),
+        missedBlock(S.missed.map((m) => { const it = itemFor(m.id), L = it && D.lexByN.get(it.strongs); return { greek: true, word: D.forms[m.id].plain, sub: L ? L.head + ' · ' + L.brief : '', why: m.wrong.length ? 'Missed: ' + m.wrong.map((k) => (SLOT_TITLE[k] || k).toLowerCase()).join(', ') : '' }; }),
           () => runSession(view, S.missed.map((m) => ({ id: m.id, type: 'practice' })), { title, scope, restart, practice: true, back })),
         h('div.row.wrap', h('button.btn' + (S.missed.length ? '' : '.primary'), { onclick: restart }, 'Practice more'),
           ...backLinks(back[0], back[1]), scope ? h('a.btn', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null)));
@@ -412,7 +414,7 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
 
   function show(c) {
     if (!c.rescue && !c.retry && !practice && badStreak()) { c = { ...c, rescue: 'streak' }; S.hist = []; }
-    const it = itemOf(c.id);
+    const it = itemFor(c.id);
     if (c.rescue) return rescueStep(c, it);
     const mode = effectiveMode(groupOfItem(it), st);
 
@@ -568,11 +570,11 @@ export function renderParse(view, params) {
     }
     if (rest[0] === 'row') {                                      // from the charts: forms of one row, practice only
       const r = ROWS.find((x) => x.key === rest[1]); if (!r) { location.hash = '#/learn/charts'; return; }
-      const title = say(r.name).replace(/^./, (c) => c.toUpperCase()), q = rowQueue(r.key);
+      const title = say(r.name).replace(/^./, (c) => c.toUpperCase()), any = rest[2] === 'any', q = rowQueue(r.key, any);
       if (!q.length) {
-        const locked = rowPool(r.key, { ignoreLevel: true }).length > 0;
         clear(view).append(backHead(title, '#/learn/charts/paradigm/' + r.key, 'Paradigm'), h('div.card.stack',
-          h('p', locked ? 'These forms open later, as you move through the parsing levels.' : 'There are no forms of this row in verbs you know yet. They appear as you learn more vocabulary.'),
+          h('p', any ? 'There are no forms of this row in the text.' : 'There are no forms of this row in verbs you know yet. They appear as you learn more vocabulary.'),
+          any ? null : h('a.btn', { href: '#/parse/run/row/' + r.key + '/any' }, 'Try with any verb'),
           h('a.btn', { href: '#/learn/charts/paradigm/' + r.key }, 'Back to the paradigm')));
         return;
       }

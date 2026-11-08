@@ -8,7 +8,7 @@ import { contractType, contractSplit, contractNote } from './contract.js';
 import { miClass, miSplit, explainMi } from './midata.js';
 import { noteKind, kindLine } from './gatenote.js';
 import { verbsOn } from './know.js';
-import { h, clear, icon, pct, shuffle, missedBlock, backHead, backLinks } from './util.js';
+import { h, clear, icon, pct, shuffle, missedBlock, backHead, backLinks, startedFromKinds } from './util.js';
 
 const lg = (t, cls = '') => h('span' + cls, { lang: 'grc' }, t);
 
@@ -95,7 +95,7 @@ export function runInfDrill(view, only = null) {
       h('div.card.stack', h('p.muted.small', 'Practice only: your review schedule is unchanged.'), verbsOn() && S.kinds ? h('div.muted.small', [...S.kinds].map((k) => h('div', kindLine('inf', k)))) : null,
         h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'infinitives')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((x) => ({ word: x.w, greek: true, sub: INFB.get(x.key).name, why: null })), () => { const again = S.missed.map((x) => ({ x, tries: 1 })); S.missed = []; queue.length = 0; queue.push(...again); S.shown = 0; S.round = 0; next(); }),
-        h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/infinitives' }, 'Back to Infinitives'), ...backLinks('#/home', 'Back to Home'))));
+        h('div.row.wrap', startedFromKinds() ? h('a.btn' + (S.missed.length ? '' : '.primary'), { href: '#/parse/run/inf/' + (only || 'all') }, 'Parse some infinitives') : h('a.btn.primary', { href: '#/learn/charts/infinitives' }, 'Back to Infinitives'), ...backLinks('#/home', 'Back to Home'))));
   };
   const next = () => {
     stop(); let c = queue.shift();

@@ -6,7 +6,7 @@ import { K, openGateKeys, rateChart, chartCardsDue } from './know.js';
 import { CHART_ATTRS } from './families.js';
 import { exampleForm, paradigm, chartVerb } from './paradigms.js';
 import { MASTER, PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, openCharts } from './charts.js';
-import { h, clear, icon, pct, shuffle, toast, missedBlock, backHead, backLinks } from './util.js';
+import { h, clear, icon, pct, shuffle, toast, missedBlock, backHead, backLinks, startedFromKinds } from './util.js';
 
 export const ROWS = MASTER.filter(Boolean).map(([key, name, aug, stem, form, vowel, ends, para]) => ({ key, name, aug: /^perf/.test(key) ? 'RED' : aug, stem, form, vowel, ends, para }));      // every perfect row reduplicates, with its own verb's first consonant
 const ENDSETS = [['prim-act', 'primary active', PRIMARY_ACT], ['prim-mp', 'primary middle/passive', PRIMARY_MP], ['sec-act', 'secondary active', SECOND_ACT], ['sec-mp', 'secondary middle/passive', SECOND_MP]];
@@ -73,12 +73,15 @@ export function runDrill(view, rowKey = null) {
   const queue = shuffle(picks.map((it) => ({ it, tries: 0 })));
   if (!queue.length) return renderChartsPage(view);
   const total = queue.length, retryQ = [], S = { shown: 0, done: 0, good: 0, missed: [], round: 0, R: 0, rk: 0 };
+  const viaList = startedFromKinds();
   const finish = () => {
     stop();
     clear(view).append(h('div.pagehead', h('h1', 'Chart practice complete')),
       h('div.card.stack', h('div.kpis', h('div.kpi', h('b', S.done), h('span', 'squares done')), h('div.kpi', h('b', S.done ? pct(S.good / S.done) : '—'), h('span', 'right first time'))),
         missedBlock(S.missed.map((it) => { const q = question(it); return { word: q.main + ' ' + q.sub.replace('?', ''), greek: false, sub: it.kind === 'square' ? ATTR_LABEL[it.attr] : 'ending', why: null }; }), () => { const again = S.missed.map((it) => ({ it, tries: 1 })); S.missed = []; runList(again); }),
-        h('div.row.wrap', h('a.btn.primary', { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'), ...backLinks('#/home', 'Back to Home'))));
+        h('div.row.wrap', rowKey ? h('a.btn' + (S.missed.length ? '' : '.primary'), { href: '#/parse/run/row/' + rowKey }, 'Parse real words from this row') : null,
+          viaList ? null : h('a.btn' + (rowKey ? '' : '.primary'), { href: rowKey ? '#/learn/charts/paradigm/' + rowKey : '#/learn/charts' }, rowKey ? 'Back to the paradigm' : 'Back to Charts'),      // from the Indicative list, "Back to Indicative" (below) replaces it
+          ...backLinks('#/home', 'Back to Home', viaList && !rowKey))));
   };
   const runList = (list) => { queue.length = 0; queue.push(...list); S.shown = 0; S.round = 0; next(); };
   const next = () => {
