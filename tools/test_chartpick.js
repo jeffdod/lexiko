@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   const know = (lvl) => p.evaluate(async (lvl) => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/families.js'); K.K.settings.level = lvl; K.K.settings.gates = K.allGatesOpen(); }, lvl);
   await p.goto('http://localhost:8123/lexiko/#/learn/charts'); await p.waitForTimeout(1800); await know(0);
   // the entry point, inside the Master verb chart card
-  ok(await p.locator('.card:has(h2:text("Master verb chart")) a[href="#/learn/charts/pick"]').count() === 1, 'the Master verb chart card has a "Parse from this chart" button');
+  ok(await p.locator('.card:has(h2:text("Your chart progress")) a[href="#/learn/charts/pick"]').count() === 1, 'the chart progress card has a "Parse from this chart" button');
   await p.locator('a[href="#/learn/charts/pick"]').click(); await p.waitForTimeout(800);
   ok(/Choose at least one row/.test(await p.locator('.pickbar').innerText()), 'nothing chosen: the start button says to choose a row');
   const chip = async (name) => (await p.locator('.pickrow', { hasText: name }).first().locator('.chip').innerText()).trim();

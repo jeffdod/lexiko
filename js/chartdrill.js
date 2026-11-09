@@ -167,8 +167,9 @@ export function renderChartsPage(view) {
   const gaps = [4, 10, 17]; gaps.reverse().forEach((i) => rows.splice(i, 0, h('div', { style: { height: '.35rem' } })));
   clear(view).append(backHead('Master verb chart', '#/reference', 'Reference'), h('div.stack',
     start,
-    h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts() }, icon('table', 18), ' Look at the chart'), h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
-    h('div.card.stack', h('div.row.between', h('h2', 'Master verb chart'), h('span.chip', c.known + ' of ' + c.total + ' known')),
+    h('button.btn.primary.block', { onclick: () => openCharts() }, 'See the master verb chart ›'),
+    h('div.row.wrap.links', h('button.btn.ghost.sm', { onclick: () => openCharts({ tab: 'part' }) }, 'Participle chart')),
+    h('div.card.stack', h('div.row.between', h('h2', 'Your chart progress'), h('span.chip', c.known + ' of ' + c.total + ' known')),
       h('p.muted.small', 'Each square is one thing the chart says about a row. Tap a row name to see its paradigm.'), head, ...rows,
       h('div.legend', h('span', h('i.sq.known', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'known'), h('span', h('i.sq.shaky', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'shaky'), h('span', h('i.sq.new', { style: { display: 'inline-block', width: '.8rem', height: '.8rem' } }), 'new')),
       h('a.btn', { href: '#/learn/charts/pick' }, 'Parse from this chart')),
