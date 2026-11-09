@@ -119,10 +119,10 @@ export function topicNote(topic) { const c = counts()[topic]; return c.due || c.
 /** What the session would hold if the learner asks for more today, counted from that session itself (reviews, new, check-ins), so the offer and the session always agree. */
 export function moreReady(topic) {
   if (topic === 'words') {
-    const items = previewUnlock(() => buildSession({ kind: 'daily' })), n = (t) => items.filter((x) => x.type === t).length;
+    const items = previewUnlock(() => buildSession({ kind: 'daily' }), 'words'), n = (t) => items.filter((x) => x.type === t).length;
     return { reviews: n('review'), fresh: n('new'), checkins: n('probe') };
   }
-  return previewUnlock(() => ({ reviews: parseDueCount(), fresh: parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0, checkins: 0 }));
+  return previewUnlock(() => ({ reviews: parseDueCount(), fresh: parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0, checkins: 0 }), 'parse');
 }
 
 /** "You're done for today" and, when there is more to do, a button to ask for it. Null unless the topic really is finished for today and has studied items. */
@@ -135,7 +135,7 @@ export function doneCards(topic) {
   if (!total) return out;
   out.push(h('div.card.stack', h('b', 'Want to keep going?'),
     h('div.small.muted', plural(total, one, T.noun).replace(/^(\d+)/, '$1 more') + (total === 1 ? ' is' : ' are') + ' ready: ' + work({ due: m.reviews, sessionDue: m.reviews, fresh: m.fresh, checkins: m.checkins }, topic) + '.'),
-    h('button.btn.primary.block', { onclick: async () => { await unlockMore(); location.hash = T.go; } }, 'Study ' + plural(total, 'more ' + one, 'more ' + T.noun)),
+    h('button.btn.primary.block', { onclick: async () => { await unlockMore(topic); location.hash = T.go; } }, 'Study ' + plural(total, 'more ' + one, 'more ' + T.noun)),
     m.checkins ? h('div.small.muted', CHECKIN_NOTE) : null));
   return out;
 }
