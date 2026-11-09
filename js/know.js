@@ -176,6 +176,24 @@ export async function rate(n, grade, kind = 'review', ms = 0) {
   return next;
 }
 
+/** Words that are still unsettled when a session ends (still learning or relearning) come back together, once, HOLD_MIN minutes later.
+ *  A word already held once today (card.dfr is today) that is still unsettled comes back on the next study day instead.
+ *  Returns { later, tomorrow, due } (counts, and the time the first group comes back). Practice sessions never call this. */
+export const HOLD_MIN = 10;
+export async function holdToday(ns, now = clockNow()) {
+  const out = { later: 0, tomorrow: 0, due: 0, nextDay: 0 }, day = todayKey(), back = now + HOLD_MIN * 60000;
+  const next = F.dueAfterDays(1, now);
+  for (const n of ns) {
+    const c = K.cards.get('w:' + n);
+    if (!c || (c.state !== 'learning' && c.state !== 'relearning')) continue;
+    const again = c.dfr === day;
+    const nc = { ...c, dfr: day, due: again ? next : back };
+    await saveCard(nc);
+    if (again) { out.tomorrow++; out.nextDay = next; } else { out.later++; out.due = back; }
+  }
+  return out;
+}
+
 /** "I already know this" — create a stable card without a quiz. */
 export async function markKnown(n, full = false) {      // full: a verb whose parsing you know too (otherwise its parts and parsing are still to learn)
   const c = F.review(F.newCard('w:' + n), 4, clockNow(), K.settings.retention); c.src = full ? 'full' : 'manual';

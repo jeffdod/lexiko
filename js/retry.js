@@ -1,16 +1,18 @@
-// What happens to a card you miss during a session (shared by vocabulary and parsing).
-//  First "Again":   one retry later in the same session.
-//  Second "Again":  its next appearance is a rescue: an easier, multiple-choice style question.
-//  After the rescue: it stops for this session, whatever you answered; the scheduler brings it back when it is due.
+// What happens to a word you miss during a vocabulary session.
+//  First "Again":   it waits for the retry round at the end of the session (the retry round is one stretch with a count).
+//  Second "Again":  inside that round, a few cards later, it comes back as an easier multiple-choice question (a rescue).
+//  Third "Again":   one more rescue, a few cards later in the same round.
+//  Fourth "Again":  it stops for this session. When the session ends, every word that is still unsettled comes back
+//                   together once, later today (see holdToday in know.js).
 // "Hard" is not a miss here (the scheduler still treats it as a shaky answer).
-/** Returns 'pass' (nothing more now), 'retry', 'rescue' (requeue it as a rescue) or 'stop' (a rescue was answered; never requeue). */
+export const MAX_MISSES = 4;
+/** Returns 'pass' (nothing more now), 'retry' (retry round at the end), 'rescue' (a few cards later, same round) or 'stop' (no more tries this session). */
 export function missOutcome(item, miss) {
-  if (item.rescue) return miss ? 'stop' : 'pass';
   if (!miss) return 'pass';
   item.misses = (item.misses || 0) + 1;
   if (item.misses === 1) return 'retry';
-  item.rescue = true;
-  return 'rescue';
+  if (item.misses < MAX_MISSES) { item.rescue = true; return 'rescue'; }
+  return 'stop';
 }
 /** Snapshot and restore for Undo. */
 export const snap = (item) => ({ misses: item.misses, rescue: item.rescue });
