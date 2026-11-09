@@ -16,6 +16,20 @@ BOOKS = [  # (file prefix, code, name)
 ]
 REF = re.compile(r'^(\d+):(\d+)\s+(.*)$')
 
+# Corrections to the source tagging. The RP text tags the -qh- aorists of these verbs as middle deponent (V-ADI), although the
+# ending is the first aorist passive formative (-qh-), and the text tags the same ending as passive deponent (V-AOI) for
+# every other deponent verb (e)poreu/qh, e)fobh/qh, e)genh/qh...). Only the -qh- forms change; the true middle aorists of the same
+# verbs (A)PEKRI/NATO and the like) stay as the text has them. Found by scanning every verb form for a tense formative that
+# disagrees with its voice letter; these two verbs were the only mismatches.
+PASSIVE_DEPONENT_FIX = {611: 'apokrinomai', 4573: 'sebazomai'}   # Strong's numbers
+
+
+def fix_voice(word, strongs, morph):
+    if strongs in PASSIVE_DEPONENT_FIX and morph.startswith('V-ADI-') and 'QH' in word.upper():
+        return 'V-AOI-' + morph[len('V-ADI-'):]
+    return morph
+
+
 
 def parse_book(path):
     """Yield (chapter, verse, [token...]); token = dict(raw, word, punct, analyses=[(strongs, morph)])."""
@@ -53,6 +67,7 @@ def parse_book(path):
             for t in toks:
                 if not t['analyses']:
                     raise ValueError('%s:%d: token %r has no analysis' % (path, ln, t['raw']))
+                t['analyses'] = [(sn, fix_voice(t['raw'], sn, mo)) for sn, mo in t['analyses']]
             yield ch, vs, toks
 
 

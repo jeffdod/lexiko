@@ -27,6 +27,8 @@ node tools/test_parts.js         # principal-parts practice
 node tools/test_a11y.js          # names, tap targets and contrast, light and dark
 ```
 
+The build applies a few corrections to the RP tagging (listed in `tools/rp.py`, `PASSIVE_DEPONENT_FIX`): the -θη- aorists of ἀποκρίνομαι and σεβάζομαι are tagged middle deponent in the source but carry the first aorist passive formative, so they are corrected to passive deponent (`V-AOI`), as ἐπορεύθη, ἐφοβήθη and the other deponents with that ending already are. The source files in `sources/rp` are not edited. `node tools/test_deponent.js` checks the result.
+
 ### Prepositions that take several cases
 `sources/lexicon/Dodson-Ulrik.txt` is the single source of both the short (brief) and long definitions. Tag the parts of a preposition's definition in either column with `gen:`, `dat:` or `acc:` (for example `(a) gen: through, (b) acc: on account of`). When the short gloss has two or more different cases, the preposition is learned as one word per case ("διά + genitive", "διά + accusative"), each with its own review schedule, short gloss and long definition. The reader popup shows the sense for the case the preposition governs in that verse (it looks at the next case-bearing word, and shows every sense when that is unclear). A preposition with only one case, or none, stays a single word: the question screen shows just the word (no "+ case"), and its definition is shown exactly as written in your file, tag included. Quizzes test the short gloss; the long definition appears after answering only when it adds something, and sits behind "More" when it is long. Rebuild the data (command above), then `python3 tools/build_sw.py`.
 
