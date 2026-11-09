@@ -5,11 +5,11 @@ import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate,
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
 import { paceNote } from './pace.js';
-import { verbBrake } from './know.js';
+import { verbBrake, holdToday, HOLD_MIN } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { goalDetailCard } from './home.js';
-import { missOutcome, snap, restore } from './retry.js';
-import { h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
+import { missOutcome, snap, restore, MAX_MISSES } from './retry.js';
+import { todayKey, h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { verbQuestion } from './gatesui.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards, CHECKIN_NOTE, counts as sessionCounts } from './smart.js';
 import { readHref } from './reader.js';
@@ -81,10 +81,28 @@ function distractors(L, k = 3) {
 }
 
 /* ---------- session runner ---------- */
+/** The note under a rescue answer: another try in this round, or when the word comes back. */
+function rescueNote(item, ok, practice = false) {
+  if (practice) return 'That’s enough for now.';
+  if (!ok && (item.misses || 0) + 1 < MAX_MISSES) return 'Not yet. You’ll see it once more in this round.';
+  const c = getCard(item.n);
+  return 'That’s enough for now. You’ll see this word again ' + (c && c.dfr === todayKey() ? 'on your next study day' : 'in about ' + HOLD_MIN + ' minutes') + '.';
+}
+/** End-of-session cards for the words that are still unsettled. */
+function holdCards(held) {
+  const out = [], w = (n) => n + (n === 1 ? ' word' : ' words'), same = (n) => n === 1 ? 'comes' : 'come';
+  if (held.later) out.push(h('div.card.stack', h('h2', w(held.later) + ' ' + same(held.later) + ' back in about ' + HOLD_MIN + ' minutes'), h('p.muted.small', 'These aren’t settled yet, so you’ll see them together, once more today.')));
+  if (held.tomorrow) {
+    const today = new Date(held.nextDay).toDateString() === new Date(clockNow()).toDateString();
+    out.push(h('div.card.stack', h('h2', w(held.tomorrow) + ' ' + same(held.tomorrow) + ' back ' + (today ? 'later today' : 'tomorrow')), h('p.muted.small', 'You still missed these on their second visit today, so they’re due on your next study day.')));
+  }
+  return out;
+}
+
 function runSession(view, items, { title, scope, back, practice = false }) {
   const queue = items.map((i) => ({ ...i }));
   const total = queue.length;
-  const missed = new Set();
+  const missed = new Set(), touched = new Set();          // touched: words answered for the schedule in this session
   const stats = { shown: 0, round: 0, rk: 0, R: 0, done: 0, good: 0, again: 0, fresh: 0, probes: 0, probeMiss: 0 };
   let current = null, t0 = 0;
   /* keyboard: Space/Enter shows the answer or continues, 1–4 choose or rate. Skipped when a button has focus or a dialog is open. */
@@ -101,7 +119,8 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   document.addEventListener('keydown', onKey);
   const kbHint = (t) => h('div.kbhint.muted.small', t);
 
-  const finish = () => {
+  const finish = async () => {
+    const held = practice ? null : await holdToday([...touched]);           // words still unsettled come back together, once, later today
     const previewed = items.filter((i) => i.type === 'preview').map((i) => i.n);
     const addBtn = previewed.length ? h('button.btn.primary', { onclick: async (e) => { e.currentTarget.disabled = true; for (const n of previewed) if (!getCard(n)) await markLearning(n); e.currentTarget.textContent = '✓ Added to your review pile'; } }, 'Add these ' + previewed.length + ' words to my review pile') : null;
     clear(view).append(
@@ -112,6 +131,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         practice ? null : h('div.kpi', h('b', stats.fresh), h('span', 'new words started')),
         stats.probes ? h('div.kpi', h('b', stats.probes - stats.probeMiss + '/' + stats.probes), h('span', 'check-ins held')) : null),
         stats.probeMiss ? h('p.muted', stats.probeMiss + ' word' + (stats.probeMiss > 1 ? 's' : '') + ' you’d assumed you knew slipped; they’re back in your review pile.') : null,
+        ...(held ? holdCards(held) : []),
         !practice && items.some((i) => { const L = lexeme(i.n); return L && L.verb; }) ? verbQuestion() : null,
         missedBlock([...missed].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: L.brief }; }),
           () => runSession(view, [...missed].map((m) => ({ ...m, type: 'practice', seen: false, retry: false })), { title, scope, back, practice: true })),
@@ -141,24 +161,26 @@ function runSession(view, items, { title, scope, back, practice = false }) {
   }
   async function grade(item, g) {
     undoState = { item, wasSeen: !!item.seen, stats: { ...stats }, rated: !practice, rescue: snap(item) };
-    if (!practice) await rate(item.n, g, item.type, clockNow() - t0);
+    if (!practice) { await rate(item.n, g, item.type, clockNow() - t0); touched.add(item.n); }
     if (!item.seen) {                       // first time this card is answered in the session
       item.seen = true;
       if (item.type === 'new') stats.fresh++;
       if (item.type === 'probe') { stats.probes++; if (g < 3) stats.probeMiss++; }
     }
     const out = missOutcome(item, g === 1);                 // only Again is a miss; Hard is not retried
-    if (g >= 2 && out !== 'stop') { stats.good++; stats.done++; }
-    else { stats.again++; missed.add(item); if (out === 'retry' || out === 'rescue') requeue(item); }
+    if (g >= 2) { stats.good++; stats.done++; }
+    else { stats.again++; missed.add(item); if (out === 'retry') requeue(item); else if (out === 'rescue') queue.splice(Math.min(3, queue.length), 0, item); }     // a rescue comes back a few cards later, in the same round
     advance();
   }
 
   function frame(item, inner) {
+    const left = queue.length + 1;                       // words still to retry, this one included (a missed one stays in the count)
     const label = item.type === 'new' ? ['accent', 'New'] : item.type === 'probe' ? ['gold', 'Check-in'] : item.type === 'recent' ? ['', 'Refresher'] : item.type === 'practice' ? ['', 'Strengthen'] : item.type === 'preview' ? ['accent', 'Look ahead'] : ['', 'Review'];
+    const chip = item.rescue ? ['gold', 'One more try'] : stats.round ? ['gold', 'Retry'] : [label[0], label[1]];
         clear(view).append(h('div.qwrap',
       h('div.qtop', h('button.btn.ghost.icon.sm', { 'aria-label': 'End session', onclick: () => { if (confirm('End this session? Your answers so far are saved.')) finish(); } }, icon('close', 20)),
-        h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.round ? stats.rk / stats.R : stats.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': stats.round ? 'Retry ' + stats.rk + ' of ' + stats.R : 'Item ' + stats.shown + ' of ' + total }, stats.round ? '↻ ' + stats.rk + ' / ' + stats.R : stats.shown + ' / ' + total), chartsButton(),
-        h('span.chip' + (item.rescue ? '.gold' : label[0] ? '.' + label[0] : ''), item.rescue ? 'One more try' : label[1])),
+        h('div.bar.accent.grow', h('i', { style: { width: (100 * (stats.round ? Math.max(0, stats.R - left) / stats.R : stats.shown / total)) + '%' } })), h('span.qcount', { 'aria-label': stats.round ? left + (left === 1 ? ' word' : ' words') + ' left to retry' : 'Item ' + stats.shown + ' of ' + total }, stats.round ? left + ' left' : stats.shown + ' / ' + total), chartsButton(),
+        h('span.chip' + (chip[0] ? '.' + chip[0] : ''), chip[1])),
       item.rescue ? h('div.rescue-note', 'You’ve missed this twice. Pick the meaning.') : null,
       practice ? practiceBanner(item.type === 'preview', item.type === 'recent') : null, inner,
       undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));
@@ -197,7 +219,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         const r = reveal(); card.append(...r.answer.filter(Boolean));
         const g = item.rescue ? (ok ? 2 : 1) : ok ? (item.type === 'probe' && !item.seen ? 4 : 3) : 1;      // a rescue answered right counts as Hard: it was only recognized with help
         const next = h('button.btn.primary.block', { onclick: () => grade(item, g) }, ok || item.rescue ? 'Continue' : 'Continue (I’ll see this again)');
-        if (item.rescue) card.append(h('div.rescue-note', 'That’s enough for now.' + (practice ? '' : ' You’ll see this word again ' + soonText(F.preview(getCard(item.n) || F.newCard('w:' + item.n), clockNow(), setting('retention'))[g]) + '.')));
+        if (item.rescue) card.append(h('div.rescue-note', rescueNote(item, ok, practice)));
         clear(ctl).append(next);
         keyAct = (e, go) => { if (go) { next.click(); return true; } return false; };
       };
