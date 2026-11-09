@@ -12,12 +12,12 @@ const { chromium } = require('playwright');
     const k = await import('/lexiko/js/know.js'), S = await import('/lexiko/js/smart.js'), { todayKey } = await import('/lexiko/js/util.js'), out = [];
     const d = (k.K.daily[todayKey()] ||= {});
     for (const today of [10, 24, 44]) {                         // allowance used up; learned more than the allowance (asked for more earlier); asked twice
-      d.n = today; delete d.wc; delete d.wcm; delete d.more;
+      d.n = today; delete d.wc; delete d.wcm; delete d.more; delete d.mw; delete d.mp; delete d.pc; delete d.pcm;
       const offer = S.moreReady('words');
       await k.unlockMore();
       const items = k.buildSession({ kind: 'daily' }), c = (t) => items.filter((x) => x.type === t).length;
       out.push({ today, offer, real: { reviews: c('review'), fresh: c('new'), checkins: c('probe') } });
-      delete d.more; delete d.wc; delete d.wcm;
+      delete d.more; delete d.mw; delete d.mp; delete d.pc; delete d.pcm; delete d.wc; delete d.wcm;
     }
     d.n = 0; return out;
   });

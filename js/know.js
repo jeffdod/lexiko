@@ -235,13 +235,18 @@ export const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const
 const dayStart = (now) => { const d = new Date(now); d.setHours(0, 0, 0, 0); return +d; };
 const dayEnd = (now) => { const d = new Date(now); d.setHours(24, 0, 0, 0); return +d; };
 let forceMore = false;
-/** True once the learner has pressed "Study more today": from then on everything that is due right now counts. */
-export const moreUnlocked = () => forceMore || !!(K.daily[todayKey()] || {}).more;
+/** True once the learner has pressed "Study more today" for a topic ('words' or 'parse'): from then on everything of that topic that is due right now counts.
+ *  Each topic has its own unlock (mw, mp in today's record), so asking for more forms never opens more words, and the other way round.
+ *  No topic: true if either is unlocked. A record from before the split carries a single `more` flag, which counts for both. */
+export const moreUnlocked = (topic) => {
+  const d = K.daily[todayKey()] || {};
+  return forceMore || !!(d.more || (topic === 'words' ? d.mw : topic === 'parse' ? d.mp : d.mw || d.mp));
+};
 /** Is this studied card part of today's work? Due before midnight and not already reviewed today, or a word still being learned (it comes back within minutes,
  *  and the done card says so while it waits). A word already reviewed today and scheduled for later is not new work. */
 export function dueToday(c, now = clockNow()) {
   if (c.state === 'new') return false;
-  if (moreUnlocked()) return c.due <= now;
+  if (moreUnlocked(c.id.startsWith('w:') ? 'words' : 'parse')) return c.due <= now;
   if (c.state === 'learning' || c.state === 'relearning') return c.due <= now;      // words just missed or found hard come back within minutes: part of today's work once their time comes
   return c.due < dayEnd(now) && (c.last || 0) < dayStart(now);
 }
@@ -511,23 +516,26 @@ function itemPace(topic, now = clockNow()) {
   if (d[f] == null || d[f + 'm'] !== max) { d[f] = r.n; d[f + 'm'] = max; store.set('daily', K.daily); }
   return { ...r, n: d[f], left: Math.max(0, d[f] - (words ? newToday() : parseNewToday())) };
 }
-/** What "Study more today" does to today's record: everything due now counts, and a fresh daily allowance of new items opens on top of whatever was already learned today. */
-function applyUnlock(d, now) {
-  const w = wordsPace(now), p = parsePace(now);
-  d.more = true;
-  if (!w.paused) d.wc = Math.max(d.wc || 0, newToday()) + Math.max(0, setting('newPerDay'));
-  if (!p.paused) d.pc = Math.max(d.pc || 0, parseNewToday()) + Math.max(0, setting('parseNewPerDay'));
+/** What "Study more today" does to today's record for one topic: everything of that topic due now counts, and a fresh daily allowance of its new items opens on top of whatever was already learned today. The other topic is not touched. */
+function applyUnlock(d, now, topic) {
+  if (topic === 'parse') {
+    d.mp = true;
+    if (!parsePace(now).paused) d.pc = Math.max(d.pc || 0, parseNewToday()) + Math.max(0, setting('parseNewPerDay'));
+  } else {
+    d.mw = true;
+    if (!wordsPace(now).paused) d.wc = Math.max(d.wc || 0, newToday()) + Math.max(0, setting('newPerDay'));
+  }
 }
-/** Press "Study more today". */
-export async function unlockMore() {
+/** Press "Study more today" for a topic ('words' or 'parse'). */
+export async function unlockMore(topic = 'words') {
   const now = clockNow(), d = (K.daily[todayKey(now)] ||= {});
-  applyUnlock(d, now);
+  applyUnlock(d, now, topic);
   await store.set('daily', K.daily);
 }
 /** Run fn as if "Study more today" had been pressed, then put today's record back exactly as it was. The offer is counted this way, so it cannot disagree with the session the button starts. */
-export function previewUnlock(fn) {
-  const now = clockNow(), d = (K.daily[todayKey(now)] ||= {}), keys = ['more', 'wc', 'wcm', 'pc', 'pcm'], keep = Object.fromEntries(keys.map((k) => [k, d[k]]));
-  try { applyUnlock(d, now); return fn(); }
+export function previewUnlock(fn, topic = 'words') {
+  const now = clockNow(), d = (K.daily[todayKey(now)] ||= {}), keys = ['more', 'mw', 'mp', 'wc', 'wcm', 'pc', 'pcm'], keep = Object.fromEntries(keys.map((k) => [k, d[k]]));
+  try { applyUnlock(d, now, topic); return fn(); }
   finally { for (const k of keys) { if (keep[k] === undefined) delete d[k]; else d[k] = keep[k]; } }
 }
 function paceNow(topic, now = clockNow()) {
