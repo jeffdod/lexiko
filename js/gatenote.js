@@ -6,7 +6,8 @@ import { toast } from './util.js';
 
 const FORMS = { ptc: participleForms, inf: infinitiveForms, sub: subjunctiveForms, imp: imperativeForms };
 /** How many forms of this kind there are in the verbs you know (a small number shortens the pass mark). */
-export const poolOf = (fam, key) => FORMS[fam](key, { ignoreLevel: true }).length;
+export const poolForms = (fam, key) => FORMS[fam](key, { ignoreLevel: true });
+export const poolOf = (fam, key) => poolForms(fam, key).length;
 /** One first-try answer in a "Which kind is it?" drill; says so when that opens the kind. Does nothing while verb parsing is off. */
 export async function noteKind(fam, key, ok) {
   if (!verbsOn()) return false;

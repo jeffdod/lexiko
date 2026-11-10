@@ -146,6 +146,38 @@ setParseFreshCounter(() => {
   return freshMemo.n;
 });
 
+/* ---------- a kind that was just offered and accepted starts slowly ---------- */
+export const TRICKLE_DAILY = 2, TRICKLE_UNTIL = 20;      // new forms a day for a kind you just added, until you have met this many of its forms
+/** The gate keys a form can belong to (a form with two parses can be in two kinds). */
+export function formGateKeys(id) { const it = rawItem(id); return it && it.valid ? it.valid.map((v) => gateKey(v.slots, v.code, it.strongs)) : []; }
+/** Accepted kinds still easing in: the gate key and how many more new forms of it today's session may add. */
+function trickleState() {
+  ensureIndex();
+  const tr = K.settings.gateTrickle || {}, keys = Object.keys(tr).filter(gateOpen), out = new Map();
+  if (!keys.length) return out;
+  const met = new Map(keys.map((k) => [k, 0])), today = new Map(keys.map((k) => [k, 0])), d0 = new Date(clockNow()); d0.setHours(0, 0, 0, 0);
+  for (const c of K.cards.values()) {
+    if (!c.id.startsWith('f:') || c.state === 'new') continue;
+    const id = keyMap.get(c.id); if (id == null) continue;
+    const k = formGateKeys(id).find((q) => met.has(q)); if (!k) continue;
+    met.set(k, met.get(k) + 1); if (c.reps === 1 && c.last >= d0.getTime()) today.set(k, today.get(k) + 1);       // met for the first time today
+  }
+  for (const k of keys) if (met.get(k) < TRICKLE_UNTIL) out.set(k, Math.max(0, TRICKLE_DAILY - today.get(k)));
+  return out;
+}
+export const trickleActive = () => trickleState().size > 0;
+/** Of the new forms, drop the ones past a trickling kind's allowance for today (the most common forms of the kind go first). */
+function applyTrickle(fresh) {
+  const left = trickleState(); if (!left.size) return fresh;
+  const out = [];
+  for (const x of [...fresh].sort((a, b) => b.w - a.w)) {
+    const k = formGateKeys(x.id).find((q) => left.has(q));
+    if (k) { if (left.get(k) <= 0) continue; left.set(k, left.get(k) - 1); }
+    out.push(x);
+  }
+  return out;
+}
+
 /** What a session would contain right now: the due forms, then new ones up to the daily allowance. */
 export function planParseSession({ scope = null, kind = 'all', size = setting('sessionSize'), newLimit = null }) {
   ensureIndex();
@@ -155,7 +187,7 @@ export function planParseSession({ scope = null, kind = 'all', size = setting('s
     .filter((x) => x.id != null && autoItemOf(x.id) && kinds.includes(itemOf(x.id).kind) && (!scope || inPool.has(x.id)))
     .sort((a, b) => a.c.due - b.c.due).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);       // one entry per form
   const limit = newLimit != null ? newLimit : scope ? size : parsePace().left;
-  const fresh = pool.filter((x) => isFresh(x.id));
+  const fresh = scope ? pool.filter((x) => isFresh(x.id)) : applyTrickle(pool.filter((x) => isFresh(x.id)));
   return { due, fresh, limit, size };
 }
 

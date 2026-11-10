@@ -6,6 +6,8 @@ import { FAMILIES, FAMILY, ROW_KEYS, kindName, allGateKeys } from './kinds.js';
 import { poolOf } from './gatenote.js';
 import { h, clear, icon, fold, backHead, toast } from './util.js';
 import { setSetting } from './know.js';
+import { gateOffer, acceptOffer, putOffOffer } from './gateoffer.js';
+import { TRICKLE_DAILY } from './parse.js';
 
 const rowName = (r) => { const x = ROWS.find((q) => q.key === r); return x ? x.name || x.title || r : r; };
 const chip = (on) => h(on ? 'span.chip.good' : 'span.chip', on ? 'Open' : 'Locked');
@@ -15,18 +17,39 @@ const nOpen = (f) => f.kinds.filter((k) => gateOpen(f.id + ':' + k.key)).length;
 export async function turnOnVerbs() { await setGate('verbs', true); }
 async function turnOn(go = true) { await turnOnVerbs(); if (go) location.hash = '#/parse/howto'; }
 
+const SINGULAR = { ptc: 'participle', inf: 'infinitive', sub: 'subjunctive', imp: 'imperative' };
+/** What a kind is called in the offer: "aorist active", "present active participle". */
+function offerName(key) {
+  const [fam, k] = key.split(':');
+  if (fam === 'row') { const r = ROWS.find((q) => q.key === k); const n = longName(r ? r.name || r.title || k : k); return n.charAt(0).toLowerCase() + n.slice(1); }
+  const n = kindName(fam, k); return n.charAt(0).toLowerCase() + n.slice(1) + ' ' + SINGULAR[fam];
+}
+/** Where an accepted kind's lesson is: the chart row's page, or the family's page. */
+const lessonHref = (key) => { const [fam, k] = key.split(':'); return fam === 'row' ? '#/learn/charts/paradigm/' + k : FAMILY[fam].study; };
+/** The offer on the Parsing page, or null when there is none. */
+function offerCard() {
+  const o = gateOffer(); if (!o) return null;
+  const name = offerName(o.key), box = h('div.card.stack');
+  box.append(h('b', { style: { fontSize: '1.05rem' } }, 'Ready for the ' + name + '?'),
+    h('p.muted.small', { style: { margin: 0 } }, 'Your verb parsing is going well: ' + Math.round(o.acc * 100) + '% right over your last ' + o.n + '. The ' + name + ' is the next most common kind among the verbs you know. It would add ' + TRICKLE_DAILY + ' new forms a day to begin with.'),
+    h('div.row.wrap', h('button.btn.primary', { onclick: async () => { await acceptOffer(o.key); location.hash = lessonHref(o.key); } }, 'Yes, add it'),
+      h('button.btn', { onclick: async () => { await putOffOffer(); box.remove(); } }, 'Not yet')));
+  return box;
+}
+
 /** On the Parsing page: the "Turn on verb parsing" card while verbs are off, otherwise the unlock list. */
 export function unlockSection() {
   if (!verbsOn()) return h('div.card.stack', h('h2', 'Verb parsing'),
     h('p.muted.small', nominalState() === 'off' ? 'Daily parsing has nothing to ask yet: nouns, adjectives and pronouns are off. Turn on verbs when you are ready to parse them. Present active comes first.' : 'Daily parsing now asks about nouns, adjectives and other words you know. Turn on verbs when you are ready to parse them too. Present active comes first.'),
     h('div.row', h('button.btn.primary', { onclick: () => turnOn() }, 'Turn on verb parsing')));
-  const p = chartPlan(), n = p.due.length + p.nw.length, rows = ROW_KEYS.filter((r) => gateOpen('row:' + r)).length;
+  const rows = ROW_KEYS.filter((r) => gateOpen('row:' + r)).length;
   const row = (href, t, sub) => h('a.li', { href, style: { gap: '.7rem' } }, h('span.grow', h('b', t), h('div.muted.small', sub)), icon('chevR', 18));
   return h('div.stack',
+    offerCard(),
     h('div.sec', 'Unlock verb forms'),
-    h('p.muted.small', 'Present active is already on. Pass a drill to start getting that type of verb form in your daily parsing.'),
+    h('p.muted.small', 'Present active is already on. Each type opens when lexiko offers it, or you can open it yourself here. Drills are optional practice, and passing one opens that type too.'),
     h('div.list',
-      row('#/parse/kinds/ind', 'Indicative', rows + ' of ' + ROW_KEYS.length + ' rows open' + (n ? ', ' + (p.due.length ? sq(p.due.length) + ' to review' : sq(p.nw.length) + ' new') : '')),
+      row('#/parse/kinds/ind', 'Indicative', rows + ' of ' + ROW_KEYS.length + ' rows open'),
       ...FAMILIES.map((f) => row('#/parse/kinds/' + f.id, f.name, nOpen(f) + ' of ' + f.kinds.length + ' kinds open')),
       row('#/parse/gates', 'Choose forms', 'Tick or untick any type of verb form, or whole groups at once')));
 }
@@ -37,13 +60,13 @@ const TENSES = [['pres', 'Present'], ['impf', 'Imperfect'], ['fut', 'Future'], [
 export function renderRows(view) {
   const p = chartPlan(), due = p.due.length;
   clear(view).append(backHead('Indicative', '#/parse', 'Parsing'), h('div.stack',
-    h('p.muted.small', 'A row opens in daily parsing when you have learned its squares on the master verb chart. Present active is always open.'),
-    h('div.row.wrap', h('a.btn.primary', { href: '#/learn/charts/run' }, 'Drill all rows' + (due ? ' (' + sq(due) + ' to review)' : '')), h('a.btn', { href: '#/parse/run/open/ind' }, 'Parse open rows'), h('a.btn.ghost', { href: '#/learn/charts' }, 'Study the chart')),
+    h('p.muted.small', 'A row opens when lexiko offers it, or you can open it yourself in Choose forms. Present active is always open. The chart is optional practice, and learning a row’s squares opens that row too.'),
+    h('div.row.wrap', h('a.btn.primary', { href: '#/parse/run/open/ind' }, 'Parse open rows'), h('a.btn', { href: '#/learn/charts/run' }, 'Practice the chart' + (due ? ' (' + sq(due) + ' to review)' : '')), h('a.btn.ghost', { href: '#/learn/charts' }, 'Study the chart')),
     ...TENSES.flatMap(([pre, title]) => {
       const rs = ROWS.filter((r) => r.key.startsWith(pre));
       return rs.length ? [h('div.sec', title), h('div.list', rs.map((r) => {
         const on = gateOpen('row:' + r.key), got = chartRowSquares(r.key);
-        return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', longName(r.name)), h('div.muted.small', on ? 'Open in daily parsing' : got + ' of ' + CHART_ATTRS.length + ' learned')),
+        return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', longName(r.name)), h('div.muted.small', on ? 'Open in daily parsing' : got ? 'Not open yet · ' + got + ' of ' + CHART_ATTRS.length + ' learned' : 'Not open yet')),
           chip(on), h('a.btn.sm', { href: '#/learn/charts/run/' + r.key }, 'Drill'), h('a.btn.sm', { href: '#/parse/run/row/' + r.key }, 'Parse'));
       }))] : [];
     })));
@@ -54,7 +77,7 @@ export function renderKinds(view, id) {
   const f = FAMILY[id]; if (!f) { location.hash = '#/parse'; return; }
   const base = '#/learn/charts/' + f.path + '/run';
   clear(view).append(backHead(f.name, '#/parse', 'Parsing'), h('div.stack',
-    h('p.muted.small', 'A kind opens in daily parsing when you pass its “Which kind is it?” drill: about ' + Math.round(FAM_ACC * 100) + '% right over your last 20 answers.'),
+    h('p.muted.small', 'A kind opens when lexiko offers it, or you can open it yourself in Choose forms. Passing its “Which kind is it?” drill (about ' + Math.round(FAM_ACC * 100) + '% right over your last 20 answers) opens it too.'),
     h('div.row.wrap', h('a.btn.primary', { href: base }, 'Drill all kinds'), h('a.btn', { href: '#/parse/run/' + f.id + '/all' }, 'Parse open kinds'), h('a.btn.ghost', { href: f.study }, 'Study ' + f.name.toLowerCase())),
     h('div.list', f.kinds.map((k) => {
       const key = f.id + ':' + k.key, on = gateOpen(key), s = gateStats(key), need = passNeed(poolOf(f.id, k.key));

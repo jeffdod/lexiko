@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
   const rows = await p.locator('#view .li').count();
   ok(rows >= 10, 'rows listed: ' + rows);
   ok(await p.locator('#view .li a.btn.sm:text-is("Parse")').count() === rows && await p.locator('#view .li a.btn.sm:text-is("Drill")').count() === rows, 'every row has Drill and Parse');
-  ok(/\d of 5 learned/.test(await txt()) && !/squares learned/.test(await txt()), 'short caption "N of 5 learned"');
+  ok(/Not open yet/.test(await txt()) && !/squares learned/.test(await txt()), 'a locked row says "Not open yet" (with a short "N of 5 learned" once squares are learned)');
   ok(await p.locator('#view .li').nth(2).locator('a:text-is("Parse")').getAttribute('href').then((h) => /^#\/parse\/run\/row\/[a-z0-9-]+$/.test(h)), 'Parse points to that row');
 
   // a locked row can be practiced (practice only)
@@ -42,8 +42,8 @@ const { chromium } = require('playwright');
   await p.locator('a.btn:text-is("Back to Indicative")').click(); await p.waitForTimeout(400);
   ok(await p.evaluate(() => location.hash) === '#/parse/kinds/ind', 'Back to Indicative returns to the list');
 
-  // "Drill all rows" from Indicative
-  await p.locator('a.btn:text-is("Drill all rows")').click(); await p.waitForSelector('.qwrap'); await endNow();
+  // "Practice the chart" from Indicative
+  await p.locator('a.btn:has-text("Practice the chart")').click(); await p.waitForSelector('.qwrap'); await endNow();
   t = await btns(); ok(t[0] === 'Parse real words from open rows' && t.includes('Back to Indicative') && !t.includes('Back to Charts'), 'drill all rows: (' + t.join(' | ') + ')');
 
   // from the paradigm page: unchanged, plus Parse
