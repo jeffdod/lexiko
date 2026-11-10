@@ -6,6 +6,7 @@ import { decode } from './morph.js';
 import { slotOrder, labelOf } from './parse-model.js';
 import { ROWS } from './chartdrill.js';
 import { chartRowForSlots } from './charts.js';
+import { hintFor } from './verbhints.js';
 import { h } from './util.js';
 
 const lc = (s) => s.charAt(0).toLowerCase() + s.slice(1);
@@ -71,13 +72,17 @@ export function whyWrong(it, res) {
   const best = res.best, ans = answeredSlots(best, slot, user), got = findForm(it.strongs, ans, it.form.plain);
   const quiz = it.form.plain;
   let rule = null;
+  const hint = hintFor({ strongs: it.strongs, quiz: best.slots, ans, got, slot });   // hand-written hints for easily confused pairs (js/verbhints.js)
   if (['person', 'number', 'case', 'gender'].includes(slot)) rule = 'This is marked in the ending, so compare how the two words end. The letters that differ are set apart above.';
-  else if ((slot === 'tense' || slot === 'voice') && best.slots.mood === 'I' && ans.mood === 'I') rule = rowRule(best.slots, got ? got.slots : ans);
-  const [gw, qw] = got ? diff(got.f.plain, quiz) : [null, [quiz, '', '']];
+  else if (hint) rule = hint.text;
+  if (!hint && (slot === 'tense' || slot === 'voice') && best.slots.mood === 'I' && ans.mood === 'I') rule = rowRule(best.slots, got ? got.slots : ans);
+  // spelled alike: the learner's reading is the same word as the quiz word, so show it once instead of "no form like that"
+  const same = !!(hint && hint.same);
+  const [gw, qw] = same ? [[quiz, '', ''], [quiz, '', '']] : got ? diff(got.f.plain, quiz) : [null, [quiz, '', '']];
   const block = (label, parsing, body) => h('div.whyblock', h('div.whylabel', label), h('div.whyparse', parsing), body);
   return h('details.whyfold', h('summary', 'Where did this go wrong?'),
     h('div.whybody',
-      block('You answered', parsingText(ans), got ? word(gw) : h('div.small.muted', 'This verb has no form like that in the Greek text.')),
+      block('You answered', parsingText(ans), got || same ? word(gw) : h('div.small.muted', 'This verb has no form like that in the Greek text.')),
       block('This word', parsingText(best.slots), word(qw)),
       rule ? h('div.whyblock', h('div.whylabel', 'What to look for'), h('div.whyrule', rule)) : null));
 }
