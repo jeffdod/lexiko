@@ -524,3 +524,11 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .navbtn { padding-left: .7rem; padding-right: .7rem; gap: .3rem; white-space: nowrap; }       /* the two chapter names must stay on one line at narrow phone widths */
 .readbar .navpair { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: .35rem; }
 @media (min-width: 461px) { .readbar .navpair { display: flex; justify-content: space-between; } }
+
+/* Pull up at the end of a chapter for the next one (js/pullnext.js) */
+.pullhint { height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: height .18s ease; }
+.pullhint.live { transition: none; }
+.pullhint span { display: inline-flex; align-items: center; justify-content: center; text-align: center; padding: .5rem 1rem; border-radius: 999px; font: 600 .95rem var(--ui); border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.pullhint.ready span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+@media (prefers-reduced-motion: reduce) { .pullhint { transition: none; } }
+@media print { .pullhint { display: none; } }
