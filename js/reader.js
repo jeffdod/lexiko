@@ -166,6 +166,9 @@ export function renderReader(view, params) {
   const nav = (dir) => { const t = target(dir); return readHref(t.b.code, t.ch); };
   /** Where a bottom button goes, in a few words: "1 John 3". The two longest book names are shortened so the label stays on one line. */
   const navLabel = (dir) => { const t = target(dir); return shortBook(t.b.name) + ' ' + t.ch; };
+  /** The Previous (-1) or Next (1) button. The top bar and the foot of the chapter both use this, so they always match. */
+  const navBtn = (dir) => h('a.btn.navbtn', { href: nav(dir), 'aria-label': (dir < 0 ? 'Previous chapter: ' : 'Next chapter: ') + target(dir).b.name + ' ' + target(dir).ch },
+    ...(dir < 0 ? [icon('chevL', 18), navLabel(dir)] : [navLabel(dir), icon('chevR', 18)]));
 
   const body = h('div.reader', { lang: 'grc' });
   const meta = h('div.row.wrap.between', { style: { margin: '.2rem 0 .6rem' } });
@@ -205,9 +208,9 @@ export function renderReader(view, params) {
     );
     const read = !!K.read[book.code + ':' + ch];
     clear(foot).append(
-      h('div.readfoot', h('a.btn', { href: nav(-1), 'aria-label': 'Previous chapter: ' + target(-1).b.name + ' ' + target(-1).ch }, icon('chevL', 18), navLabel(-1)),
+      h('div.readfoot', navBtn(-1),
         h('button.btn' + (read ? '.primary' : ''), { onclick: async () => { await markRead(book.code, ch, !read); toast(read ? 'Chapter unmarked' : 'Chapter marked as read'); draw(); } }, read ? [icon('check', 18), 'Chapter marked as read'] : 'Mark chapter as read'),
-        h('a.btn', { href: nav(1), 'aria-label': 'Next chapter: ' + target(1).b.name + ' ' + target(1).ch }, navLabel(1), icon('chevR', 18))));
+        navBtn(1)));
   };
   draw();
 
@@ -252,10 +255,9 @@ export function renderReader(view, params) {
   };
 
   const bar = h('div.readbar',
-    h('div.row', h('a.btn.ghost.icon.sm', { href: nav(-1), 'aria-label': 'Previous chapter' }, icon('chevL', 20)),
-      h('button.title.grow', { onclick: pick, 'aria-label': 'Choose book and chapter' }, book.name + ' ' + ch, h('span.muted', '▾')),
-      h('button.btn.ghost.sm', { onclick: options, 'aria-label': 'Reading options' }, 'Aa'),
-      h('a.btn.ghost.icon.sm', { href: nav(1), 'aria-label': 'Next chapter' }, icon('chevR', 20))));
+    h('div.row', h('button.title.grow', { onclick: pick, 'aria-label': 'Choose book and chapter' }, book.name + ' ' + ch, h('span.muted', '▾')),
+      h('button.btn.ghost.sm', { onclick: options, 'aria-label': 'Reading options' }, 'Aa')),
+    h('div.navpair', navBtn(-1), navBtn(1)));
   clear(view).append(...[readBack(), bar, meta, body, foot].filter(Boolean));      // readBack() is null unless the reader was opened from search or a Learn page
 
   // word interactions (delegated)

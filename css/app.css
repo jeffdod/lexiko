@@ -521,4 +521,6 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .reads .li { padding: .5rem .7rem; } .reads .s { display: none; } .reads.open .s { display: block; }
 .cz { gap: .7rem; } .cz input[type=checkbox] { width: 1.3rem; height: 1.3rem; flex: none; accent-color: var(--accent); }
 .czmove { display: flex; gap: .25rem; flex: none; } .czlock { width: 1.3rem; display: flex; justify-content: center; color: var(--muted); flex: none; }
-.readfoot > a.btn { padding-left: .7rem; padding-right: .7rem; gap: .3rem; white-space: nowrap; }       /* the two chapter names must stay on one line at narrow phone widths */
+.navbtn { padding-left: .7rem; padding-right: .7rem; gap: .3rem; white-space: nowrap; }       /* the two chapter names must stay on one line at narrow phone widths */
+.readbar .navpair { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: .35rem; }
+@media (min-width: 461px) { .readbar .navpair { display: flex; justify-content: space-between; } }
