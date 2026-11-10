@@ -143,10 +143,19 @@ function showBetaHelp() {
   document.body.append(dlg); dlg.showModal();
 }
 
-let sortMode = 'alpha', sortDir = 1;                            // the glossary's order survives leaving and coming back
-let alphaCache = null;
+/* The Glossary's order: any of Word, Count and Status, each ascending or descending, in the order they were tapped (the first decides, the next ones break ties). */
+const SORTS = [['word', 'Word'], ['count', 'Count'], ['status', 'Status']];
+const SORT_HELP = { word: ['α to ω', 'ω to α'], count: ['fewest first', 'most first'], status: ['new words first', 'known words first'] };
+let sorts = [], letter = null;                                   // both survive leaving the Glossary and coming back
+const STATUS_RANK = { unknown: 0, learning: 1, known: 2 };
 const firstLetter = (L) => fold(L.head).replace(/[^α-ω]/g, '')[0] || '';
-const alphaList = () => alphaCache || (alphaCache = D.lex.map((L) => [fold(L.head), L]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1].rank - b[1].rank)).map((x) => x[1]));
+/** `list` ordered by the chosen sorts; words that tie on all of them (and the default, no sorts chosen) go alphabetically. */
+export function sortWords(list, chosen = sorts) {
+  const rows = list.map((L) => ({ L, w: fold(L.head), c: L.freq, s: STATUS_RANK[status(L.n)] ?? 0 }));
+  const key = { word: 'w', count: 'c', status: 's' };
+  rows.sort((x, y) => { for (const { key: k, dir } of chosen) { const a = x[key[k]], b = y[key[k]]; if (a !== b) return (a < b ? -1 : 1) * dir; } return x.w < y.w ? -1 : x.w > y.w ? 1 : x.L.rank - y.L.rank; });
+  return rows.map((r) => r.L);
+}
 
 export function renderSearch(view, params = []) {
   if (params[0] === 'w' && lexeme(+params[1])) return detail(view, +params[1], () => { location.hash = '#/search'; });
@@ -157,17 +166,23 @@ export function renderSearch(view, params = []) {
   const row = (L) => h('a.li', { href: '#/search/w/' + L.n, 'data-l': firstLetter(L), style: { gap: '.7rem' } },
     h('span.grow', h('b', { lang: 'grc', style: { fontSize: '1.15rem' } }, L.head), h('div.muted.small', L.short)),
     h('span.muted.small', fmt(L.freq) + '×'), statusChip(L.n));
-  const drawControls = () => {
+  // Tap a sort to add it (ascending), tap again to reverse it, tap a third time to drop it; the tap order is the priority.
+  const tapSort = (k) => { const i = sorts.findIndex((x) => x.key === k); if (i < 0) sorts.push({ key: k, dir: 1 }); else if (sorts[i].dir === 1) sorts[i].dir = -1; else sorts.splice(i, 1); draw(); };
+  const drawControls = (withLetters) => {
     clear(controls);
-    const alpha = sortMode === 'alpha';
-    controls.append(h('div.row', { style: { gap: '.4rem' } },
-      h('button.btn.sm' + (alpha ? '.primary' : ''), { 'aria-pressed': String(alpha), 'aria-label': alpha ? (sortDir > 0 ? 'Alphabetical, alpha to omega. Tap to reverse.' : 'Alphabetical, omega to alpha. Tap to reverse.') : 'Alphabetical order',
-        onclick: () => { if (sortMode === 'alpha') sortDir = -sortDir; else sortMode = 'alpha'; draw(); } }, sortDir < 0 ? 'ω → α' : 'α → ω'),
-      h('button.btn.sm' + (alpha ? '' : '.primary'), { 'aria-pressed': String(!alpha), onclick: () => { sortMode = 'freq'; draw(); } }, 'Most common')));
-    if (alpha) {
-      const have = new Set(D.lex.map(firstLetter)), ls = 'αβγδεζηθικλμνξοπρστυφχψω'.split('').filter((l) => have.has(l)); if (sortDir < 0) ls.reverse();
-      controls.append(h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto', gap: '.35rem', paddingBottom: '.2rem' }, role: 'group', 'aria-label': 'Jump to letter' },
-        ls.map((l) => h('button.btn.sm', { lang: 'grc', style: { minWidth: '2.6rem', padding: '0 .4rem', flex: 'none' }, onclick: () => { const t = out.querySelector('[data-l="' + l + '"]'); if (t) t.scrollIntoView({ block: 'start' }); } }, l))));
+    controls.append(h('div.row.sortrow', { role: 'group', 'aria-label': 'Sort the Glossary' }, h('span.muted.small', 'Sort'),
+      ...SORTS.map(([k, label]) => {
+        const i = sorts.findIndex((x) => x.key === k), on = i >= 0, dir = on ? sorts[i].dir : 0;
+        return h('button.btn.sm.sortbtn' + (on ? '.primary' : ''), { 'aria-pressed': String(on),
+          'aria-label': on ? 'Sort by ' + label + ', priority ' + (i + 1) + ', ' + SORT_HELP[k][dir > 0 ? 0 : 1] + '. Tap to ' + (dir > 0 ? 'reverse it.' : 'remove it.') : 'Sort by ' + label + ': ' + SORT_HELP[k][0],
+          onclick: () => tapSort(k) }, label, on ? h('b', (i + 1) + (dir > 0 ? '↑' : '↓')) : null);
+      }),
+      sorts.length ? h('button.btn.ghost.icon.sm', { 'aria-label': 'Clear the sort', title: 'Clear the sort', onclick: () => { sorts = []; draw(); } }, icon('close', 18)) : null));
+    if (withLetters) {
+      const have = new Set(D.lex.map(firstLetter)), ls = 'αβγδεζηθικλμνξοπρστυφχψω'.split('').filter((l) => have.has(l));
+      controls.append(h('div.row', { style: { flexWrap: 'nowrap', overflowX: 'auto', gap: '.35rem', paddingBottom: '.2rem' }, role: 'group', 'aria-label': 'Show words starting with a letter' },
+        h('button.btn.sm' + (letter ? '' : '.primary'), { 'aria-pressed': String(!letter), style: { flex: 'none' }, onclick: () => { letter = null; draw(); } }, 'All'),
+        ls.map((l) => h('button.btn.sm' + (letter === l ? '.primary' : ''), { lang: 'grc', 'aria-pressed': String(letter === l), 'aria-label': 'Words starting with ' + l, style: { minWidth: '2.6rem', padding: '0 .4rem', flex: 'none' }, onclick: () => { letter = letter === l ? null : l; draw(); } }, l))));
     }
   };
   const draw = () => {
@@ -175,14 +190,15 @@ export function renderSearch(view, params = []) {
     const q = input.value.trim(), res = q ? findWords(input.value) : null;
     clear(out); clear(controls);
     if (!q) {
-      drawControls();
-      const list = sortMode === 'alpha' ? (sortDir > 0 ? alphaList() : alphaList().slice().reverse()) : D.lex.slice().sort((a, b) => b.freq - a.freq || a.rank - b.rank);
-      hint.textContent = fmt(list.length) + ' words · tap one to see where it appears. Or type above to search.';
+      drawControls(true);
+      const list = sortWords(letter ? D.lex.filter((L) => firstLetter(L) === letter) : D.lex);
+      hint.textContent = fmt(list.length) + (letter ? ' words starting with ' + letter : ' words') + ' · tap one to see where it appears. Or type above to search.';
       const frag = document.createDocumentFragment(); list.forEach((L) => frag.append(row(L))); out.append(frag);
       return;
     }
-    hint.textContent = res.length ? res.length + (res.length === 1 ? ' match' : ' matches') : 'No match. Try fewer letters, or search by the English meaning.';
-    res.forEach((L) => out.append(row(L)));
+    drawControls(false);
+    hint.textContent = res.length ? res.length + (res.length === 1 ? ' match' : ' matches') + (sorts.length ? '' : ', best first') : 'No match. Try fewer letters, or search by the English meaning.';
+    (sorts.length ? sortWords(res) : res).forEach((L) => out.append(row(L)));
   };
   input.addEventListener('input', draw);
   clear(view).append(h('div.stack', backHead('Glossary', '#/reference', 'Reference'), input, controls, h('div.row.wrap.between', hint, h('button.btn.ghost.sm', { onclick: showBetaHelp }, 'What is Beta Code?')), out));
