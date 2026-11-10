@@ -109,7 +109,8 @@ function showPop(el, pinned, rerender) {
 function verseHTML(vs, toks, seenGloss, opts) {
   let out = '<span class="verse" id="v' + vs + '" data-vs="' + vs + '">';
   if (opts.english) out += '<span class="gk">';           // the Greek in one piece, so the English can sit under it (or beside it on a wide screen)
-  if (opts.verseNums) out += '<span class="vn">' + vs + '</span>';
+  if (opts.lead != null) out += opts.lead;                  // plain run-in number (and ¶) of verse by verse and of the English layout
+  else if (opts.verseNums) out += '<span class="vn">' + vs + '</span>';
   const sn = senseNs(toks);
   for (let k = 0; k < toks.length; k++) {
     const t = toks[k];
@@ -130,6 +131,12 @@ function verseHTML(vs, toks, seenGloss, opts) {
     if (en) out += '<span class="en" lang="en">' + englishHTML(en) + '</span>';
   }
   return out + '</span> ';
+}
+
+/** The plain verse number that opens a verse in verse by verse and beside the English, with a ¶ before it when a paragraph begins at the verse. */
+function runIn(vs, marks, nums) {
+  const pil = marks && marks[0] === 1 ? '<span class="pil" aria-hidden="true">\u00b6</span>' : '';
+  return pil || nums ? '<span class="vh">' + pil + (nums ? '<span class="nm">' + vs + '</span>' : '') + '</span>' : '';
 }
 
 /** A book name for a small button: Corinthians and Thessalonians are shortened, the rest stay as they are. */
@@ -195,13 +202,17 @@ export function renderReader(view, params) {
       const marks = paras ? D.paras.get(book.code + ':' + ch + ':' + vs) : null;
       if (vmode) {
         if (sec && heads) html += headingHTML(sec);
-        const num = (marks && marks[0] === 1 ? '<span class="pil" aria-hidden="true">\u00b6</span>' : '') + (opts.verseNums ? '<span class="nm">' + vs + '</span>' : '');
-        html += '<p class="vv"><span class="vh">' + num + '</span>' + verseHTML(vs, toks, seen, { ...opts, verseNums: false, pilcrow: true, breaks: marks && marks.filter((m) => m > 1) }) + '</p>';
+        html += '<p class="vv">' + verseHTML(vs, toks, seen, { ...opts, verseNums: false, pilcrow: true, breaks: marks && marks.filter((m) => m > 1), lead: runIn(vs, marks, opts.verseNums) }) + '</p>';
         continue;
       }
       if (sec && heads) { if (open) html += '</p>'; html += headingHTML(sec); html += '<p>'; open = true; }       // a section heading starts a new paragraph
       else if (!open) { html += '<p>'; open = true; }
       else if (marks && marks[0] === 1) html += '</p><p>';
+      if (eng) {                                                 // beside the English: the same plain number and ¶ as verse by verse, and a ¶ for a break inside the verse
+        const pm = D.parasBooks.has(book.code) ? D.paras.get(book.code + ':' + ch + ':' + vs) : null;
+        html += verseHTML(vs, toks, seen, { ...opts, verseNums: false, pilcrow: true, breaks: pm && pm.filter((m) => m > 1), lead: runIn(vs, pm, opts.verseNums) });
+        continue;
+      }
       html += verseHTML(vs, toks, seen, marks ? { ...opts, breaks: marks } : opts);
     }
     body.innerHTML = html + (open && !vmode ? '</p>' : '');
