@@ -11,6 +11,10 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   const txt = async () => p.evaluate(() => { const [a, , c] = [...document.querySelectorAll('.readfoot > *')]; return [a.textContent.trim(), c.textContent.trim(), a.getAttribute('aria-label'), c.getAttribute('aria-label')]; });
   let t = await txt(); ok(t[0] === '1 John 1' && t[1] === '1 John 3', 'names the chapters: ' + t.slice(0, 2).join(' / '));
   ok(t[2] === 'Previous chapter: 1 John 1' && t[3] === 'Next chapter: 1 John 3', 'screen readers hear “Previous chapter: …”: ' + t.slice(2).join(' / '));
+  const top = await p.evaluate(() => [...document.querySelectorAll('.readbar .navpair a')].map((a) => [a.textContent.trim(), a.getAttribute('aria-label'), a.className]));
+  const bot = await p.evaluate(() => [...document.querySelectorAll('.readfoot a')].map((a) => [a.textContent.trim(), a.getAttribute('aria-label'), a.className]));
+  ok(top.length === 2 && JSON.stringify(top) === JSON.stringify(bot), 'the top buttons are exactly the bottom buttons ' + JSON.stringify(top));
+  ok(await p.locator('.readbar .btn.icon').count() === 0, 'the top bar no longer has the bare arrows');
   await p.click('.readfoot a >> nth=1'); await p.waitForSelector('.readfoot'); await p.waitForTimeout(200);
   ok((await p.evaluate(() => location.hash)).includes('1JN/3'), 'Next opens the chapter it names');
   // every book's first and last chapter: both labels stay on one line (button no taller than a single-line button)
@@ -18,7 +22,7 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   let tall = [];
   for (const [code, ch] of codes) {
     await p.goto(U + '#/read/' + code + '/' + ch); await p.waitForSelector('.readfoot'); await p.waitForTimeout(60);
-    const r = await p.evaluate(() => [...document.querySelectorAll('.readfoot a')].map((a) => { const rg = document.createRange(); rg.selectNodeContents(a); const c = rg.getBoundingClientRect(), box = a.getBoundingClientRect(); return [a.textContent.trim(), Math.round(box.height), c.left >= box.left + 4 && c.right <= box.right - 4]; }));
+    const r = await p.evaluate(() => [...document.querySelectorAll('.readfoot a, .readbar .navpair a')].map((a) => { const rg = document.createRange(); rg.selectNodeContents(a); const c = rg.getBoundingClientRect(), box = a.getBoundingClientRect(); return [a.textContent.trim(), Math.round(box.height), c.left >= box.left + 4 && c.right <= box.right - 4]; }));
     for (const [l, h, fits] of r) if (h > 50 || !fits) tall.push(code + ' ' + ch + ': ' + l + ' (' + h + 'px' + (fits ? '' : ', overflows') + ')');
   }
   ok(tall.length === 0, 'no label wraps at 360px across all books ' + tall.join('; '));
