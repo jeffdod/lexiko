@@ -7,6 +7,7 @@ import { poolOf } from './gatenote.js';
 import { h, clear, icon, fold, backHead, toast } from './util.js';
 import { setSetting } from './know.js';
 import { gateOffer, acceptOffer, putOffOffer } from './gateoffer.js';
+import { typeName, typeHref, longName } from './typepage.js';
 import { TRICKLE_DAILY } from './parse.js';
 
 const rowName = (r) => { const x = ROWS.find((q) => q.key === r); return x ? x.name || x.title || r : r; };
@@ -17,22 +18,13 @@ const nOpen = (f) => f.kinds.filter((k) => gateOpen(f.id + ':' + k.key)).length;
 export async function turnOnVerbs() { await setGate('verbs', true); }
 async function turnOn(go = true) { await turnOnVerbs(); if (go) location.hash = '#/parse/howto'; }
 
-const SINGULAR = { ptc: 'participle', inf: 'infinitive', sub: 'subjunctive', imp: 'imperative' };
-/** What a kind is called in the offer: "aorist active", "present active participle". */
-function offerName(key) {
-  const [fam, k] = key.split(':');
-  if (fam === 'row') { const r = ROWS.find((q) => q.key === k); const n = longName(r ? r.name || r.title || k : k); return n.charAt(0).toLowerCase() + n.slice(1); }
-  const n = kindName(fam, k); return n.charAt(0).toLowerCase() + n.slice(1) + ' ' + SINGULAR[fam];
-}
-/** Where an accepted kind's lesson is: the chart row's page, or the family's page. */
-const lessonHref = (key) => { const [fam, k] = key.split(':'); return fam === 'row' ? '#/learn/charts/paradigm/' + k : FAMILY[fam].study; };
 /** The offer on the Parsing page, or null when there is none. */
 function offerCard() {
   const o = gateOffer(); if (!o) return null;
-  const name = offerName(o.key), box = h('div.card.stack');
+  const name = typeName(o.key), box = h('div.card.stack');
   box.append(h('b', { style: { fontSize: '1.05rem' } }, 'Ready for the ' + name + '?'),
     h('p.muted.small', { style: { margin: 0 } }, 'Your verb parsing is going well: ' + Math.round(o.acc * 100) + '% right over your last ' + o.n + '. The ' + name + ' is the next most common kind among the verbs you know. It would add ' + TRICKLE_DAILY + ' new forms a day to begin with.'),
-    h('div.row.wrap', h('button.btn.primary', { onclick: async () => { await acceptOffer(o.key); location.hash = lessonHref(o.key); } }, 'Yes, add it'),
+    h('div.row.wrap', h('button.btn.primary', { onclick: async () => { await acceptOffer(o.key); location.hash = typeHref(o.key); } }, 'Yes, add it'),
       h('button.btn', { onclick: async () => { await putOffOffer(); box.remove(); } }, 'Not yet')));
   return box;
 }
@@ -54,7 +46,6 @@ export function unlockSection() {
       row('#/parse/gates', 'Choose forms', 'Tick or untick any type of verb form, or whole groups at once')));
 }
 
-const longName = (n) => n.replace('mid/pas', 'middle/passive').replace(/\bfut\b/, 'future').replace(/\bact\b/, 'active').replace(/\bmid\b/, 'middle').replace(/\bpas\b/, 'passive').replace(/^./, (c) => c.toUpperCase());
 const TENSES = [['pres', 'Present'], ['impf', 'Imperfect'], ['fut', 'Future'], ['aor', 'Aorist'], ['perf', 'Perfect']];
 /** The indicative: the rows of the master verb chart, grouped by tense; a row opens when its squares are learned. */
 export function renderRows(view) {
@@ -66,7 +57,7 @@ export function renderRows(view) {
       const rs = ROWS.filter((r) => r.key.startsWith(pre));
       return rs.length ? [h('div.sec', title), h('div.list', rs.map((r) => {
         const on = gateOpen('row:' + r.key), got = chartRowSquares(r.key);
-        return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', longName(r.name)), h('div.muted.small', on ? 'Open in daily parsing' : got ? 'Not open yet · ' + got + ' of ' + CHART_ATTRS.length + ' learned' : 'Not open yet')),
+        return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('a.tlink', { href: typeHref('row:' + r.key) }, h('b', longName(r.name))), h('div.muted.small', on ? 'Open in daily parsing' : got ? 'Not open yet · ' + got + ' of ' + CHART_ATTRS.length + ' learned' : 'Not open yet')),
           chip(on), h('a.btn.sm', { href: '#/learn/charts/run/' + r.key }, 'Drill'), h('a.btn.sm', { href: '#/parse/run/row/' + r.key }, 'Parse'));
       }))] : [];
     })));
@@ -81,7 +72,7 @@ export function renderKinds(view, id) {
     h('div.row.wrap', h('a.btn.primary', { href: base }, 'Drill all kinds'), h('a.btn', { href: '#/parse/run/' + f.id + '/all' }, 'Parse open kinds'), h('a.btn.ghost', { href: f.study }, 'Study ' + f.name.toLowerCase())),
     h('div.list', f.kinds.map((k) => {
       const key = f.id + ':' + k.key, on = gateOpen(key), s = gateStats(key), need = passNeed(poolOf(f.id, k.key));
-      return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', k.name), h('div.muted.small', on ? 'Open in daily parsing' : s.n >= need ? 'Not quite yet: ' + Math.round(s.acc * 100) + '%' : s.n + ' of ' + need + ' answers')),
+      return h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('a.tlink', { href: typeHref(f.id + ':' + k.key) }, h('b', k.name)), h('div.muted.small', on ? 'Open in daily parsing' : s.n >= need ? 'Not quite yet: ' + Math.round(s.acc * 100) + '%' : s.n + ' of ' + need + ' answers')),
         chip(on), f.id === 'inf' ? null : h('a.btn.sm', { href: base + '/' + k.key }, 'Drill'));
     }))));
 }

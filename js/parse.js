@@ -23,6 +23,7 @@ import { currentGoal, goalWords, formOpen, gateOpen, skipsArticle, nominalState,
 import { isLiquidVerb } from './families.js';
 import { gateKey } from './kinds.js';
 import { unlockSection, renderKinds, renderRows, renderGates, renderHowto } from './gatesui.js';
+import { renderTypePage } from './typepage.js';
 import { store } from './store.js';
 import { renderClues } from './cluehunt.js';
 import { renderBuild } from './buildform.js';
@@ -166,6 +167,7 @@ function trickleState() {
   return out;
 }
 export const trickleActive = () => trickleState().size > 0;
+export const trickling = (key) => trickleState().has(key);
 /** Of the new forms, drop the ones past a trickling kind's allowance for today (the most common forms of the kind go first). */
 function applyTrickle(fresh) {
   const left = trickleState(); if (!left.size) return fresh;
@@ -747,6 +749,7 @@ export function renderParse(view, params) {
   if (mode === 'form') return practiceForm(view);
   if (mode === 'kinds') return rest[0] === 'ind' ? renderRows(view) : renderKinds(view, rest[0]);
   if (mode === 'gates') return renderGates(view);
+  if (mode === 'type') return renderTypePage(view, rest[0]);
   if (mode === 'howto') return renderHowto(view);
   landing(view);
 }
