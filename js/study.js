@@ -1,4 +1,4 @@
-// Study: the three places to practice and look things up. (Home is the dashboard.)
+// Study: the places to practice and look things up. (Home is the dashboard.)
 import { counts } from './smart.js';
 import { h, clear, icon } from './util.js';
 
@@ -10,6 +10,7 @@ export function renderStudy(view) {
   clear(view).append(h('div.pagehead', h('h1', 'Study')), h('div.stack',
     area('#/learn/words', 'learn', 'Vocabulary', 'Learn, review, look ahead', [cnt.words.total ? cnt.words.total + (cnt.words.total === 1 ? ' word' : ' words') : '']),      // one total, always the same as the count inside the session
     area('#/parse', 'text', 'Parsing', nothingYet ? 'Opens as you learn words' : 'Practice forms and unlock verb types', [cnt.parse.total ? cnt.parse.total + (cnt.parse.total === 1 ? ' form' : ' forms') : '']),
-    area('#/reference', 'table', 'Reference', 'Glossary, charts and paradigms'),
+    area('#/reference', 'table', 'Reference', 'Charts and paradigms'),
+    area('#/search', 'search', 'Glossary', 'Every word in the text, α to ω or by how common'),
     h('a.small.center', { href: '#/help', style: { textAlign: 'center' } }, 'How lexiko works ›')));
 }

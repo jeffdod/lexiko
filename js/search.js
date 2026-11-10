@@ -201,7 +201,7 @@ export function renderSearch(view, params = []) {
     (sorts.length ? sortWords(res) : res).forEach((L) => out.append(row(L)));
   };
   input.addEventListener('input', draw);
-  clear(view).append(h('div.stack', backHead('Glossary', '#/reference', 'Reference'), input, controls, h('div.row.wrap.between', hint, h('button.btn.ghost.sm', { onclick: showBetaHelp }, 'What is Beta Code?')), out));
+  clear(view).append(h('div.stack', backHead('Glossary', '#/study', 'Study'), input, controls, h('div.row.wrap.between', hint, h('button.btn.ghost.sm', { onclick: showBetaHelp }, 'What is Beta Code?')), out));
   draw();
   return scrollButton();
 }

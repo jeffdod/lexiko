@@ -11,7 +11,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(300); await k.setSetting('levelAsked', true); await k.setSetting('parseAsked', true); });
   const go = async (h) => { await p.goto(URL + h); await p.reload(); await ready(); await p.waitForTimeout(300); };
   await go('#/learn');
-  await p.waitForTimeout(300); ok(await p.locator('a.area').count() === 3, 'Learn opens Study with three areas');
+  await p.waitForTimeout(300); ok(await p.locator('a.area').count() === 4, 'Learn opens Study with four areas');
   await go('#/learn/words'); ok(await p.locator('.start').count() === 1 && await p.locator('button:has-text("Change ›")').count() === 1, 'Vocabulary: one start button and a goal card with Change › (no goal chosen yet)');
   await p.click('button:has-text("Change ›")'); await p.waitForSelector('.goal-picker'); ok(true, 'Change › opens the picker in place');
   await p.click('button:has-text("Cancel")'); ok(await p.locator('.goal-picker').count() === 0, 'Cancel closes it');
