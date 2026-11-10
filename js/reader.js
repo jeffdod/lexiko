@@ -113,7 +113,7 @@ function verseHTML(vs, toks, seenGloss, opts) {
   const sn = senseNs(toks);
   for (let k = 0; k < toks.length; k++) {
     const t = toks[k];
-    if (k && opts.breaks && opts.breaks.includes(k + 1)) out += '</span></p><p><span class="verse" data-vs="' + vs + '">';          // a paragraph begins in the middle of this verse
+    if (k && opts.breaks && opts.breaks.includes(k + 1)) out += opts.pilcrow ? '<span class="pil" aria-hidden="true">\u00b6</span> ' : '</span></p><p><span class="verse" data-vs="' + vs + '">';          // a paragraph begins in the middle of this verse (verse by verse: a ¶ marks it)
     const f = tokenForm(t), s = sn.ns[k], st = status(s);
     const cls = 'w' + (st === 'unknown' ? ' u' : st === 'learning' ? ' l' : '');
     const dash = tokenFlag(t);                         // source marker: an em-dash follows, with no space after it
@@ -181,8 +181,11 @@ export function renderReader(view, params) {
     body.classList.toggle('par', !!eng);
     // paragraphs: only where the marks exist for this book, and not beside the English (that layout is one verse at a time)
     const paras = D.parasBooks.has(book.code) && !eng;
-    body.classList.toggle('pi', paras && setting('paraStyle') !== 'block');
-    body.classList.toggle('pb', paras && setting('paraStyle') === 'block');
+    const vmode = setting('paraStyle') === 'verse' && !eng;      // verse by verse: one verse to a line block, ¶ where a paragraph begins (no ¶ in a book without marks)
+    body.classList.toggle('pv', vmode);
+    body.classList.toggle('nonum', vmode && !opts.verseNums);
+    body.classList.toggle('pi', paras && !vmode && setting('paraStyle') !== 'block');
+    body.classList.toggle('pb', paras && !vmode && setting('paraStyle') === 'block');
     body.classList.toggle('rag', setting('lineEnds') === 'ragged');
     body.dataset.lh = setting('lineSpacing');
     const heads = setting('sectionHeads') !== false;           // off: no headings, and a section no longer breaks the paragraph
@@ -190,12 +193,18 @@ export function renderReader(view, params) {
     for (const [vs, toks] of chapterVerses(book.code, ch)) {
       const sec = D.periAt.get(book.code + ':' + ch + ':' + vs);
       const marks = paras ? D.paras.get(book.code + ':' + ch + ':' + vs) : null;
+      if (vmode) {
+        if (sec && heads) html += headingHTML(sec);
+        const num = (marks && marks[0] === 1 ? '<span class="pil" aria-hidden="true">\u00b6</span>' : '') + (opts.verseNums ? '<span class="nm">' + vs + '</span>' : '');
+        html += '<p class="vv"><span class="vh">' + num + '</span>' + verseHTML(vs, toks, seen, { ...opts, verseNums: false, pilcrow: true, breaks: marks && marks.filter((m) => m > 1) }) + '</p>';
+        continue;
+      }
       if (sec && heads) { if (open) html += '</p>'; html += headingHTML(sec); html += '<p>'; open = true; }       // a section heading starts a new paragraph
       else if (!open) { html += '<p>'; open = true; }
       else if (marks && marks[0] === 1) html += '</p><p>';
       html += verseHTML(vs, toks, seen, marks ? { ...opts, breaks: marks } : opts);
     }
-    body.innerHTML = html + (open ? '</p>' : '');
+    body.innerHTML = html + (open && !vmode ? '</p>' : '');
     // readiness
     const sc = { book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 }, rd = scopeReadiness(sc);
     const cg = currentGoal(), isGoal = cg.kind === 'passage' && cg.book === book.code && cg.c1 === ch && cg.c2 === ch && (cg.v1 || 1) === 1 && cg.v2 >= (book.chapters.find((c) => c[0] === ch) || [0, 999])[1];
@@ -245,7 +254,7 @@ export function renderReader(view, params) {
       sw('English translation', 'Show the American Standard Version Byzantine Text with each verse.', 'english', async (on) => {
         if (on && !D.english[book.code]) { try { await loadEnglish(book.code); } catch { toast('The English translation could not be loaded'); } }
       }),
-      choice('Paragraphs', 'Not used while the English translation is on.', 'paraStyle', [['indent', 'Indented'], ['block', 'Block']]),
+      choice('Paragraphs', 'Verse by verse puts each verse on its own, with a ¶ where a paragraph begins. Not used while the English translation is on, which is already one verse at a time.', 'paraStyle', [['indent', 'Indented'], ['block', 'Block'], ['verse', 'Verse by verse']]),
       choice('Line ends', '', 'lineEnds', [['justify', 'Justified, hyphenated'], ['ragged', 'Left, ragged right']]),
       choice('Line spacing', '', 'lineSpacing', [['tight', 'Tight'], ['normal', 'Normal'], ['roomy', 'Roomy'], ['extra', 'Extra']]),
       h('div.row.between', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('span.t', { style: { fontWeight: 600 } }, 'Text size'),
