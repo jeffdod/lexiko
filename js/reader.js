@@ -246,8 +246,7 @@ export function renderReader(view, params) {
       return h('div', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('div.t', { style: { fontWeight: 600 } }, label), desc ? h('div.d.muted.small', { style: { marginBottom: '.4rem' } }, desc) : null, seg);
     };
     dlg.append(h('div.row.between', h('h2', 'Reading options'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close', onclick: () => dlg.close() }, icon('close', 18))),
-      sw('Meanings for unknown words', 'Show a short meaning in parentheses after words you don’t know yet.', 'glossMode'),
-      sw('Repeat meanings', 'Show the meaning on every occurrence, not just the first in the chapter.', 'glossRepeat'),
+      sw('Repeat meanings', 'When meanings are showing, show one on every occurrence, not just the first in the chapter.', 'glossRepeat'),
       sw('Highlight unknown words', 'Blue = new to you, gold = still learning.', 'highlight'),
       sw('Section headings', 'Show the section titles, with each section’s progress and a ⋯ menu for Study and the read mark.', 'sectionHeads'),
       sw('Verse numbers', '', 'verseNums'),
