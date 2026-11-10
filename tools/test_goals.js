@@ -138,7 +138,9 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   const rh = await p.evaluate(async () => (await import('./js/reader.js')).readHref('1JN', 3));
   await p.goto(URL + rh); await p.reload(); await p.waitForSelector('text=Make this my goal');
   await p.waitForSelector('#loading', { state: 'detached' }).catch(() => {}); await p.waitForTimeout(400); await p.screenshot({ path: out + '/reader-goal.png' });
-  await p.getByRole('button', { name: 'Make this my goal' }).click(); await p.waitForSelector('text=Your goal');
+  await p.getByRole('button', { name: 'Make this my goal' }).click();
+  if (await p.locator('dialog.ask[open]').count() || await p.waitForSelector('dialog.ask[open]', { timeout: 1500 }).catch(() => null)) { ok(true, 'a chosen goal is not replaced without asking'); await p.getByRole('button', { name: 'Replace goal' }).click(); }
+  await p.waitForSelector('text=Your goal');
   const rg = await p.evaluate(async () => (await import('./js/know.js')).K.goal);
   ok(rg.kind === 'passage' && rg.book === '1JN' && rg.c1 === 3 && rg.c2 === 3, 'reader button makes the chapter the goal', JSON.stringify(rg));
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setGoal({ kind: 'freq', min: 30 }); });
