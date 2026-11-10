@@ -22,6 +22,8 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   ok(info.n > 20 && info.nums[0] === '1', 'each verse is its own block: ' + info.n + ' blocks, numbers ' + info.nums);
   ok(info.oneVerse && info.vnRaised === 0, 'one verse per block, and no raised numbers');
   ok(info.indent === '0px', 'no indentation');
+  const flush = await p.evaluate(() => { const q = document.querySelector('.reader p.vv'), r = document.createRange(); r.selectNodeContents(q); const lines = [...r.getClientRects()].map((x) => Math.round(x.left)); return [Math.min(...lines), Math.round(q.getBoundingClientRect().left), getComputedStyle(q).display]; });
+  ok(flush[0] === flush[1] && flush[2] === 'block', 'every line starts at the left edge (no hanging column): ' + flush);
   ok(Math.abs(info.gap - blockGap) < 0.5, 'verse spacing equals Block paragraph spacing: ' + info.gap + ' vs ' + blockGap);
   ok(info.justify === 'justify', 'justified by default');
   ok(/¶/.test(info.firstPil || '') && info.pilBeforeNum === 'pil', 'a paragraph at the start of 5:13 (right after a heading) has ¶ before the number: ' + info.firstPil);
