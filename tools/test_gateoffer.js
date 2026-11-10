@@ -29,7 +29,7 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   await p.click('#view .card button:has-text("Yes, add it")'); await p.waitForTimeout(500);
   const after = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); return { open: K.gateOpen(location.hash.length ? '' : ''), gates: K.K.settings.gates, tr: K.K.settings.gateTrickle, hash: location.hash }; });
   ok(after.gates[key] === true && after.tr[key] > 0, 'Yes opens ' + key + ' and starts it slowly');
-  ok(/#\/learn\/charts\//.test(after.hash), 'and shows its lesson page: ' + after.hash);
+  ok(/#\/parse\/type\//.test(after.hash), 'and shows its summary page: ' + after.hash);
   await go('#/parse'); ok(await offer() === null, 'no second offer while the new kind is still easing in');
   // the daily cap: for a kind with more than 2 new forms available, a session plan adds at most 2
   const cap = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); const P = await import('/lexiko/js/parse.js'); const { allGateKeys } = await import('/lexiko/js/kinds.js');

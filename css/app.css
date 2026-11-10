@@ -530,3 +530,6 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .navbtn { padding-left: .7rem; padding-right: .7rem; gap: .3rem; white-space: nowrap; }       /* the two chapter names must stay on one line at narrow phone widths */
 .readbar .navpair { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: .35rem; }
 @media (min-width: 461px) { .readbar .navpair { display: flex; justify-content: space-between; } }
+
+.tlink { color: inherit; text-decoration: none; }      /* the name of a kind of verb form links to its summary page */
+.tlink b::after { content: ' ›'; color: var(--muted); font-weight: 400; }
