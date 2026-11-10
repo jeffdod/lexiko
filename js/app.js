@@ -1,6 +1,6 @@
 // lexiko — app shell: loading, routing, navigation, service worker, install prompt.
 import { loadData } from './data.js';
-import { initKnow, K } from './know.js';
+import { initKnow, seedNominals, K } from './know.js';
 import { requestPersistence } from './store.js';
 import { renderHome } from './home.js';
 import { upcoming, whenText, counts, smartAll } from './smart.js';
@@ -98,6 +98,7 @@ async function boot() {
   const bar = document.getElementById('loadbar'), msg = document.getElementById('loadmsg');
   try {
     await Promise.all([loadData((p) => { bar.style.width = Math.max(4, p * 100) + '%'; }), initKnow()]);
+    await seedNominals();
   } catch (e) {
     console.error(e); msg.textContent = 'Could not load the data: ' + (e.message || e) + '. If you are offline for the first time, reconnect once so lexiko can download itself.';
     return;

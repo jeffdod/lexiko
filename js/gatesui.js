@@ -1,5 +1,5 @@
 // The screens of the gating: the Unlock list on Parsing, a page per kind of form, the "Choose forms" checklist, the how-to screen, and the verb question.
-import { K, setGate, setGates, gateOpen, verbsOn, openGateKeys, chartRowKnown, chartRowSquares, gateStats, passNeed, verbAskDue, noteVerbAsk, FAM_ACC } from './know.js';
+import { K, setGate, setGates, gateOpen, verbsOn, openGateKeys, chartRowKnown, chartRowSquares, gateStats, passNeed, verbAskDue, noteVerbAsk, FAM_ACC, nominalState, setNominals } from './know.js';
 import { CHART_ATTRS } from './families.js';
 import { ROWS, plan as chartPlan } from './chartdrill.js';
 import { FAMILIES, FAMILY, ROW_KEYS, kindName, allGateKeys } from './kinds.js';
@@ -18,7 +18,7 @@ async function turnOn(go = true) { await turnOnVerbs(); if (go) location.hash = 
 /** On the Parsing page: the "Turn on verb parsing" card while verbs are off, otherwise the unlock list. */
 export function unlockSection() {
   if (!verbsOn()) return h('div.card.stack', h('h2', 'Verb parsing'),
-    h('p.muted.small', 'Daily parsing now asks about nouns, adjectives and other words you know. Turn on verbs when you are ready to parse them too. Present active comes first.'),
+    h('p.muted.small', nominalState() === 'off' ? 'Daily parsing has nothing to ask yet: nouns, adjectives and pronouns are off. Turn on verbs when you are ready to parse them. Present active comes first.' : 'Daily parsing now asks about nouns, adjectives and other words you know. Turn on verbs when you are ready to parse them too. Present active comes first.'),
     h('div.row', h('button.btn.primary', { onclick: () => turnOn() }, 'Turn on verb parsing')));
   const p = chartPlan(), n = p.due.length + p.nw.length, rows = ROW_KEYS.filter((r) => gateOpen('row:' + r)).length;
   const row = (href, t, sub) => h('a.li', { href, style: { gap: '.7rem' } }, h('span.grow', h('b', t), h('div.muted.small', sub)), icon('chevR', 18));
@@ -63,6 +63,13 @@ export function renderKinds(view, id) {
     }))));
 }
 
+const NOM_SUB = { on: 'Asked once you know the word', thin: 'Check-ins only: you answer these reliably', off: 'Not asked. Your progress on these forms is kept.' };
+/** The row that switches nouns, adjectives and pronouns on or off in parsing. Unticking stops them in the daily quiz and in free practice. */
+function nominalsRow(redraw) {
+  const st = nominalState(), cb = h('input', { type: 'checkbox', checked: st !== 'off', onchange: async () => { await setNominals(cb.checked); redraw(); } });
+  return h('label.li', { style: { gap: '.7rem', cursor: 'pointer' } }, cb, h('span.grow', h('span', 'Nouns, adjectives and pronouns'), h('div.muted.small', NOM_SUB[st])));
+}
+
 /** The advanced checklist. Ticking opens a gate without a drill; unticking closes it. Progress is kept either way. */
 export function renderGates(view) {
   const draw = () => {
@@ -81,8 +88,10 @@ export function renderGates(view) {
     const everyKey = [...allGateKeys(), 'mi', 'rare'].filter((k) => k !== 'row:pres-act');
     const all = (on) => h('button.btn.sm', { disabled: !verbsOn(), onclick: async () => { await setGates(everyKey, on); draw(); } }, on ? 'Select all' : 'Clear all');
     clear(view).append(backHead('Choose forms', '#/parse', 'Parsing'), h('div.stack',
-      h('p.muted.small', 'These decide which types of verb forms daily parsing may ask. Passing drills opens them for you; here you can tick or untick any by hand, or a whole group at once. Words you have studied keep their progress.'),
+      h('p.muted.small', 'These decide which forms daily parsing may ask. Passing drills opens verb forms for you; here you can tick or untick any by hand, or a whole group at once. Words you have studied keep their progress.'),
       h('div.row', all(true), all(false)),
+      h('h2.cathead', 'Other words'),
+      h('div.list', nominalsRow(draw)),
       h('div.list', verbs),
       group('Indicative rows', ROW_KEYS.map((r) => 'row:' + r)), h('div.list', ROW_KEYS.map((r) => box('row:' + r, rowName(r), r === 'pres-act' ? 'Always open once verbs are on' : chartRowKnown(r) ? 'Learned on the chart' : null))),
       ...FAMILIES.flatMap((f) => [group(f.name, f.kinds.map((k) => f.id + ':' + k.key)), h('div.list', f.kinds.map((k) => box(f.id + ':' + k.key, k.name)))]),

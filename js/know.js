@@ -4,7 +4,7 @@ import { requiredStems } from './stems.js';
 import { D, isName, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBook } from './data.js';
 import { store } from './store.js';
 import * as F from './fsrs.js';
-import { todayKey, shuffle } from './util.js';
+import { todayKey, shuffle, toast } from './util.js';
 import { CHART_ATTRS, ROW_LEVEL, rowOfTag } from './families.js';
 import { gateKeyOfTag, allGateKeys } from './kinds.js';
 import { miClass } from './midata.js';
@@ -13,7 +13,7 @@ export const DEFAULTS = {
   theme: 'auto', level: null, parseLevel: null, parseAsked: false, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
   readerSize: 1.35, paraStyle: 'indent', lineEnds: 'justify', lineSpacing: 'normal', sectionHeads: true, verseNums: true, english: false, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, gates: {}, verbAsk: { n: 0, t: 0 }, barsDebug: false,
 };
-export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, gateAcc: {}, ready: false };
+export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], nomAcc: [], nomChk: [], verbParse: {}, gateAcc: {}, ready: false };
 
 export async function initKnow() {
   const s = (await store.get('settings')) || {};
@@ -31,6 +31,8 @@ export async function initKnow() {
   K.parseAcc = (await store.get('parseAcc')) || [];
   K.verbParse = (await store.get('verbParse')) || {};
   K.gateAcc = (await store.get('gateAcc')) || {};
+  K.nomChk = (await store.get('nomChk')) || [];
+  K.nomAcc = await store.get('nomAcc'); K.nomSeed = !K.nomAcc; if (!K.nomAcc) K.nomAcc = [];
   K.ready = true;
 }
 
@@ -423,6 +425,45 @@ export function recentWords(days = 3, now = clockNow()) {
   }
   return out.sort((a, b) => b.t - a.t).map((x) => x.n);
 }
+/* ---------- nouns, adjectives and pronouns in parsing ----------
+ * They follow a few fixed patterns, so people who parse them reliably should not keep being quizzed on them.
+ * 'on': asked once you know the word. 'thin': check-ins only (a few forms a day). 'off': never asked, in the daily quiz or free practice.
+ * Thinning starts by itself after NOM_WINDOW first-try answers at NOM_BAR or better, and ends after NOM_MISSES misses in the last NOM_CHECK_WINDOW check-ins.
+ * It only applies while verb parsing is on, so a session never runs dry. Progress on these forms is never deleted. */
+export const NOM_WINDOW = 30, NOM_BAR = 0.95, NOM_CHECKINS = 3, NOM_CHECK_WINDOW = 10, NOM_MISSES = 2;
+export const nominalState = () => (K.settings.nominals === 'off' ? 'off' : K.settings.nomThin && verbsOn() ? 'thin' : 'on');
+/** The learner's own choice in Choose forms: on (asked in full again) or off. */
+export async function setNominals(on) {
+  K.nomAcc = []; K.nomChk = []; await store.set('nomAcc', K.nomAcc); await store.set('nomChk', K.nomChk);
+  await setSetting('nomThin', false); await setSetting('nomNote', null); await setSetting('nominals', on ? 'on' : 'off');
+}
+const nomMean = (a) => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+/** Existing users: read their history once from the review log, so someone who already answers reliably is thinned without having to start over. */
+export async function seedNominals() {
+  if (!K.nomSeed) return; K.nomSeed = false;      // the lexicon loads at the same time as the settings, so this runs once both are ready
+  const log = (await store.allLog()).filter((e) => e.k === 'parse' && typeof e.id === 'string' && e.id.startsWith('f:')).sort((a, b) => a.t - b.t);
+  const mine = log.filter((e) => { const L = D.lexByN.get(+e.id.split(':')[2]); return !(L && L.verb); }).slice(-40).map((e) => (e.g >= 3 ? 1 : 0));
+  K.nomAcc = mine; await store.set('nomAcc', mine);
+  if (K.settings.nominals !== 'off' && mine.length >= NOM_WINDOW && nomMean(mine.slice(-NOM_WINDOW)) >= NOM_BAR && verbsOn()) { K.settings.nomThin = true; K.settings.nomNote = 'thin'; await store.set('settings', K.settings); }
+}
+/** One answer on a noun, adjective or pronoun form: may start or end the thinning. */
+async function noteNominal(grade) {
+  const ok = grade >= 3 ? 1 : 0, st = nominalState();
+  if (st === 'on') {
+    K.nomAcc.push(ok); if (K.nomAcc.length > 40) K.nomAcc.shift(); await store.set('nomAcc', K.nomAcc);
+    if (K.nomAcc.length >= NOM_WINDOW && nomMean(K.nomAcc.slice(-NOM_WINDOW)) >= NOM_BAR && verbsOn() && K.settings.nominals !== 'off') {
+      K.nomChk = []; await store.set('nomChk', K.nomChk); await setSetting('nomThin', true);
+      toast('You parse nouns and adjectives reliably, so lexiko will only check them now and then. You can change this under Choose forms.', 10000);
+    }
+  } else if (st === 'thin') {
+    K.nomChk.push(ok); if (K.nomChk.length > NOM_CHECK_WINDOW) K.nomChk.shift(); await store.set('nomChk', K.nomChk);
+    if (K.nomChk.filter((x) => !x).length >= NOM_MISSES) {
+      K.nomAcc = []; await store.set('nomAcc', K.nomAcc); K.nomChk = []; await store.set('nomChk', K.nomChk); await setSetting('nomThin', false);
+      toast('You missed a couple of noun and adjective check-ins, so lexiko is asking about them regularly again. You can change this under Choose forms.', 10000);
+    }
+  }
+}
+
 /* ---------- parsing practice: form-level cards ('f:<form>:<strongs>') ---------- */
 export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;
 /** Parsing forms due now, counted the way a session serves them (one per form, only forms that are still quizzed). parse.js registers the real counter. */
@@ -443,7 +484,8 @@ export async function rateParse(id, grade, ms = 0, meta = {}) {
   const d = (K.daily[todayKey()] ||= {}); d.pr = (d.pr || 0) + 1; if (prev.state === 'new') d.pn = (d.pn || 0) + 1;
   await store.set('daily', K.daily);
   K.parseAcc.push(grade >= 3 ? 1 : 0); if (K.parseAcc.length > 40) K.parseAcc.shift(); await store.set('parseAcc', K.parseAcc);
-  const sn = id.split(':')[2]; if (sn && isVerb(+sn)) { K.verbAcc.push(grade >= 3 ? 1 : 0); if (K.verbAcc.length > 40) K.verbAcc.shift(); await store.set('verbAcc', K.verbAcc); }
+  const sn = id.split(':')[2]; if (sn && !isVerb(+sn) && id.startsWith('f:')) await noteNominal(grade);
+  if (sn && isVerb(+sn)) { K.verbAcc.push(grade >= 3 ? 1 : 0); if (K.verbAcc.length > 40) K.verbAcc.shift(); await store.set('verbAcc', K.verbAcc); }
   if (sn) { const a = (K.verbParse[sn] ||= []); a.push(grade >= 3 ? 1 : 0); if (a.length > 20) a.shift(); await store.set('verbParse', K.verbParse); }
   await store.addLog([{ t: now, id, g: grade, k: 'parse', ms, ...meta }]);
   return next;
@@ -474,8 +516,8 @@ export async function setGates(keys, on) { const g = { ...gateMap() }; for (cons
 export const PARSE_LEVELS = [
   ['start', 'I’m just starting', 'Verbs stay off for now. You’ll be asked about nouns, adjectives and other words you know, and can turn verbs on later.'],
   ['basics', 'I know the basics', 'I know the present, imperfect, future and aorist active and middle. Participles, infinitives, subjunctive and imperative unlock as you learn them.'],
-  ['most', 'I know most forms', 'I can parse nearly everything except verbs in -μι and rare forms like the optative.'],
-  ['all', 'I parse everything', 'Ask me about every form, including -μι and the rare ones.'],
+  ['most', 'I know most forms', 'I can parse nearly everything except verbs in -μι and rare forms like the optative. You won’t be asked about nouns, adjectives or pronouns.'],
+  ['all', 'I parse everything', 'Ask me about every verb form, including -μι and the rare ones. You won’t be asked about nouns, adjectives or pronouns.'],
 ];
 export async function setParseLevel(key, { merge = false } = {}) {          // merge: an existing user's answer only opens more, it never closes what they have earned
   let g = {};
@@ -484,6 +526,7 @@ export async function setParseLevel(key, { merge = false } = {}) {          // m
   else if (key === 'all') g = allGatesOpen();
   if (merge) g = { ...gateMap(), ...Object.fromEntries(Object.entries(g).filter(([, v]) => v)) };
   await setSetting('parseLevel', key); await setSetting('parseAsked', true); await setSetting('gates', g);
+  if (key === 'most' || key === 'all') { await setSetting('nominals', 'off'); await setSetting('nomThin', false); }      // someone who parses nearly everything knows the declensions: those words are not asked (they can switch them back on in Choose forms)
 }
 /** The definite article is too simple to ask about once someone has said they know more than the start. */
 /** An existing user (a level chosen) who has never been asked how well they parse Greek: they get that question once, on their own. */
