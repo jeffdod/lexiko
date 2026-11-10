@@ -37,6 +37,10 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   ok((await secs()).every(Boolean), 'marking the chapter marks all its sections');
   await p.reload(); await p.waitForSelector('h3.peri'); await p.locator('.reader h3.peri .pmore').nth(1).click(); await p.click('.reader h3.peri .pmenu:not([hidden]) button[data-act=pread]'); await p.waitForTimeout(300);
   const after = await secs(); ok(after.filter((x) => !x).length === 1 && after.filter(Boolean).length === after.length - 1, 'unmarking one section leaves the other sections read ' + JSON.stringify(after));
+  // a chapter in which every word is known has no meanings button (only the "No new words" chip)
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), D = (await import('/lexiko/js/data.js')).D; for (const l of D.lex) if (!K.K.cards.get('w:' + l.n)) await K.markKnown(l.n); });
+  await p.goto(U + '#/read/3JN/1'); await p.waitForSelector('h3.peri, .reader .w'); await p.waitForTimeout(300);
+  ok(await p.locator('.chip:has-text("No new words")').count() === 1 && await p.locator('button:has-text("meanings")').count() === 0, 'no unknown words: “No new words” and no meanings button');
   const wide = await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
   ok(wide, 'the footer does not stretch the page at phone width');
   ok(errs.length === 0, 'no page errors ' + errs.join('|'));
