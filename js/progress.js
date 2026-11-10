@@ -109,7 +109,7 @@ export function renderProgress(view) {
     doneCard,
     sug.length ? h('div.card.stack', h('h2', 'Good next reads'), h('p.muted.small', 'Sections where you already know most of the words — the sweet spot for reading with a few lookups.'), h('div.list', sug.map((r) => suggestionItem(r)))) : null,
     h('div.card', h('h2', 'Passages within reach'), h('p.muted.small', 'Sections you could read now, closest first. Open “By book” below to see every chapter.')),
-    fold('By book · ' + secReady + ' of ' + rows.length + ' sections ready · ' + secRead + ' read', legend, h('div', books)),
+    fold('By book · ' + secReady + ' of ' + rows.length + ' sections ready · ' + secRead + ' read', legend, h('div.small.muted', 'The bar under each number grows as the chapter gets easier.'), h('div', books)),
     fold('Recent practice', act, h('div.muted.small', 'Reviews per day, last 14 days.')),
   ));
 }

@@ -9,6 +9,7 @@
   --bg: #f6f2ea; --surface: #fffdf8; --surface-2: #efe9dc; --ink: #1d2430; --ink-2: #4b5563; --muted: #596172;
   --line: #ddd5c4; --splash: #1f6f8f; --accent: #1f6f8f; --accent-ink: #ffffff; --accent-soft: #dcebf1; --gold: #9a6a14; --gold-soft: #f3e6c8;
   --good: #256a40; --good-soft: #dcefe2; --warn: #8a510f; --warn-soft: #f6e6cf; --bad: #b0384a; --bad-soft: #f6dde1;
+  --rd4-bg: #256a40; --rd4-ink: #ffffff; --rd3-bg: #6fb5b0; --rd3-ink: #0c2f2d; --rd2-bg: #ecc067; --rd2-ink: #4a2b05; --rd1-bg: #e7a9b4; --rd1-ink: #5a1424; --rd0-line: rgba(0, 0, 0, .28);
   --shadow: 0 1px 2px rgba(29, 36, 48, .06), 0 6px 20px rgba(29, 36, 48, .08);
   --greek: 'Lexiko Serif', 'Gentium Plus', 'Cardo', 'Palatino Linotype', 'Times New Roman', serif;
   --ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -20,6 +21,7 @@
     --bg: #12161b; --surface: #1a2027; --surface-2: #232b34; --ink: #ebe7df; --ink-2: #b9bfc8; --muted: #9aa3b0;
     --line: #2f3944; --splash: #15516a; --accent: #6bb8d8; --accent-ink: #0c1a22; --accent-soft: #1d3442; --gold: #e0b765; --gold-soft: #3a2f18;
     --good: #6cc28b; --good-soft: #1b3326; --warn: #e3a553; --warn-soft: #3a2b14; --bad: #ee8a9a; --bad-soft: #3c1d25;
+    --rd4-bg: #6cc28b; --rd4-ink: #0c2416; --rd3-bg: #5fbab4; --rd3-ink: #082826; --rd2-bg: #e3a553; --rd2-ink: #2d1a02; --rd1-bg: #ee8a9a; --rd1-ink: #3a0f18; --rd0-line: rgba(255, 255, 255, .3);
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
   }
 }
@@ -28,6 +30,7 @@
   --bg: #12161b; --surface: #1a2027; --surface-2: #232b34; --ink: #ebe7df; --ink-2: #b9bfc8; --muted: #9aa3b0;
   --line: #2f3944; --splash: #15516a; --accent: #6bb8d8; --accent-ink: #0c1a22; --accent-soft: #1d3442; --gold: #e0b765; --gold-soft: #3a2f18;
   --good: #6cc28b; --good-soft: #1b3326; --warn: #e3a553; --warn-soft: #3a2b14; --bad: #ee8a9a; --bad-soft: #3c1d25;
+  --rd4-bg: #6cc28b; --rd4-ink: #0c2416; --rd3-bg: #5fbab4; --rd3-ink: #082826; --rd2-bg: #e3a553; --rd2-ink: #2d1a02; --rd1-bg: #ee8a9a; --rd1-ink: #3a0f18; --rd0-line: rgba(255, 255, 255, .3);
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
 }
 :root[data-theme='light'] { color-scheme: light; }
@@ -167,8 +170,8 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 .readfoot { display: flex; gap: .6rem; justify-content: space-between; margin-top: .5rem; }
 @media (max-width: 460px) { .readfoot { display: grid; grid-template-columns: 1fr 1fr; } .readfoot > button { grid-column: 1 / -1; order: -1; } }
 .rdy { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; font-weight: 700; padding: .2rem .65rem; border-radius: 999px; }
-.rdy.r4 { background: var(--good-soft); color: var(--good); } .rdy.r3 { background: color-mix(in srgb, var(--good-soft) 60%, var(--accent-soft)); color: var(--accent); }
-.rdy.r2 { background: var(--warn-soft); color: var(--warn); } .rdy.r1 { background: var(--bad-soft); color: var(--bad); } .rdy.r0 { background: var(--surface-2); color: var(--muted); }
+.rdy.r4 { background: var(--rd4-bg); color: var(--rd4-ink); } .rdy.r3 { background: var(--rd3-bg); color: var(--rd3-ink); }
+.rdy.r2 { background: var(--rd2-bg); color: var(--rd2-ink); } .rdy.r1 { background: var(--rd1-bg); color: var(--rd1-ink); } .rdy.r0 { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--rd0-line); }
 
 #pop { position: fixed; z-index: 60; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 10px 40px rgba(0, 0, 0, .28); padding: .9rem 1rem 1rem; overflow: auto; font-family: var(--ui); color: var(--ink); left: 0; right: 0; bottom: 0; max-height: 62vh; border-radius: 18px 18px 0 0; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
 @media (min-width: 700px) { #pop { left: auto; right: auto; bottom: auto; width: 23rem; max-height: 70vh; border-radius: 14px; } }
@@ -205,8 +208,12 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 /* ---------- progress ---------- */
 .chaps { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: .35rem; margin-top: .6rem; }
 .chap { position: relative; display: grid; place-items: center; height: 2.5rem; border-radius: 10px; font-weight: 700; font-size: .85rem; text-decoration: none; border: 1.5px solid transparent; }
-.chap.r4 { background: var(--good-soft); color: var(--good); } .chap.r3 { background: color-mix(in srgb, var(--good-soft) 55%, var(--accent-soft)); color: var(--accent); }
-.chap.r2 { background: var(--warn-soft); color: var(--warn); } .chap.r1 { background: var(--bad-soft); color: var(--bad); } .chap.r0 { background: var(--surface-2); color: var(--muted); }
+.chap.r4 { background: var(--rd4-bg); color: var(--rd4-ink); } .chap.r3 { background: var(--rd3-bg); color: var(--rd3-ink); }
+.chap.r2 { background: var(--rd2-bg); color: var(--rd2-ink); } .chap.r1 { background: var(--rd1-bg); color: var(--rd1-ink); } .chap.r0 { background: transparent; color: var(--muted); border-color: var(--rd0-line); }
+/* a second cue besides color: the bar under the number grows as the chapter gets easier */
+.chap::before { content: ''; position: absolute; left: 50%; bottom: .28rem; transform: translateX(-50%); height: 3px; border-radius: 2px; background: currentColor; opacity: .75; width: 0; }
+.chap.r1::before { width: .5rem; } .chap.r2::before { width: .9rem; } .chap.r3::before { width: 1.3rem; } .chap.r4::before { width: 1.7rem; }
+.legend .chap::before { display: none; }
 .chap.done::after { content: '✓'; position: absolute; top: -.25rem; right: -.15rem; font-size: .62rem; background: var(--good); color: #fff; width: .95rem; height: .95rem; border-radius: 50%; display: grid; place-items: center; }
 .legend { display: flex; flex-wrap: wrap; gap: .5rem .9rem; font-size: .78rem; color: var(--muted); font-weight: 600; }
 .legend i { display: inline-block; width: .8rem; height: .8rem; border-radius: 4px; margin-right: .3rem; vertical-align: -.1rem; }
