@@ -150,10 +150,10 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 .reader.pi p { margin: 0; text-indent: 1.5em; }
 .reader.pb p { margin: 0 0 .7rem; }
 .reader.pv p.vv { margin: 0 0 .7rem; }      /* verse by verse: the number runs in at the start of the verse, plain and not raised, and every line is flush left */
-.reader.pv .vh, .reader.par .vh { margin-right: .35em; font-family: var(--ui); font-size: .78rem; font-weight: 700; color: var(--muted); user-select: none; -webkit-user-select: none; }
+.reader.pv .vh, .reader.par .vh { margin-right: .35em; font-family: var(--ui); font-size: .95rem; font-weight: 700; color: var(--muted); user-select: none; -webkit-user-select: none; }
 .reader.pv .pil, .reader.par .pil { font-family: var(--ui); font-weight: 400; color: var(--muted); user-select: none; -webkit-user-select: none; }
 .reader.pv .vh .pil, .reader.par .vh .pil { margin-right: .25em; }
-.reader.pv .verse .pil, .reader.par .verse .pil { font-size: .8em; margin-right: .1em; }
+.reader.pv .verse .pil, .reader.par .verse .pil { font-size: .95rem; margin-right: .1em; }
 .reader.pi h3.peri + p { text-indent: 0; }                    /* the paragraph under a section heading starts flush left */
 .reader.rag { text-align: left; hyphens: none; -webkit-hyphens: none; }
 .reader[data-lh='tight'] { --lh: 1.6; } .reader[data-lh='roomy'] { --lh: 2.3; } .reader[data-lh='extra'] { --lh: 2.7; }
