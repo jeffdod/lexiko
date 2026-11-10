@@ -95,6 +95,7 @@ const ICONS = {
   clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
   chevL: 'M15 18l-6-6 6-6', chevU: 'M6 15l6-6 6 6', chevD: 'M6 9l6 6 6-6',
   chevR: 'M9 18l6-6-6-6',
+  sliders: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6',
   close: 'M6 6l12 12M18 6L6 18',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
   check: 'M5 12l5 5L20 7',
@@ -161,7 +162,7 @@ export function noteRoute(hash) {
   if (cur.startsWith('#/read') && !(origin.prev || '').startsWith('#/read')) origin.readFrom = origin.prev || null;      // where the reader was entered from
   origin.prev = cur;
 }
-const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/progress/, 'Back to Progress'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Home'],
+const ORIGIN_LABEL = [[/^#\/(home)?$/, 'Back to Home'], [/^#\/read/, 'Back to reading'], [/^#\/study/, 'Back to Study'], [/^#\/learn\/words/, 'Back to Vocabulary'], [/^#\/learn$/, 'Back to Study'],
   [/^#\/parse(\/(form|chart))?$/, 'Back to Parsing'], [/^#\/reference/, 'Back to Reference'], [/^#\/learn\/verbs?(\/|$)/, 'Back to Verbs'], [/^#\/settings/, 'Back to Settings'], [/^#\/search/, 'Back to Glossary'],
   [/^#\/parse\/kinds\/ind/, 'Back to Indicative'], [/^#\/parse\/kinds\/ptc/, 'Back to Participles'], [/^#\/parse\/kinds\/inf/, 'Back to Infinitives'], [/^#\/parse\/kinds\/sub/, 'Back to Subjunctive'], [/^#\/parse\/kinds\/imp/, 'Back to Imperative']];
 /** True when the drill that just ended was started from one of the "Unlock verb forms" pages (Indicative, Participles, ...). */

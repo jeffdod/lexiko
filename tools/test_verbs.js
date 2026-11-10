@@ -95,7 +95,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(await p.evaluate(async () => { const k = await import('./js/know.js'); return ![...k.K.cards.keys()].some((id) => id.startsWith('p:')); }), 'old principal-part cards are gone after loading');
   // ---- pages
   for (const [u, t] of [['#/learn/verbs', /Verbs/], ['#/parts', /Verbs/]]) { await p.goto(URL + u); await p.reload(); await p.waitForSelector('#view h1, #view h2, #view .pagehead'); ok(t.test(await p.textContent('#view')) && !/(null|undefined)/.test(await p.textContent('#view')), u + ' shows Verbs', ''); }
-  ok(!/Principal parts/.test(await (async () => { await p.goto(URL + '#/home'); await p.reload(); await p.waitForSelector('.area'); return p.textContent('#view'); })()), 'Home has no Principal parts topic');
+  ok(!/Principal parts/.test(await (async () => { await p.goto(URL + '#/study'); await p.reload(); await p.waitForSelector('.area'); return p.textContent('#view'); })()), 'Home has no Principal parts topic');
   const n0 = await p.evaluate(async () => { const k = await import('./js/know.js'); const { D } = await import('./js/data.js'); const L = D.lex.filter((x) => x.pos === 'V' && k.verbStatus(x.n))[0]; await k.rate(L.n, 3, 'new'); return L.n; });
   await p.goto(URL + '#/learn/verbs'); await p.reload(); await p.waitForSelector('.verbrow');
   await p.screenshot({ path: out + '/verbs.png', fullPage: true });
@@ -120,7 +120,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   }
   await p.goto(URL + '#/parse/run/verbs'); await p.reload(); await p.waitForTimeout(800);
   ok(!/(null|undefined)/.test(await p.textContent('#view')), 'practicing verb forms opens without errors');
-  for (const u of ['#/learn', '#/learn/words', '#/parse', '#/home', '#/progress']) { await p.goto(URL + u); await p.reload(); await p.waitForSelector('#view *'); ok(!/(null|undefined)/.test(await p.textContent('#view')), u + ' has no stray null/undefined'); }
+  for (const u of ['#/learn', '#/learn/words', '#/parse', '#/home', '#/home']) { await p.goto(URL + u); await p.reload(); await p.waitForSelector('#view *'); ok(!/(null|undefined)/.test(await p.textContent('#view')), u + ' has no stray null/undefined'); }
   ok(errs.length === 0, 'no console/page errors', errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();

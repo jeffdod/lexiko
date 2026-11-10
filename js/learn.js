@@ -136,7 +136,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         missedBlock([...missed].map((m) => { const L = lexeme(m.n); return { greek: true, word: L.head, sub: L.brief }; }),
           () => runSession(view, [...missed].map((m) => ({ ...m, type: 'practice', seen: false, retry: false })), { title, scope, back, practice: true })),
         h('div.row.wrap', addBtn, scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1, scope.v1 > 1 ? scope.v1 : 0) }, icon('read', 18), 'Read ' + scopeLabel(scope)) : null,
-          ...backLinks('#/home', 'Back to Home', !scope), h('a.btn', { href: '#/progress' }, 'Progress'))));
+          ...backLinks('#/study', 'Back to Study', !scope), h('a.btn', { href: '#/home' }, 'Home'))));
   };
 
   const retryQ = [];                                      // missed cards wait here and come back after the last card, in a retry round
@@ -237,7 +237,7 @@ function startFrom(view, kind, scope, title, only = null) {
   if (!items.length) {
     if (!scope) { const alt = smart('words'); if (alt.kind !== 'go') { redirect(alt.href); return; } }       // caught up: go to something useful instead
     clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? (passageStudy(scope).held + passageStudy(scope).started ? waitNote(passageStudy(scope)) : 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉') : 'You’re all caught up. 🎉'),
-      h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1) }, 'Read it') : null, h('a.btn', { href: '#/home' }, 'Back'))));
+      h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1) }, 'Read it') : null, h('a.btn', { href: '#/study' }, 'Back'))));
     return;
   }
   runSession(view, items, { title, scope });
@@ -272,7 +272,7 @@ export function renderLearn(view, params) {
       return void runSession(view, shuffle(ns.map((n) => ({ n, type: 'recent' }))), { title: 'Review what I just learned', practice: true });
     }
     const items = shuffle(preview ? previewWords(goal).map((n) => ({ n, type: 'preview' })) : troubleCards('w:', 15).map((c) => ({ n: +c.id.slice(2), type: 'practice' })));      // shuffled: the worst card shouldn't always come first
-    if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Look ahead at new words' : 'Strengthen weak spots')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the words you’ve studied.'), h('a.btn', { href: '#/home' }, 'Back'))); return; }
+    if (!items.length) { clear(view).append(h('div.pagehead', h('h1', preview ? 'Look ahead at new words' : 'Strengthen weak spots')), h('div.card.stack', h('p', preview ? 'No new words to preview right now.' : 'Nothing is shaky right now: you haven’t missed or struggled with any of the words you’ve studied.'), h('a.btn', { href: '#/study' }, 'Back'))); return; }
     return void runSession(view, items, { title: 'Strengthen weak spots', practice: true });
   }
   if (mode === 'level') {
@@ -281,10 +281,10 @@ export function renderLearn(view, params) {
   }
   if (mode === 'passage') {
     const [book, c1, v1, c2, v2] = rest; const scope = { book, c1: +c1, v1: +v1 || 1, c2: +c2 || +c1, v2: +v2 || 999 };
-    if (!D.bookByCode.has(book)) return void (location.hash = '#/home');
+    if (!D.bookByCode.has(book)) return void (location.hash = '#/study');
     return void startFrom(view, 'passage', scope, scopeLabel(scope));
   }
-  redirect('#/home');                                   // the Learn hub is gone: Home opens the areas
+  redirect('#/study');                                  // the Learn hub is gone: Study opens the areas
 }
 
 /* ---------- Vocabulary page ---------- */
@@ -302,7 +302,7 @@ const checkinNote = () => (smart('words').kind === 'go' && sessionCounts().words
 function wordsPage(view) {
   const sm = smart('words');
   clear(view).append(
-    backHead('Vocabulary', '#/home', 'Home'),
+    backHead('Vocabulary', '#/study', 'Study'),
     h('div.stack',
       ...(doneCards('words') || [startButton(sm)]),
       checkinNote(),

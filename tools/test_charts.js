@@ -17,7 +17,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(/1st aorist passive/.test(m.sum) && /θη/.test(m.sum) && /secondary active/.test(m.sum), 'row summary uses the chart', m.sum);
 
   await go('#/learn');
-  await go('#/home'); await p.waitForSelector('a.area[href="#/reference"]');
+  await go('#/study'); await p.waitForSelector('a.area[href="#/reference"]');
   ok(await p.locator('a.area[href="#/reference"]').count() === 1, 'Home: Reference area');
   await p.click('a.area[href="#/reference"]'); await p.waitForSelector('a.area[href="#/learn/charts"]'); ok(await p.locator('a.area').count() >= 6, 'Reference lists the master chart and the kinds of form');
   await p.click('a.area[href="#/learn/charts"]'); await p.waitForSelector('h1:text-is("Master verb chart")');

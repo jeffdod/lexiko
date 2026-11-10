@@ -60,7 +60,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   ok(/words? to go · about/.test(ht) && /Goal/.test(ht) && !/goal words known/.test(ht), 'Vocabulary goal card: the goal and the finish estimate only');
   await p.screenshot({ path: out + '/home-freq.png' });
   await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
-  await p.locator('.goalnum').click(); await p.waitForTimeout(400); ok(!p.url().endsWith('#/progress'), 'a tap on the Home goal card does nothing (Progress is in the bottom bar)', p.url());
+  await p.locator('.goalnum').click(); await p.waitForTimeout(400); ok(!p.url().endsWith('#/home'), 'a tap on the Home goal card does nothing (Progress is in the bottom bar)', p.url());
   await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
   await p.getByRole('button', { name: /Change/ }).click();
   ok(await p.locator('.goal-picker').isVisible() && p.url().endsWith('#/'), 'Change opens the picker on Home itself');
@@ -104,9 +104,9 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
 
   // progress card + picker
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setGoal(null); });
-  await p.goto(URL + '#/progress'); await p.waitForSelector('text=Goal');
-  ok(await p.locator('text=goal words known').first().isVisible(), 'goal card shows words known');
-  await p.getByRole('button', { name: /Change/ }).click();
+  await p.goto(URL + '#/home'); await p.waitForSelector('text=Goal');
+  ok(await p.locator('button:has-text("Choose a goal")').first().isVisible(), 'with no goal the Home card offers to choose one');
+  await p.getByRole('button', { name: /Choose a goal/ }).click();
   ok(await p.locator('.goal-picker').isVisible(), 'picker opens');
   const rungs = await p.locator('.goal-picker .goal-opt').count();
   ok(rungs >= 3, 'rungs listed', String(rungs));
@@ -130,8 +130,8 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   await p.getByRole('button', { name: 'Start this goal' }).click(); await p.waitForSelector('.goalnum');
   const g5 = await p.evaluate(async () => { const k = await import('./js/know.js'); return { goal: k.K.goal, done: k.K.goalsDone }; });
   ok(g5.goal.kind === 'freq' && g5.goal.min === 30 && g5.done.length === 1 && g5.done[0].goal.min === 100, 'the suggested goal is set and the finished one is recorded', JSON.stringify(g5).slice(0, 160));
-  await p.goto(URL + '#/progress'); await p.reload(); await p.waitForSelector('text=Goals completed');
-  ok(/Words occurring 100 or more times/.test(await p.locator('#view').innerText()), 'Goals completed lists it');
+  await p.goto(URL + '#/home'); await p.reload(); await p.waitForSelector('summary:has-text("Goals completed")', { state: 'attached' });
+  ok(/Words occurring 100 or more times/.test(await p.locator('#view').textContent()), 'Goals completed lists it');
   await p.waitForSelector('#loading', { state: 'detached' }).catch(() => {}); await p.waitForTimeout(400); await p.screenshot({ path: out + '/progress-done.png' });
   const nx = await p.evaluate(async () => { const k = await import('./js/know.js'); return { a: k.nextGoal({ kind: 'freq', min: 2 }), b: k.nextGoal({ kind: 'passage', book: '1JN', c1: 1, v1: 1, c2: 2, v2: 29 }) }; });
   ok(nx.a === null && nx.b && nx.b.kind === 'pericope' && nx.b.c1 >= 2, 'next goal: none past the last rung; the next section after a passage', JSON.stringify(nx).slice(0, 140));
@@ -147,7 +147,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
 
   // nothing should ever print a stray "null" or "undefined"
   const stray = [];
-  for (const [hash, pre] of [['#/', null], ['#/progress', null]]) {
+  for (const [hash, pre] of [['#/', null], ['#/home', null]]) {
     await p.goto(URL + hash); await p.reload(); await p.waitForTimeout(600);
     stray.push([hash, /(null|undefined)/.test(await p.locator('#view').innerText())]);
   }

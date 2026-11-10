@@ -510,3 +510,11 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .area .badges { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex: none; }
 .area .badges .due { margin-left: 0; }
 @media (min-width: 640px) { .area .badges { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; } }
+
+/* Home as a dashboard: the numbers line inside the goal card, the short Good next reads card, and the Customize Home page */
+.statline { margin-top: .6rem; padding-top: .55rem; border-top: 1px solid var(--line); font-size: .88rem; display: grid; gap: .15rem; }
+.statline .muted { font-size: .82rem; }
+.reads { gap: .5rem; } .reads h2 { margin: 0; }
+.reads .li { padding: .5rem .7rem; } .reads .s { display: none; } .reads.open .s { display: block; }
+.cz { gap: .7rem; } .cz input[type=checkbox] { width: 1.3rem; height: 1.3rem; flex: none; accent-color: var(--accent); }
+.czmove { display: flex; gap: .25rem; flex: none; } .czlock { width: 1.3rem; display: flex; justify-content: center; color: var(--muted); flex: none; }
