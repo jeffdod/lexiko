@@ -4,7 +4,6 @@ import { decode } from './morph.js';
 import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal, goalLabel } from './know.js';
 import { partsGrid } from './partforms.js';
 import { barTracker } from './readbars.js';
-import { pullNext } from './pullnext.js';
 import { clueRef } from './clueref.js';
 import { rowOfTag } from './families.js';
 import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack, askDialog } from './util.js';
@@ -259,8 +258,7 @@ export function renderReader(view, params) {
     h('div.row', h('button.title.grow', { onclick: pick, 'aria-label': 'Choose book and chapter' }, book.name + ' ' + ch, h('span.muted', '▾')),
       h('button.btn.ghost.sm', { onclick: options, 'aria-label': 'Reading options' }, 'Aa')),
     h('div.navpair', navBtn(-1), navBtn(1)));
-  const pullHint = h('div.pullhint', { 'aria-hidden': 'true' }, h('span'));          // shown while you pull up at the end of the chapter (js/pullnext.js)
-  clear(view).append(...[readBack(), bar, meta, body, foot, pullHint].filter(Boolean));      // readBack() is null unless the reader was opened from search or a Learn page
+  clear(view).append(...[readBack(), bar, meta, body, foot].filter(Boolean));      // readBack() is null unless the reader was opened from search or a Learn page
 
   // word interactions (delegated)
   const wordOf = (e) => e.target.closest && e.target.closest('.w');
@@ -308,9 +306,6 @@ export function renderReader(view, params) {
   const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) hold(4000); };
   addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
 
-  const stopPull = pullNext({ el: pullHint, label: navLabel(1), go: () => { location.hash = nav(1); },
-    blocked: () => !!document.querySelector('dialog[open]') || !!(document.getElementById('pop') && !document.getElementById('pop').hidden) });
-
   const placeVerse = () => { const vv = [...body.querySelectorAll('.verse[data-vs="' + (+vsS) + '"]')]; if (vv.length) { vv.forEach((v) => v.classList.add('focus')); requestAnimationFrame(() => vv[0].scrollIntoView({ block: 'center' })); } };
   if (vsS) placeVerse(); else scrollTo(0, 0);
   // The route renderer is synchronous, so the Greek shows first and this book's English folds in when it has loaded.
@@ -323,5 +318,5 @@ export function renderReader(view, params) {
       if (vsS && y < 80) placeVerse(); else scrollTo(0, y);
     }).catch(() => toast('The English translation could not be loaded'));
   }
-  return () => { alive = false; stopPull(); hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  return () => { alive = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }
