@@ -72,6 +72,19 @@ export function toast(msg, ms = 2600) {
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, ms);
 }
 
+/** A small yes/no question in a dialog. Resolves true for the main button and false for the other, Escape or a tap outside; "No" is the focused one, so a stray tap changes nothing. */
+export function askDialog({ title, body, yes, no }) {
+  return new Promise((resolve) => {
+    let answer = false;
+    const end = (v) => () => { answer = v; dlg.close(); };
+    const dlg = h('dialog.ask', { 'aria-label': title }, h('div.stack', h('h2', title), ...body.map((t) => h('p', t)),
+      h('div.row.wrap.end', h('button.btn', { autofocus: true, onclick: end(false) }, no), h('button.btn.primary', { onclick: end(true) }, yes))));
+    dlg.addEventListener('close', () => { dlg.remove(); resolve(answer); });
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    document.body.append(dlg); dlg.showModal();
+  });
+}
+
 /** Icons (stroke, currentColor). */
 const ICONS = {
   home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',

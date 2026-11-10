@@ -1,12 +1,12 @@
 // The reader: Greek text with tap/click word popups, optional glosses for unknown words, readiness per chapter.
 import { D, tokenForm, tokenPunct, tokenFlag, chapterVerses, lexeme, senseNs, periScope, periRange, loadEnglish, englishVerse } from './data.js';
 import { decode } from './morph.js';
-import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal } from './know.js';
+import { K, status, setting, setSetting, markKnown, markLearning, scopeReadiness, passageStudy, waitNote, readinessLabel, readinessClass, markRead, setReadKey, sectionRead, unmarkSection, setGoal, currentGoal, goalLabel } from './know.js';
 import { partsGrid } from './partforms.js';
 import { barTracker } from './readbars.js';
 import { clueRef } from './clueref.js';
 import { rowOfTag } from './families.js';
-import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack } from './util.js';
+import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack, askDialog } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /** A verse's English as HTML. [Bracketed] words are words the translators supplied; they show in italics, without the brackets. */
@@ -189,7 +189,9 @@ export function renderReader(view, params) {
     const cg = currentGoal(), isGoal = cg.kind === 'passage' && cg.book === book.code && cg.c1 === ch && cg.c2 === ch && (cg.v1 || 1) === 1 && cg.v2 >= (book.chapters.find((c) => c[0] === ch) || [0, 999])[1];
     clear(meta).append(
       h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' known · ' + readinessLabel(rd.known)),
-      h('span.row', rd.distinctUnknown ? (isGoal ? h('span.chip.good', 'Your goal') : h('button.btn.sm', { onclick: async () => { await setGoal({ kind: 'passage', book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 }); toast('This chapter is now your goal'); draw(); } }, icon('target', 16), 'Make this my goal')) : h('span.chip.good', 'No new words'),
+      h('span.row', rd.distinctUnknown ? (isGoal ? h('span.chip.good', 'Your goal') : h('button.btn.sm', { onclick: async () => { const ng = { kind: 'passage', book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 };
+          if (K.goal && !(await askDialog({ title: 'Replace your goal?', body: ['Your goal is “' + goalLabel(cg) + '”. Make ' + goalLabel(ng) + ' your goal instead?', 'Your word progress stays as it is. Only the target changes.'], yes: 'Replace goal', no: 'Keep my goal' }))) return;      // a goal you chose is not swapped by one stray tap
+          await setGoal(ng); toast('This chapter is now your goal'); draw(); } }, icon('target', 16), 'Make this my goal')) : h('span.chip.good', 'No new words'),
         h('button.btn.sm' + (setting('glossMode') ? '.primary' : ''), { 'aria-pressed': !!setting('glossMode'), onclick: async () => { await setSetting('glossMode', !setting('glossMode')); draw(); } }, 'Meanings')),
     );
     const read = !!K.read[book.code + ':' + ch];
