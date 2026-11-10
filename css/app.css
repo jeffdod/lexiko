@@ -152,7 +152,8 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 .reader.rag { text-align: left; hyphens: none; -webkit-hyphens: none; }
 .reader[data-lh='tight'] { --lh: 1.6; } .reader[data-lh='roomy'] { --lh: 2.3; } .reader[data-lh='extra'] { --lh: 2.7; }
 .w { cursor: pointer; border-radius: 4px; padding: 0 .06em; -webkit-touch-callout: none; transition: background .1s; }
-.w:hover, .w.sel { background: var(--accent-soft); }
+.w.sel { background: var(--accent-soft); }
+@media (hover: hover) { .w:hover { background: var(--accent-soft); } }     /* only where a pointer can really hover: on a phone the last touched word would stay tinted */
 .w.sel { box-shadow: 0 0 0 2px var(--accent-soft); }
 .cathead { display: flex; align-items: center; gap: .6rem; }
 .hl .w.u { background: color-mix(in srgb, var(--accent) 24%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
