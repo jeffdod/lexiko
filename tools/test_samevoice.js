@@ -38,7 +38,7 @@ const { chromium } = require('playwright');
   ok(JSON.stringify(r.dep) === '[true,true,true,false,false]', 'deponent / RP "E" rules unchanged: ' + JSON.stringify(r.dep));
 
   // the feedback screen: note, open verse, chip
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('gates', K.allGatesOpen()); });
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); await K.setSetting('gates', K.allGatesOpen()); });
   await p.goto(U + '#/home'); await p.waitForTimeout(150); await p.goto(U + '#/parse/run/row/pres-mp'); await p.waitForSelector('.qwrap');
   // walk the quiz: verb questions get any answer; at the voice step of a parse pick "Middle or passive"; then read the feedback
   let saw = false;

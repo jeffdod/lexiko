@@ -2,12 +2,12 @@
 import { clockNow } from './clock.js';
 import { D } from './data.js';
 import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, studiedCount, currentGoal, setGoal, setSetting, wordsPace, goalFinished, noteGoalDone, nextGoal, goalStats, ntShareKnown, freqCoverage } from './know.js';
-import { goalLabel } from './know.js';
+import { goalLabel, parseAskDue } from './know.js';
 import { goalPicker, previewLine, miniGoalCard } from './goals.js';
 import { h, clear, add, pct, fmt, icon } from './util.js';
 import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
 import { counts, smart } from './smart.js';
-import { renderWelcome } from './welcome.js';
+import { renderWelcome, renderParseWelcome } from './welcome.js';
 import { readHref } from './reader.js';
 
 const DAY = 86400000;
@@ -98,6 +98,7 @@ function goalSummary(view) {
 export function renderHome(view) {
   const lvl = setting('level');
   if (lvl == null && !K.settings.levelAsked && !studiedCount('w:')) return renderWelcome(view, (href) => { if (href) location.hash = href; else renderHome(view); });
+  if (parseAskDue()) return renderParseWelcome(view, () => renderHome(view));
   const cnt = counts();
   const studied = studiedCount('w:');
   const needsBackup = backupDue(studied);

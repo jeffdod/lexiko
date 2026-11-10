@@ -8,7 +8,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   p.on('pageerror', (e) => errs.push(e.message));
   const ready = async () => { await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 }); await p.waitForFunction(() => !document.getElementById('loading')); };
   await p.goto(URL); await ready();
-  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(100); await k.setSetting('levelAsked', true); });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(100); await k.setSetting('levelAsked', true); await k.setSetting('parseAsked', true); });
   const go = async (h) => { await p.goto(URL + h); await p.reload(); await ready(); await p.waitForTimeout(300); };
 
   const m = await p.evaluate(async () => { const c = await import('./js/chartdrill.js'); return { rows: c.ROWS.length, items: c.ITEMS.length, ids: new Set(c.ITEMS.map((i) => i.id)).size, ex: ['pres-act', 'aor1-pas', 'perf-mp', 'aor-liq-act'].map(c.exampleFor), sum: c.summary(c.ROWS.find((r) => r.key === 'aor1-pas')) }; });

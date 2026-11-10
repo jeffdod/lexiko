@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
     const ctx = await b.newContext({ viewport: { width: w, height: 860 }, colorScheme: scheme || 'light' }); const p = await ctx.newPage();
     p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto('http://localhost:8123/lexiko/#/home'); await p.waitForSelector('#nav a[data-tab]', { timeout: 8000 });
-    await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); });
+    await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); });
     return p;
   };
   const go = async (p, hash) => { await p.goto('http://localhost:8123/lexiko/#/home'); await p.waitForTimeout(200); await p.goto('http://localhost:8123/lexiko/' + hash); await p.waitForSelector('.reader .verse', { timeout: 8000 }); };

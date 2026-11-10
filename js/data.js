@@ -15,6 +15,7 @@ export const D = {
   english: {},          // book code -> Map(chapter -> Map(verse -> English text)), filled one book at a time by loadEnglish()
   chap: new Map(),      // 'JHN:1' -> {book, ch, strongs:Int32Array, verses:n}
   occ: new Map(),       // strongs -> [packed bookIdx*1e5+ch*1e3+vs]
+  parasBooks: new Set(), paras: new Map(),   // 'MAT:1:6' -> word numbers where a paragraph begins in that verse
   periList: [], periAt: new Map(),   // sections (pericopes): list, and 'MAT:1:18' -> section starting at that verse
   totalTokens: 0, ready: false,
 };
@@ -31,6 +32,12 @@ export const englishVerse = (code, ch, vs) => { const b = D.english[code], c = b
 /** Words the text tags as verb forms but which are used as interjections ('Lo! Behold!': ἰδού, ἴδε). They are learned as vocabulary words only: no parsing, and no verb stems. */
 export const NOT_PARSED = new Set([2400, 2396]);
 /** Words learned as plain vocabulary although the text tags them as verbs: no 'I know the parsing' button, no principal-parts notice, not counted among the verbs you are learning. The interjections above, and δεῖ, whose other forms (ἔδει, δεῖν, δέῃ, δέον) are still parsed as verbs. */
+/** Proper names are never quizzed: a capitalized noun in the lexicon is a name, except a group name (its gloss starts "a Pharisee", "an Israelite", "belonging to Cyrene"). */
+const GROUP_GLOSS = /^(an? |belonging to|from |member of|the Herodians)/;
+const NAME_YES = new Set([4567, 2241]), NAME_NO = new Set([5598]);       // Satan and Eli are names; Ὦ is the letter omega
+const isCapital = (head) => { for (const ch of head.normalize('NFD')) if (/\p{L}/u.test(ch)) return ch !== ch.toLowerCase(); return false; };
+const isNameEntry = (r) => !NAME_NO.has(r[0]) && isCapital(r[1]) && (NAME_YES.has(r[0]) || (r[5] === 'N' && !GROUP_GLOSS.test(r[2])));
+export const isName = (n) => { const L = D.lexByN.get(n); return !!L && L.name; };
 export const VOCAB_ONLY = new Set([...NOT_PARSED, 1163]);
 /** One analysis (form tag) that is not parsed: any form of a NOT_PARSED word, and the form δεῖ itself (G1163, present active indicative 3rd singular), which is just the vocabulary word. The other forms of δεῖ (ἔδει, δεῖν, δέῃ, δέον) are parsed as verbs. */
 export const notParsed = (a) => !!a && (NOT_PARSED.has(a.s) || (a.s === 1163 && a.m === 'V-PAI-3S'));
@@ -47,9 +54,10 @@ export function shortGloss(b) {
 }
 
 export async function loadData(onProgress = () => {}) {
-  const [lex, forms, books, peri, parts] = await Promise.all([getJSON('lexicon.json'), getJSON('forms.json'), getJSON('books.json'), getJSON('pericopes.json'), getJSON('parts.json')]);
+  const [lex, forms, books, peri, parts, paras] = await Promise.all([getJSON('lexicon.json'), getJSON('forms.json'), getJSON('books.json'), getJSON('pericopes.json'), getJSON('parts.json'), getJSON('paragraphs.json')]);
+  for (const [code, marks] of Object.entries(paras)) { D.parasBooks.add(code); for (const [c, v, w] of marks) { const k = code + ':' + c + ':' + v; (D.paras.get(k) || D.paras.set(k, []).get(k)).push(w); } }
   onProgress(0.25);
-  D.lex = lex.map((r, i) => ({ n: r[0], head: r[1], brief: r[2], full: r[3], freq: r[4], pos: r[5], verb: r[5] === 'V' && !VOCAB_ONLY.has(r[0]), short: shortGloss(r[2]), senses: r[6] || null }));
+  D.lex = lex.map((r, i) => ({ n: r[0], head: r[1], brief: r[2], full: r[3], freq: r[4], pos: r[5], verb: r[5] === 'V' && !VOCAB_ONLY.has(r[0]), short: shortGloss(r[2]), senses: r[6] || null, name: isNameEntry(r) }));
   D.lex.sort((a, b) => b.freq - a.freq || a.n - b.n);
   D.lex.forEach((l, i) => { l.rank = i + 1; D.lexByN.set(l.n, l); });
   const senseLex = makeSenses();

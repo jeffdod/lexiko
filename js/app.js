@@ -14,7 +14,7 @@ import { renderReference } from './reference.js';
 import { renderSearch } from './search.js';
 import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
-import { h, clear, icon, noteRoute } from './util.js';
+import { h, clear, icon, noteRoute, NOT_RESUMABLE } from './util.js';
 import { travelBar } from './timetravel.js';
 import { startAutoBackup } from './backup.js';
 
@@ -24,8 +24,11 @@ const TABS = [['home', 'Home', 'home'], ['read', 'Read', 'read'], ['progress', '
 const routes = { home: renderHome, read: renderReader, learn: renderLearn, progress: renderProgress, settings: renderSettings, parse: renderParse, parts: renderParts, reference: renderReference, search: renderSearch, help: renderHelp };
 let cleanup = null;
 
+const lastIn = {};          // the last screen you were on in each tab, so a tab opens where you left it (for this visit only)
+const tabRoot = (id) => '#/' + id;
 function buildNav() {
-  clear(navEl).append(...TABS.map(([id, label, ic]) => h('a', { href: id === 'read' ? '#/read' : '#/' + id, dataset: { tab: id } }, icon(ic, 24), label)));
+  clear(navEl).append(...TABS.map(([id, label, ic]) => h('a', { href: tabRoot(id), dataset: { tab: id },
+    onclick: (e) => { e.preventDefault(); const here = navEl.querySelector('a[aria-current]'); location.hash = here && here.dataset.tab === id ? tabRoot(id) : (lastIn[id] || tabRoot(id)); } }, icon(ic, 24), label)));
 }
 function route() {
   noteRoute(location.hash);
@@ -33,6 +36,7 @@ function route() {
   const name = routes[parts[0]] ? parts[0] : 'home';
   if (cleanup) { try { cleanup(); } catch (e) { console.error(e); } cleanup = null; }
   const tabName = name === 'parse' || name === 'parts' || name === 'reference' || name === 'learn' || name === 'search' ? 'home' : name === 'help' ? 'settings' : name;
+  if (!NOT_RESUMABLE(location.hash)) lastIn[tabName] = location.hash || tabRoot(tabName);
   navEl.querySelectorAll('a[data-tab]').forEach((a) => (a.dataset.tab === tabName ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   view.scrollTop = 0; window.scrollTo(0, 0);
   try { cleanup = routes[name](view, parts.slice(1)) || null; }

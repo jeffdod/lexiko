@@ -2,7 +2,7 @@
 // Nothing is scheduled, graded, counted or gated: a wrong answer just shows the right form. It lives on the Verbs page and in each verb's page.
 import { D, lexeme } from './data.js';
 import { K, setting, startedVerbs } from './know.js';
-import { h, clear, shuffle, pct, icon, practiceBanner, missedBlock, backLinks } from './util.js';
+import { redirect, h, clear, shuffle, pct, icon, practiceBanner, missedBlock, backLinks } from './util.js';
 import { partsGrid } from './partforms.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
@@ -105,7 +105,7 @@ function runSession(view, queue, { restart, back }) {
   function show(c) {
     const entry = eligible().get(c.n); if (!entry || !entry.parts[c.slot]) return next();
     const L = lexeme(c.n), form = entry.parts[c.slot], flash = setting('mode') === 'flash';
-    const card = h('div.qcard', h('div.qgreek', { lang: 'grc' }, entry.lemma), h('div.qmeta', (L.short || L.brief) + ' · G' + c.n), h('div.qask', SLOT_NAMES[c.slot] + '?'), h('div', { id: 'ans' }));
+    const card = h('div.qcard', h('div.qgreek', { lang: 'grc' }, entry.lemma), h('div.qmeta', (L.short || L.brief)), h('div.qask', SLOT_NAMES[c.slot] + '?'), h('div', { id: 'ans' }));
     const tail2 = h('div'), continueBtn = (ok, label) => { const b = h('button.btn.primary.block', { onclick: () => answer(c, ok) }, label); setKeys(() => { b.click(); return true; }); return b; };
     if (!flash) {                                                    // multiple choice: the verb and a part name → the form
       const optsEl = h('div.opts'), choices = recallOptions(entry, c.slot);
@@ -131,7 +131,7 @@ function runSession(view, queue, { restart, back }) {
 /* ---------- route ---------- */
 export function renderParts(view, params) {
   const [mode, rest] = params;
-  if (mode !== 'exercise') { location.replace('#/learn/verbs'); return; }
+  if (mode !== 'exercise') { redirect('#/learn/verbs'); return; }
   const n = rest ? +rest : null, e = n ? eligible().get(n) : null, back = n ? { href: '#/learn/verb/' + n, label: 'Back to this verb' } : { href: '#/learn/verbs', label: 'Back to Verbs' };
   const queue = exerciseQueue(n ? [n] : null);
   if (!queue.length) { clear(view).append(h('div.pagehead', h('h1', 'Principal parts')), h('div.card.stack', h('p', n ? 'This verb has no principal parts beyond its first form.' : 'There are no principal parts to practice yet.'), h('a.btn', { href: back.href }, 'Back'))); return; }

@@ -8,7 +8,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   p.on('pageerror', (e) => errs.push(e.message));
   const ready = async () => { await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 }); await p.waitForFunction(() => !document.getElementById('loading')); };
   await p.goto(URL); await ready();
-  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(300); await k.setSetting('levelAsked', true);
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(300); await k.setSetting('levelAsked', true); await k.setSetting('parseAsked', true);
     const F = await import('./js/fsrs.js'); for (let i = 0; i < 20; i++) { const id = 'w:' + (1000 + i); const c = { ...F.newCard(id), state: 'review', stability: 3, reps: 2, last: Date.now() - 864e5, due: Date.now() + 864e5 }; k.K.cards.set(id, c); (await import('./js/store.js')).store.putCards([c]); } });
   const home = async () => { await p.goto(URL + '#/settings'); await p.goto(URL + '#/home'); await p.waitForTimeout(400); };
   const set = (o) => p.evaluate(async (o) => { const k = await import('./js/know.js'); for (const [a, v] of Object.entries(o)) await k.setSetting(a, v); }, o);

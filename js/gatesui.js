@@ -1,8 +1,8 @@
-// The screens of the gating: the Unlock list on Parsing, a page per kind of form, the "What's open" checklist, the how-to screen, and the verb question.
-import { K, setGate, gateOpen, verbsOn, openGateKeys, chartRowKnown, chartRowSquares, gateStats, passNeed, verbAskDue, noteVerbAsk, FAM_ACC } from './know.js';
+// The screens of the gating: the Unlock list on Parsing, a page per kind of form, the "Choose forms" checklist, the how-to screen, and the verb question.
+import { K, setGate, setGates, gateOpen, verbsOn, openGateKeys, chartRowKnown, chartRowSquares, gateStats, passNeed, verbAskDue, noteVerbAsk, FAM_ACC } from './know.js';
 import { CHART_ATTRS } from './families.js';
 import { ROWS, plan as chartPlan } from './chartdrill.js';
-import { FAMILIES, FAMILY, ROW_KEYS, kindName } from './kinds.js';
+import { FAMILIES, FAMILY, ROW_KEYS, kindName, allGateKeys } from './kinds.js';
 import { poolOf } from './gatenote.js';
 import { h, clear, icon, fold, backHead, toast } from './util.js';
 import { setSetting } from './know.js';
@@ -27,8 +27,8 @@ export function unlockSection() {
     h('p.muted.small', 'Present active is already on. Pass a drill to start getting that type of verb form in your daily parsing.'),
     h('div.list',
       row('#/parse/kinds/ind', 'Indicative', rows + ' of ' + ROW_KEYS.length + ' rows open' + (n ? ', ' + (p.due.length ? sq(p.due.length) + ' to review' : sq(p.nw.length) + ' new') : '')),
-      ...FAMILIES.map((f) => row('#/parse/kinds/' + f.id, f.name, nOpen(f) + ' of ' + f.kinds.length + ' kinds open'))),
-    h('p.small', h('a', { href: '#/parse/gates' }, 'What’s open ›')));
+      ...FAMILIES.map((f) => row('#/parse/kinds/' + f.id, f.name, nOpen(f) + ' of ' + f.kinds.length + ' kinds open')),
+      row('#/parse/gates', 'Choose forms', 'Tick or untick any type of verb form, or whole groups at once')));
 }
 
 const longName = (n) => n.replace('mid/pas', 'middle/passive').replace(/\bfut\b/, 'future').replace(/\bact\b/, 'active').replace(/\bmid\b/, 'middle').replace(/\bpas\b/, 'passive').replace(/^./, (c) => c.toUpperCase());
@@ -71,12 +71,22 @@ export function renderGates(view) {
       return h('label.li', { style: { gap: '.7rem', cursor: 'pointer' } }, cb, h('span.grow', h('span', label), sub ? h('div.muted.small', sub) : null));
     };
     const verbs = h('label.li', { style: { gap: '.7rem' } }, h('input', { type: 'checkbox', checked: verbsOn(), onchange: async (e) => { await setGate('verbs', e.target.checked); draw(); } }), h('span.grow', h('b', 'Verb parsing'), h('div.muted.small', 'Off: daily parsing asks about nouns, adjectives and other words only.')));
-    clear(view).append(backHead('What’s open', '#/parse', 'Parsing'), h('div.stack',
-      h('p.muted.small', 'These decide which types of verb forms daily parsing may ask. Passing drills opens them for you; here you can tick or untick any by hand. Words you have studied keep their progress.'),
+    // A heading with a box that ticks or unticks the whole group (partly ticked when only some are open).
+    const group = (title, keys) => {
+      const fixed = (k) => k === 'row:pres-act', free = keys.filter((k) => !fixed(k)), on = keys.filter(gateOpen).length;
+      const cb = h('input', { type: 'checkbox', 'aria-label': title + ': tick or untick all', checked: on === keys.length, disabled: !verbsOn(), onchange: async () => { await setGates(free, cb.checked); draw(); } });
+      cb.indeterminate = on > 0 && on < keys.length;
+      return h('h2.cathead', cb, title);
+    };
+    const everyKey = [...allGateKeys(), 'mi', 'rare'].filter((k) => k !== 'row:pres-act');
+    const all = (on) => h('button.btn.sm', { disabled: !verbsOn(), onclick: async () => { await setGates(everyKey, on); draw(); } }, on ? 'Select all' : 'Clear all');
+    clear(view).append(backHead('Choose forms', '#/parse', 'Parsing'), h('div.stack',
+      h('p.muted.small', 'These decide which types of verb forms daily parsing may ask. Passing drills opens them for you; here you can tick or untick any by hand, or a whole group at once. Words you have studied keep their progress.'),
+      h('div.row', all(true), all(false)),
       h('div.list', verbs),
-      h('h2', 'Indicative rows'), h('div.list', ROW_KEYS.map((r) => box('row:' + r, rowName(r), r === 'pres-act' ? 'Always open once verbs are on' : chartRowKnown(r) ? 'Learned on the chart' : null))),
-      ...FAMILIES.flatMap((f) => [h('h2', f.name), h('div.list', f.kinds.map((k) => box(f.id + ':' + k.key, k.name)))]),
-      h('h2', 'More'), h('div.list', box('mi', 'Verbs in -μι', 'Kept out of daily parsing until ticked'), box('rare', 'Rare forms', 'Optative, future participles and infinitives, pluperfect'))));
+      group('Indicative rows', ROW_KEYS.map((r) => 'row:' + r)), h('div.list', ROW_KEYS.map((r) => box('row:' + r, rowName(r), r === 'pres-act' ? 'Always open once verbs are on' : chartRowKnown(r) ? 'Learned on the chart' : null))),
+      ...FAMILIES.flatMap((f) => [group(f.name, f.kinds.map((k) => f.id + ':' + k.key)), h('div.list', f.kinds.map((k) => box(f.id + ':' + k.key, k.name)))]),
+      group('More', ['mi', 'rare']), h('div.list', box('mi', 'Verbs in -μι', 'Kept out of daily parsing until ticked'), box('rare', 'Rare forms', 'Optative, future participles and infinitives, pluperfect'))));
   };
   draw();
 }

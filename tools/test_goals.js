@@ -51,7 +51,7 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
   ok(b2.nNew > 0 && b2.inOrder, 'a session teaches the passage in order');
 
   // Home goal card
-  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(50); await k.setGoal({ kind: 'freq', min: 30 }); });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(50); await k.setSetting('parseAsked', true); await k.setGoal({ kind: 'freq', min: 30 }); });
   await p.goto(URL + '#/'); await p.waitForSelector('.goalnum');
   const hc = await p.locator('.goalnum').textContent();
   ok(/^\d[\d,]* of \d[\d,]* goal words known · \d+%$/.test(hc), 'Home card headline', hc);

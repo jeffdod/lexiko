@@ -8,7 +8,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   p.on('pageerror', (e) => errs.push(e.message));
   const ready = async () => { await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 }); await p.waitForFunction(() => !document.getElementById('loading')); };
   await p.goto(URL); await ready();
-  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(500); await k.setSetting('levelAsked', true); await k.setSetting('parseMode', 'guided'); await k.setSetting('sessionSize', 1); await k.setSetting('parseNewPerDay', 5); await k.setSetting('parsePace', 'fixed'); });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(500); await k.setSetting('levelAsked', true); await k.setSetting('parseAsked', true); await k.setSetting('parseMode', 'guided'); await k.setSetting('sessionSize', 1); await k.setSetting('parseNewPerDay', 5); await k.setSetting('parsePace', 'fixed'); });
   await p.goto(URL + '#/parse/run/noun'); await p.reload(); await ready(); await p.waitForSelector('.pcard');
   const miss = async () => { await p.click('text=I don’t know'); await p.click('.qwrap .btn.primary.block'); await p.waitForTimeout(200); };
   await miss();                                                    // first try: missed

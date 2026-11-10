@@ -1,7 +1,7 @@
 // Knowledge model: which words does the learner know? Combines the level they declared with SRS cards.
 import { clockNow } from './clock.js';
 import { requiredStems } from './stems.js';
-import { D, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBook } from './data.js';
+import { D, isName, NOT_PARSED, scopeCounts, scopeVerses, scopeLabel, periScope, periBook } from './data.js';
 import { store } from './store.js';
 import * as F from './fsrs.js';
 import { todayKey, shuffle } from './util.js';
@@ -10,8 +10,8 @@ import { gateKeyOfTag, allGateKeys } from './kinds.js';
 import { miClass } from './midata.js';
 
 export const DEFAULTS = {
-  theme: 'auto', level: null, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
-  readerSize: 1.35, verseNums: true, english: false, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, gates: {}, verbAsk: { n: 0, t: 0 }, barsDebug: false,
+  theme: 'auto', level: null, parseLevel: null, parseAsked: false, mode: 'flash', newPerDay: 10, probeRate: 0.12, retention: 0.9,
+  readerSize: 1.35, paraStyle: 'indent', lineEnds: 'justify', lineSpacing: 'normal', sectionHeads: true, verseNums: true, english: false, glossMode: false, glossRepeat: false, highlight: true, sessionSize: 25, parseMode: 'auto', parseNewPerDay: 10, wordsPace: 'auto', wordsPause: false, parsePace: 'auto', parsePause: false, backupReminder: true, autoBackup: false, gates: {}, verbAsk: { n: 0, t: 0 }, barsDebug: false,
 };
 export const K = { settings: { ...DEFAULTS }, cards: new Map(), daily: {}, read: {}, goal: null, wordsAcc: [], parseAcc: [], verbAcc: [], verbParse: {}, gateAcc: {}, ready: false };
 
@@ -137,6 +137,7 @@ export const getCard = (n) => K.cards.get(cardId(n));
 
 /** 'known' | 'learning' | 'unknown' — drives the reader, readiness and queues. */
 export function status(n) {
+  if (isName(n)) return 'known';                       // a proper name is never quizzed and never counts as a word you don't know
   const c = K.cards.get('w:' + n);
   if (c) return c.state === 'review' && ((c.stability || 0) >= 7 || (c.reps || 0) >= 2) ? 'known' : 'learning';      // one right answer isn't knowing a word yet
   const L = D.lexByN.get(n);
@@ -230,7 +231,7 @@ export const readinessLabel = (p) => (p >= 0.98 ? 'Ready' : p >= 0.95 ? 'Comfort
 export const readinessClass = (p) => (p >= 0.98 ? 'r4' : p >= 0.95 ? 'r3' : p >= 0.9 ? 'r2' : p >= 0.8 ? 'r1' : 'r0');
 
 /** A word card that is still in use (a preposition that is now reviewed per case no longer uses its old single card). */
-export const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const L = D.lexByN.get(+c.id.slice(2)); return !L || !L.senses; };
+export const liveWord = (c) => { if (!c.id.startsWith('w:')) return false; const L = D.lexByN.get(+c.id.slice(2)); return !L || (!L.senses && !L.name); };
 /* ---------- "done for today": the day's work is fixed, extra work is something the learner asks for ---------- */
 const dayStart = (now) => { const d = new Date(now); d.setHours(0, 0, 0, 0); return +d; };
 const dayEnd = (now) => { const d = new Date(now); d.setHours(24, 0, 0, 0); return +d; };
@@ -312,7 +313,7 @@ export function nextByLevel(limit) {
 /** Assumed-known words (no card yet) to spot-check, weighted toward the edge of the declared level. */
 export function probeCandidates(limit, exclude = new Set()) {
   if (K.settings.level == null) return [];
-  const pool = D.lex.filter((L) => L.freq >= K.settings.level && !K.cards.has('w:' + L.n) && !exclude.has(L.n));
+  const pool = D.lex.filter((L) => L.freq >= K.settings.level && !L.name && !K.cards.has('w:' + L.n) && !exclude.has(L.n));
   if (!pool.length) return [];
   const w = pool.map((L) => 1 / Math.sqrt(L.freq)); const out = [];
   const used = new Set();
@@ -372,7 +373,7 @@ const formKnown = (rows) => rows.some((i) => cardKnown(K.cards.get(parseId(D.for
 const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 /** δίδωμι, τίθημι, ἵστημι, ἀφίημι, δείκνυμι and their compounds. */
 export const isMiVerb = (n) => { const L = D.lexByN.get(n); return !!L && !!miClass(L.head); };
-/** Verbs in -μι stay out of daily practice (and are not required of you) until you tick them in What's open. */
+/** Verbs in -μι stay out of daily practice (and are not required of you) until you tick them in Choose forms. */
 export const miHeld = (n) => isMiVerb(n) && !(K.settings.gates || {}).mi;
 /** Where one verb stands: its required stems and chosen forms (known or not), and whether its forms are learned. Null for a word with no verb forms. */
 export function verbStatus(n) {
@@ -467,6 +468,27 @@ export function gateOpen(key) {
 export const formOpen = (tags, n) => verbsOn() && !miHeld(n) && tags.some((t) => gateOpen(gateKeyOfTag(t, n)));
 export const openGateKeys = () => allGateKeys().filter(gateOpen);
 export async function setGate(key, on) { await setSetting('gates', { ...gateMap(), [key]: !!on }); }
+/** Set many gates at once (a whole category, or every kind): `keys` is a list of gate keys. */
+export async function setGates(keys, on) { const g = { ...gateMap() }; for (const k of keys) g[k] = !!on; await setSetting('gates', g); }
+/** The answers to "How well do you parse Greek?" (first-run step). Each one sets the gates; 'start' leaves verb parsing off. */
+export const PARSE_LEVELS = [
+  ['start', 'I’m just starting', 'Verbs stay off for now. You’ll be asked about nouns, adjectives and other words you know, and can turn verbs on later.'],
+  ['basics', 'I know the basics', 'I know the present, imperfect, future and aorist active and middle. Participles, infinitives, subjunctive and imperative unlock as you learn them.'],
+  ['most', 'I know most forms', 'I can parse nearly everything except verbs in -μι and rare forms like the optative.'],
+  ['all', 'I parse everything', 'Ask me about every form, including -μι and the rare ones.'],
+];
+export async function setParseLevel(key, { merge = false } = {}) {          // merge: an existing user's answer only opens more, it never closes what they have earned
+  let g = {};
+  if (key === 'basics') { g.verbs = true; for (const r of Object.keys(ROW_LEVEL)) if (ROW_LEVEL[r] === 1) g['row:' + r] = true; }
+  else if (key === 'most') g = { ...allGatesOpen(), mi: false, rare: false };
+  else if (key === 'all') g = allGatesOpen();
+  if (merge) g = { ...gateMap(), ...Object.fromEntries(Object.entries(g).filter(([, v]) => v)) };
+  await setSetting('parseLevel', key); await setSetting('parseAsked', true); await setSetting('gates', g);
+}
+/** The definite article is too simple to ask about once someone has said they know more than the start. */
+/** An existing user (a level chosen) who has never been asked how well they parse Greek: they get that question once, on their own. */
+export const parseAskDue = () => K.settings.level != null && !K.settings.parseAsked && !K.settings.parseLevel;
+export const skipsArticle = () => !!K.settings.parseLevel && K.settings.parseLevel !== 'start';
 /** Gate keys that opened between two calls of openGateKeys(): for a message. */
 export const newlyOpen = (before) => openGateKeys().filter((k) => !before.includes(k));
 /** How a kind's drill is going: answers in the last FAM_WINDOW, and the share right. */
@@ -487,7 +509,7 @@ export async function bootGates() {
   await setSetting('gates', {}); await setSetting('verbAsk', { n: 0, t: 0 }); await store.set('gatesInit', true);
 }
 /** The question after a quiz: ask once, once more after a week, then never (the Parsing page keeps a button). */
-export function verbAskDue(now = clockNow()) { const a = K.settings.verbAsk || { n: 0, t: 0 }; return !verbsOn() && (a.n === 0 || (a.n === 1 && now - a.t >= 7 * 864e5)); }
+export function verbAskDue(now = clockNow()) { const a = K.settings.verbAsk || { n: 0, t: 0 }; return !verbsOn() && !(K.settings.parseLevel && K.settings.parseLevel !== 'start') && (a.n === 0 || (a.n === 1 && now - a.t >= 7 * 864e5)); }
 export const noteVerbAsk = (now = clockNow()) => setSetting('verbAsk', { n: ((K.settings.verbAsk || {}).n || 0) + 1, t: now });
 /** A square of the master verb chart (c:row:part) or a personal ending (e:set:person): scheduled like any card, never mixed into word or form sessions. */
 export async function rateChart(id, grade) {

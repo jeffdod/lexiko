@@ -32,7 +32,7 @@ const { chromium } = require('playwright');
   ok(r.full === null && r.dk === null, 'no fold for a right answer or an empty answer');
 
   // the live feedback screen: closed fold under the chips, opens to three blocks
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('gates', K.allGatesOpen()); });
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); await K.setSetting('gates', K.allGatesOpen()); });
   await p.goto(U + '#/home'); await p.waitForTimeout(150); await p.goto(U + '#/parse/run/row/aor1-pas'); await p.waitForSelector('.qwrap');
   let saw = false;
   for (let i = 0; i < 150 && !saw; i++) {

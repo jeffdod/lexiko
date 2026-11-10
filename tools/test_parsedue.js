@@ -10,7 +10,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await p.goto(URL); await ready();
   const mk = async () => p.evaluate(async () => { const k = await import('./js/know.js'), f = await import('./js/fsrs.js'), { D } = await import('./js/data.js'), { store } = await import('./js/store.js');
     const due = (id) => { let c = f.review(f.newCard(id), 3, Date.now() - 9e8, 0.9); c.due = Date.now() - 1000; c.src = 'new'; return c; };
-    const real = D.forms.find((x) => x.an[0] && /^N-/.test(x.an[0].m) && x.count > 200), idou = D.forms.find((x) => x.an[0] && x.an[0].s === 2400);
+    const real = D.forms.find((x) => x.an[0] && /^N-/.test(x.an[0].m) && x.count > 200 && !(D.lexByN.get(x.an[0].s) || {}).name), idou = D.forms.find((x) => x.an[0] && x.an[0].s === 2400);
     const cards = [due(k.parseId(real)), due(k.parseId(idou)), due('f:zzzz:5')];
     for (const c of cards) { k.K.cards.set(c.id, c); } await store.putCards(cards);
     const sm = await import('./js/smart.js'), pa = await import('./js/parse.js');

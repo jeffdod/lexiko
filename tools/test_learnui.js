@@ -8,7 +8,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   p.on('pageerror', (e) => errs.push(e.message));
   const ready = async () => { await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 }); await p.waitForFunction(() => !document.getElementById('loading')); };
   await p.goto(URL); await ready();
-  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(300); await k.setSetting('levelAsked', true); });
+  await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(300); await k.setSetting('levelAsked', true); await k.setSetting('parseAsked', true); });
   const go = async (h) => { await p.goto(URL + h); await p.reload(); await ready(); await p.waitForTimeout(300); };
   await go('#/learn');
   await p.waitForTimeout(300); ok(await p.locator('a.area').count() === 3, 'Learn opens Home with three areas');
