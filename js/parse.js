@@ -4,7 +4,7 @@ import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, sameSpelledMP, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { redirect, h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
+import { todayKey, redirect, h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
 import { verbsInProgress } from './verbs.js';
 import { whyWrong } from './whywrong.js';
@@ -19,7 +19,7 @@ import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
-import { currentGoal, goalWords, formOpen, gateOpen, skipsArticle } from './know.js';
+import { currentGoal, goalWords, formOpen, gateOpen, skipsArticle, nominalState, NOM_CHECKINS } from './know.js';
 import { isLiquidVerb } from './families.js';
 import { gateKey } from './kinds.js';
 import { unlockSection, renderKinds, renderRows, renderGates, renderHowto } from './gatesui.js';
@@ -58,7 +58,37 @@ const cardIdFor = (id) => {
 const isFresh = (id) => { const c = K.cards.get(cardIdFor(id)); return !c || c.state === 'new'; };
 const rawItem = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
 /** A verb form whose gate is not open (or while verb parsing is off) is treated as if it were not there: not due, not new, not counted. */
-const itemOf = (id) => { const it = rawItem(id); if (!it) return it; if (it.group === 'V') return formOpen(it.valid.map((v) => v.code), it.strongs) ? it : null; if (it.strongs === 3588 && skipsArticle()) return null; return D.lexByN.get(it.strongs)?.name ? null : it; };        // a proper name is never asked; nor is the article, unless the learner said they are just starting
+const itemOf = (id) => {
+  const it = rawItem(id); if (!it) return it;
+  if (it.group === 'V') return formOpen(it.valid.map((v) => v.code), it.strongs) ? it : null;
+  if (it.strongs === 3588 && skipsArticle()) return null;        // the article is not asked, unless the learner said they are just starting
+  if (D.lexByN.get(it.strongs)?.name) return null;               // a proper name is never asked
+  const st = nominalState();                                     // nouns, adjectives and pronouns: always, a few check-ins a day, or never (see js/know.js)
+  if (st === 'off' || (st === 'thin' && !checkins().has(canon[id]))) return null;
+  return it;
+};
+/** Thinned: today's few check-ins, chosen once a day from the noun, adjective and pronoun forms you have studied, the most overdue first. The pick is saved so the day's set does not change as you answer. */
+let pickCache = null;
+function checkins() {
+  const day = todayKey();
+  if (pickCache && pickCache.day === day) return pickCache.set;
+  const saved = K.settings.nomPick; let ids;
+  if (saved && saved.day === day) ids = saved.ids.map((k) => keyMap.get(k)).filter((x) => x != null);
+  else {
+    const cand = [];
+    for (const c of K.cards.values()) {
+      if (!c.id.startsWith('f:') || c.state === 'new') continue;
+      const id = keyMap.get(c.id); if (id == null) continue;
+      const it = rawItem(id); if (!it || it.group === 'V') continue;
+      if (D.lexByN.get(it.strongs)?.name || (it.strongs === 3588 && skipsArticle()) || status(it.strongs) !== 'known') continue;
+      cand.push({ id, due: c.due });
+    }
+    cand.sort((a, b) => a.due - b.due); ids = [];
+    for (const x of cand) { if (ids.length >= NOM_CHECKINS) break; if (!ids.includes(x.id)) ids.push(x.id); }
+    setSetting('nomPick', { day, ids: ids.map((id) => parseId(D.forms[id])) });
+  }
+  pickCache = { day, set: new Set(ids) }; return pickCache.set;
+}
 /** The forms a verb requires (its chosen forms in each required stem), as form ids; cached per verb. */
 const reqCache = new Map();
 const requiredFormIds = (n) => {
@@ -111,7 +141,7 @@ export function parseDueCount(now = clockNow()) {
 setParseDueCounter(parseDueCount);
 let freshMemo = null;      // cached for a few seconds: building the pool is not free, and Home asks often
 setParseFreshCounter(() => {
-  const key = [K.cards.size, K.settings.level, JSON.stringify(K.settings.gates || null), Math.floor(clockNow() / 3000)].join('|');
+  const key = [K.cards.size, K.settings.level, K.settings.nominals, K.settings.nomThin, JSON.stringify(K.settings.gates || null), Math.floor(clockNow() / 3000)].join('|');
   if (!freshMemo || freshMemo.key !== key) { ensureIndex(); freshMemo = { key, n: planParseSession({}).fresh.length }; }
   return freshMemo.n;
 });
@@ -690,7 +720,13 @@ export function renderParse(view, params) {
 }
 
 const gk = (t) => h('span', { lang: 'grc' }, t);
+/** A quiet line on Parsing while nouns, adjectives and pronouns are off or down to check-ins, with the way to change it. */
+function nominalsNote() {
+  const st = nominalState(); if (st === 'on') return null;
+  return h('div.small.muted', 'Nouns, adjectives and pronouns: ' + (st === 'off' ? 'off' : 'check-ins only') + '. ', h('a', { href: '#/parse/gates' }, 'Change'));
+}
 async function landing(view) {
+  if (K.settings.nomNote === 'thin') { setSetting('nomNote', null); toast('You parse nouns and adjectives reliably, so lexiko will only check them now and then. You can change this under Choose forms.', 10000); }
   ensureIndex();
   const st = await getParseStats();
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
@@ -701,6 +737,7 @@ async function landing(view) {
       ...(doneCards('parse') || [startButton(sm)]),
       paceNote(parsePace(), 'forms'),
       h('div.row.wrap.links', h('a.btn.sm', { href: TOPICS.parse.preview }, 'Look ahead at new forms'), sm.kind === 'review' ? null : h('a.btn.sm', { href: TOPICS.parse.review }, 'Review forms I’ve learned'), h('a.btn.sm', { href: TOPICS.parse.reinforce }, 'Strengthen weak spots')),
+      nominalsNote(),
       unlockSection(),
       h('div.sec', 'Free practice'),
       areaCard({ href: '#/parse/form', ic: 'text', title: 'Practice by form', sub: 'Take real forms apart or put them together', ex: 'Clue hunt · Build the form · Parse from the chart' }),
