@@ -238,11 +238,13 @@ dialog.ask .end { justify-content: flex-end; }
 @media print { #nav, #pop, .readbar { display: none; } }
 #view:focus, #view:focus-visible { outline: none; }
 
-.reader h3.peri { font: 700 1rem/1.3 var(--ui); text-align: left; hyphens: none; margin: 1.5rem 0 .5rem; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+.reader h3.peri { font: 700 1rem/1.3 var(--ui); text-align: left; hyphens: none; margin: 1.5rem 0 .5rem; display: block; padding-top: .9rem; border-top: 1px solid var(--line); }
 .reader h3.peri:first-child { border-top: 0; margin-top: .3rem; padding-top: 0; }
-.peri .pt { flex: 1 1 13rem; font-family: var(--greek); font-size: 1.2rem; line-height: 1.25; }
-.peri .pref { display: block; font: 700 .72rem var(--ui); color: var(--muted); letter-spacing: .04em; margin-bottom: .1rem; }
-.peri .pm { display: flex; gap: .35rem; align-items: center; }
+.peri .pt { display: block; font-family: var(--greek); font-size: 1.2rem; line-height: 1.25; }
+.peri .psub { display: flex; align-items: center; gap: .5rem; margin-top: .15rem; font: 600 .78rem var(--ui); color: var(--muted); }
+.peri .pmore { margin: -.5rem -.4rem -.5rem auto; min-width: 2.75rem; min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--muted); font-size: 1.3rem; line-height: 1; border-radius: 10px; cursor: pointer; }
+@media (hover: hover) { .peri .pmore:hover { background: var(--surface-2); } }
+.peri .pmenu { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .55rem; } .peri .pmenu[hidden] { display: none; }
 
 /* ---------- parsing ---------- */
 .pcard { flex: none; }

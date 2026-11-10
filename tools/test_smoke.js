@@ -61,7 +61,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
 
   // section headings (Kretzmann) in the reader
   ok(await page.locator('.reader h3.peri').count() >= 1 && /The Word Became Flesh/.test(await page.locator('.reader h3.peri').first().textContent()), 'John 1 shows its section heading');
-  const pbtn = page.locator('.reader h3.peri button[data-act=pread]').first(); await pbtn.click();
+  await page.locator('.reader h3.peri .pmore').first().click(); const pbtn = page.locator('.reader h3.peri button[data-act=pread]').first(); await pbtn.click();
   await page.waitForFunction(() => document.querySelector('.reader h3.peri button[data-act=pread]').getAttribute('aria-pressed') === 'true');
   ok(true, 'section can be marked as read');
   await page.goto(URL + '#/read/MAT/5'); await page.waitForSelector('.reader .w');
@@ -104,7 +104,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
 
   // gloss mode on
-  await page.click('button:has-text("Meanings")'); await page.waitForSelector('.gl');
+  await page.click('button:has-text("Show meanings")'); await page.waitForSelector('.gl');
   const nGl = await page.locator('.gl').count();
   ok(nGl > 5, 'unknown-word glosses shown: ' + nGl);
   await page.screenshot({ path: out + '/04-reader-glosses.png' });
