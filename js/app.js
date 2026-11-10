@@ -6,7 +6,7 @@ import { renderHome } from './home.js';
 import { upcoming, whenText, counts, smartAll } from './smart.js';
 import { renderReader } from './reader.js';
 import { renderLearn } from './learn.js';
-import { renderProgress } from './progress.js';
+import { renderStudy } from './study.js';
 import { renderParse } from './parse.js';
 import { bootGates } from './know.js';
 import { renderParts } from './parts.js';
@@ -20,8 +20,9 @@ import { startAutoBackup } from './backup.js';
 
 const view = document.getElementById('view');
 const navEl = document.getElementById('nav');
-const TABS = [['home', 'Home', 'home'], ['read', 'Read', 'read'], ['progress', 'Progress', 'progress'], ['settings', 'Settings', 'settings']];
-const routes = { home: renderHome, read: renderReader, learn: renderLearn, progress: renderProgress, settings: renderSettings, parse: renderParse, parts: renderParts, reference: renderReference, search: renderSearch, help: renderHelp };
+const TABS = [['home', 'Home', 'home'], ['study', 'Study', 'learn'], ['read', 'Read', 'read'], ['settings', 'Settings', 'settings']];
+const routes = { home: renderHome, read: renderReader, learn: renderLearn, study: renderStudy, progress: () => { location.replace('#/home'); },     // the Progress tab is gone: its content is on Home
+   settings: renderSettings, parse: renderParse, parts: renderParts, reference: renderReference, search: renderSearch, help: renderHelp };
 let cleanup = null;
 
 const lastIn = {};          // the last screen you were on in each tab, so a tab opens where you left it (for this visit only)
@@ -41,7 +42,7 @@ function route() {
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/').map(decodeURIComponent);
   const name = routes[parts[0]] ? parts[0] : 'home';
   if (cleanup) { try { cleanup(); } catch (e) { console.error(e); } cleanup = null; }
-  const tabName = name === 'parse' || name === 'parts' || name === 'reference' || name === 'learn' || name === 'search' ? 'home' : name === 'help' ? 'settings' : name;
+  const tabName = name === 'parse' || name === 'parts' || name === 'reference' || name === 'learn' || name === 'search' ? 'study' : name === 'help' ? 'settings' : name;
   if (!NOT_RESUMABLE(location.hash)) lastIn[tabName] = location.hash || tabRoot(tabName);
   navEl.querySelectorAll('a[data-tab]').forEach((a) => (a.dataset.tab === tabName ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   view.scrollTop = 0; window.scrollTo(0, 0);
@@ -51,7 +52,7 @@ function route() {
 }
 
 /* Keep the "next review in…" text and the big button honest while a screen stays open: redraw when something changes. */
-const LIVE = new Set(['', '#/home', '#/learn', '#/learn/words', '#/parse', '#/learn/verbs']);
+const LIVE = new Set(['', '#/home', '#/study', '#/learn', '#/learn/words', '#/parse', '#/learn/verbs']);
 let liveSig = '';
 const signature = () => { const u = upcoming(), c = counts(), a = smartAll(); return [u.all.due, whenText(u.all.next), c.words.due, c.parse.due, a.label, a.sub].join('|'); };
 function refreshLive() {

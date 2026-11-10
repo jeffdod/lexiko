@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
     const p = await b.newPage({ viewport: { width: 390, height: 900 }, colorScheme: theme }); p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
     await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); });
-    await p.goto(U + '#/learn'); await p.waitForTimeout(150); await p.goto(U + '#/progress'); await p.waitForSelector('.legend');
+    await p.goto(U + '#/learn'); await p.waitForTimeout(150); await p.goto(U + '#/home'); await p.waitForSelector('.legend', { state: 'attached' }); await p.evaluate(() => document.querySelectorAll('#view details').forEach((d) => { d.open = true; }));
     const r = await p.evaluate(() => {
       const legendEl = [...document.querySelectorAll('.legend')].find((l) => l.querySelector('i.chap'));
       const probe = (cls, el, parent) => { const x = document.createElement(el || 'span'); x.className = cls; x.textContent = '9'; x.style.position = 'absolute'; x.style.left = '-999px'; (parent || document.body).append(x); const cs = getComputedStyle(x), q = getComputedStyle(x, '::before'); const o = { bg: cs.backgroundColor, ink: cs.color, line: cs.borderTopColor, shadow: cs.boxShadow, bar: parseFloat(q.width) || 0, barShown: q.display !== 'none' }; x.remove(); return o; };

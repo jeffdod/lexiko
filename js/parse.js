@@ -732,7 +732,7 @@ async function landing(view) {
   const weak = Object.entries(st.slots).filter(([, v]) => v[1] >= 8).map(([k, v]) => [k, v[0] / v[1]]).sort((a, b) => a[1] - b[1])[0];
   const sm = smart('parse'), nv = verbsInProgress();
   clear(view).append(
-    backHead('Parsing', '#/home', 'Home'),
+    backHead('Parsing', '#/study', 'Study'),
     h('div.stack',
       ...(doneCards('parse') || [startButton(sm)]),
       paceNote(parsePace(), 'forms'),

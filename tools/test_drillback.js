@@ -37,7 +37,7 @@ const { chromium } = require('playwright');
   await p.locator('#view .li').nth(2).locator('a:text-is("Drill")').click(); await p.waitForSelector('.qwrap'); await endNow();
   let t = await btns();
   ok(t[0] === 'Parse real words from this row', 'first button: Parse real words (' + t.join(' | ') + ')');
-  ok(t.includes('Back to Indicative') && t.includes('Back to Home') && !t.includes('Back to the paradigm'), 'from Indicative: Back to Indicative and Home, no paradigm');
+  ok(t.includes('Back to Indicative') && t.includes('Back to Study') && !t.includes('Back to the paradigm'), 'from Indicative: Back to Indicative and Study, no paradigm');
   ok(await p.locator('#view a.btn.primary').count() === 1 && /Parse real words/.test(await p.locator('#view a.btn.primary').innerText()), 'Parse is the one primary button');
   await p.locator('a.btn:text-is("Back to Indicative")').click(); await p.waitForTimeout(400);
   ok(await p.evaluate(() => location.hash) === '#/parse/kinds/ind', 'Back to Indicative returns to the list');

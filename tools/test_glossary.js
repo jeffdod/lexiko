@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
   const ok = (c, m) => { if (!c) { console.log('FAIL: ' + m); process.exitCode = 1; } else console.log('  ok  ' + m); };
   const U = 'http://localhost:8123/lexiko/';
   const p = await (await b.newContext({ viewport: { width: 390, height: 860 } })).newPage(); p.on('pageerror', (e) => errs.push(String(e)));
-  await p.goto(U + '#/progress'); await p.waitForSelector('#nav a[data-tab]');
+  await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
   await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); });
   const open = async () => { await p.goto(U + '#/home'); await p.goto(U + '#/search'); await p.waitForSelector('a.li[data-l]'); };
   const btn = (t) => p.locator('.sortrow button.sortbtn:has-text("' + t + '")');

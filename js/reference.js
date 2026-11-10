@@ -33,7 +33,7 @@ export function renderReference(view, params = []) {
   const input = h('input', { type: 'search', placeholder: 'Search Greek, Beta Code, English or a Strong’s number', autocomplete: 'off', autocapitalize: 'off', 'aria-label': 'Search words', style: { flex: 1, minWidth: 0 } });
   input.spellcheck = false;
   const go = (e) => { e.preventDefault(); setSearchQuery(input.value); location.hash = '#/search'; };
-  clear(view).append(backHead('Reference', '#/home', 'Home'), h('div.stack',
+  clear(view).append(backHead('Reference', '#/study', 'Study'), h('div.stack',
     h('form.row', { style: { flexWrap: 'nowrap', gap: '.5rem' }, onsubmit: go }, input, h('button.btn.icon', { type: 'submit', 'aria-label': 'Search' }, icon('search', 20))),
     areaCard({ href: '#/search', ic: 'search', title: 'Glossary', sub: 'Every word in the text, α to ω or by how common' }),
     h('div.sec', 'Quick charts'),

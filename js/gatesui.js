@@ -105,7 +105,7 @@ export function renderHowto(view) {
   clear(view).append(backHead('Verb parsing is on', '#/parse', 'Parsing'), h('div.card.stack',
     h('p', 'Present active forms will now appear in daily parsing.'),
     h('p', 'Other types of verb forms open as you earn them. Learn a row of the master verb chart, or pass the “Which kind is it?” drill for a type of participle, infinitive, subjunctive or imperative. You will find them under Unlock verb forms on the Parsing page.'),
-    h('div.row.wrap', h('a.btn.primary', { href: '#/parse' }, 'Go to Parsing'), h('a.btn.ghost', { href: '#/home' }, 'Home'))));
+    h('div.row.wrap', h('a.btn.primary', { href: '#/parse' }, 'Go to Parsing'), h('a.btn.ghost', { href: '#/study' }, 'Study'))));
 }
 
 /** The question at the end of a session in which a verb came up. Returns a card, or null when it is not due. */

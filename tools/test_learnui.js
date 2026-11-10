@@ -11,7 +11,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(300); await k.setSetting('levelAsked', true); await k.setSetting('parseAsked', true); });
   const go = async (h) => { await p.goto(URL + h); await p.reload(); await ready(); await p.waitForTimeout(300); };
   await go('#/learn');
-  await p.waitForTimeout(300); ok(await p.locator('a.area').count() === 3, 'Learn opens Home with three areas');
+  await p.waitForTimeout(300); ok(await p.locator('a.area').count() === 3, 'Learn opens Study with three areas');
   await go('#/learn/words'); ok(await p.locator('.start').count() === 1 && await p.locator('button:has-text("Change ›")').count() === 1, 'Vocabulary: one start button and a goal card with Change › (no goal chosen yet)');
   await p.click('button:has-text("Change ›")'); await p.waitForSelector('.goal-picker'); ok(true, 'Change › opens the picker in place');
   await p.click('button:has-text("Cancel")'); ok(await p.locator('.goal-picker').count() === 0, 'Cancel closes it');
@@ -37,11 +37,11 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   ok(await p.locator('#view h2:text-is("Install")').count() === 1, 'Settings: Install card shown in a browser');
   { const ctx2 = await b.newContext({ viewport: { width: 420, height: 900 } }); const q = await ctx2.newPage(); await q.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
     await q.goto(URL + '#/settings'); await q.waitForSelector('#view h2'); ok(await q.locator('#view h2:text-is("Install")').count() === 0, 'Settings: Install card hidden in the installed app'); await ctx2.close(); }
-  await go('#/progress');
-  ok(await p.locator('.kpi').count() === 3, 'Progress: three stat tiles');
-  ok(await p.locator('#view details.fold:not([open]) > summary:has-text("By book")').count() === 1 && await p.locator('#view details.fold:not([open]) > summary:has-text("Recent practice")').count() === 1, 'Progress: By book and Recent practice start collapsed');
-  ok(!/Your learning curve/.test(await p.textContent('#view')), 'Progress: no empty learning-curve card');
-  for (const h of ['#/learn', '#/learn/words', '#/parse', '#/settings', '#/progress']) { await go(h); ok(!/(null|undefined)/.test(await p.textContent('#view')), h + ' has no stray null/undefined'); }
+  await go('#/home');
+  ok(await p.locator('.kpi').count() === 0 && await p.locator('.statline').count() === 1, 'Home: the numbers are one line inside the goal card');
+  ok(await p.locator('#view details.fold:not([open]) > summary:has-text("Passages within reach")').count() === 1 && await p.locator('#view details.fold:not([open]) > summary:has-text("Recent practice")').count() === 1, 'Home: By book and Recent practice start collapsed');
+  ok(!/Your learning curve/.test(await p.textContent('#view')), 'Home: no empty learning-curve card');
+  for (const h of ['#/learn', '#/learn/words', '#/parse', '#/settings', '#/home']) { await go(h); ok(!/(null|undefined)/.test(await p.textContent('#view')), h + ' has no stray null/undefined'); }
   { const ctx3 = await b.newContext({ viewport: { width: 420, height: 900 } }); const q = await ctx3.newPage(); await q.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
     await q.goto(URL + '#/settings'); await q.waitForSelector('#view h2');
     const vp = await q.getAttribute('meta[name=viewport]', 'content'), ta = await q.evaluate(() => getComputedStyle(document.documentElement).touchAction);

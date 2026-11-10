@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
   const ok = (c, m) => { if (!c) { console.log('FAIL: ' + m); process.exitCode = 1; } else console.log('  ok  ' + m); };
   const U = 'http://localhost:8123/lexiko/';
   const p = await (await b.newContext({ viewport: { width: 390, height: 860 } })).newPage(); p.on('pageerror', (e) => errs.push(String(e)));
-  await p.goto(U + '#/progress'); await p.waitForSelector('#nav a[data-tab]');
+  await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
   const set = (g) => p.evaluate(async (g) => { const K = await import('/lexiko/js/know.js'); await K.setLevel(5); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); await K.setGoal(g); }, g);
   const goal = () => p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); return K.K.goal; });
   const open = async () => { await p.goto(U + '#/home'); await p.goto(U + '#/read/JHN/3'); await p.waitForSelector('.reader .w'); await p.waitForSelector('button:has-text("Make this my goal")'); };

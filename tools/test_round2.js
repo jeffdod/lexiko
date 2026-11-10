@@ -11,8 +11,8 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached' });
   await page.click('.choice:has-text("I know the basics")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")');
-  await page.waitForSelector('.area');
-  ok(await page.locator('.area').count() === 3 && await page.locator('.card .goalnum, .card:has-text("Set a goal")').count() >= 1, 'home: a goal card and three areas');
+  await page.waitForSelector('.goalnum');
+  ok(await page.locator('.area').count() === 0 && await page.locator('.card .goalnum, .card:has-text("Set a goal")').count() >= 1, 'home: a goal card, and no area tiles (they are on Study)');
   ok(await page.locator('.kpis').count() === 0, 'home has no row of number boxes');
   ok(/goal words known/.test(await page.textContent('#view')), 'home shows the goal card');
 
@@ -27,7 +27,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
 
   // undo: taking back the last answer restores the card, the counts and the previous question
   { const snap = () => page.evaluate(async () => { const k = await import('./js/know.js'); const st = await import('./js/store.js'); return { cards: k.K.cards.size, log: (await st.store.allLog()).length, r: (k.K.daily[Object.keys(k.K.daily).pop()] || {}).r || 0 }; });
-    await page.goto(URL + '#/home'); await page.waitForSelector('.area'); await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcard');
+    await page.goto(URL + '#/study'); await page.waitForSelector('.area'); await page.goto(URL + '#/learn/daily'); await page.waitForSelector('.qcard');
     ok(await page.locator('.undorow').count() === 0, 'no Undo before the first answer');
     const before = await snap(), firstWord = await page.textContent('.qgreek');
     await page.keyboard.press(' '); await page.waitForSelector('.grades'); await page.keyboard.press('3'); await page.waitForSelector('.undorow');
@@ -54,7 +54,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
         if (d.pos === 'V' && d.slots.voice === 'N' && d.slots.tense && d.slots.mood) return { book: bk.code, ch, v, w: f.plain.replace(/\u00ad/g, ''), tense: d.slots.tense }; } return null; });
     ok(!!tgt, 'found a verb whose voice is middle or passive deponent: ' + (tgt && tgt.w));
     if (tgt) {
-      await page.goto(URL + '#/home'); await page.waitForSelector('.area');
+      await page.goto(URL + '#/study'); await page.waitForSelector('.area');
       await page.goto(URL + ['#/parse/run/passage', tgt.book, tgt.ch, tgt.v, tgt.ch, tgt.v, 'verb'].join('/')); await page.waitForSelector('.qcard');
       let lit = null; const seen = [];
       for (let i = 0; i < 15 && lit === null; i++) {
@@ -118,11 +118,11 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
       const ids = kn.troubleCards('w:', 500).map((c) => c.id); kn.K.cards.delete('w:9001'); kn.K.cards.delete('w:9002'); return [ids.indexOf('w:9001'), ids.indexOf('w:9002')]; });
     ok(order[1] >= 0 && (order[0] < 0 || order[1] < order[0]), 'a card you missed ranks above one that is only overdue or hard (' + order.join(' vs ') + ')'); }
   { const before = await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, false); return Object.keys(kn.K.read).length; });
-    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('summary:has-text("sections ready")');
-    const n0 = +/(\d+) read/.exec(await page.locator('summary:has-text("sections ready")').textContent())[1];
+    await page.goto(URL + '#/study'); await page.goto(URL + '#/home'); await page.waitForSelector('p:has-text("sections ready")', { state: 'attached' });
+    const n0 = +/(\d+) read/.exec(await page.locator('p:has-text("sections ready")').textContent())[1];
     await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, true); });
-    await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('summary:has-text("sections ready")');
-    const n1 = +/(\d+) read/.exec(await page.locator('summary:has-text("sections ready")').textContent())[1];
+    await page.goto(URL + '#/study'); await page.goto(URL + '#/home'); await page.waitForSelector('p:has-text("sections ready")', { state: 'attached' });
+    const n1 = +/(\d+) read/.exec(await page.locator('p:has-text("sections ready")').textContent())[1];
     await page.evaluate(async () => { const kn = await import('./js/know.js'); await kn.markRead('1JN', 1, false); });
     ok(n1 > n0, 'marking a chapter read counts its sections as read (' + n0 + ' -> ' + n1 + ')'); }
   { const r = await page.evaluate(async () => { const kn = await import('./js/know.js'); const sm = await import('./js/smart.js'); const F = await import('./js/fsrs.js'); const ids = [1510, 3004, 2316].map((n) => 'w:' + n);
@@ -137,10 +137,10 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.goto(URL + '#/learn/set/10/19'); await page.waitForSelector('.qcard'); ok(true, 'a frequency group starts a session (10–19)');
 
   // growth chart: appears after two days of study data
-  await page.goto(URL + '#/progress'); await page.waitForSelector('h1');
+  await page.goto(URL + '#/home'); await page.waitForSelector('h1');
   ok(!/learning curve|words started/.test(await page.textContent('#view')), 'progress hides the learning-curve card until there is data');
   await page.evaluate(async () => { const m = await import('./js/know.js'); const d = new Date(); for (let i = 0; i < 5; i++) { const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); m.K.daily[k] = { ...(m.K.daily[k] || {}), n: 4 }; d.setDate(d.getDate() - 1); } });
-  await page.goto(URL + '#/home'); await page.goto(URL + '#/progress'); await page.waitForSelector('svg[role=img]');
+  await page.goto(URL + '#/study'); await page.goto(URL + '#/home'); await page.waitForSelector('svg[role=img]', { state: 'attached' });
   ok(await page.locator('svg[role=img]').count() === 1, 'learning-curve chart is drawn');
 
   // locked backups: round trip, and a wrong passphrase fails
@@ -168,15 +168,15 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.keyboard.press('Escape');
   // progress milestone appears once some words are known
   await page.evaluate(async () => { const k = await import('./js/know.js'); for (let n = 1; n <= 40; n++) await k.markKnown(n); });
-  await page.goto(URL + '#/progress'); await page.waitForSelector('.milestone');
-  ok(/You know \d+ words?, which makes up \d+(\.\d+)?% of the New Testament text/.test(await page.textContent('.milestone')), 'progress opens with one calm milestone sentence');
+  await page.goto(URL + '#/home'); await page.waitForSelector('.statline');
+  ok(/\d+% readable · \d+ words? known · \d+-day streak/.test(await page.textContent('.statline')) && /\d+ more words? to reach [\d,]+/.test(await page.textContent('.statline')), 'the goal card has one numbers line and the next round number');
   await page.keyboard.press('Escape');
   await page.goto(URL + '#/help'); await page.waitForSelector('summary:has-text("Reading")'); ok(await page.locator('details').count() >= 5, 'help page has sections');
   await page.goto(URL + '#/settings'); await page.waitForSelector('summary:has-text("Advanced")'); ok(!(await page.locator('text=Memory target').first().isVisible()), 'advanced settings start folded');
   // phone width: the reader (with its Previous / Mark as read / Next footer) must not stretch the page
   { const pctx = await b.newContext({ viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true }); const pp = await pctx.newPage();
     await pp.goto(URL); await pp.waitForSelector('#loading', { state: 'detached' });
-    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Start with this goal")'); await pp.waitForSelector('.area');
+    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Start with this goal")'); await pp.waitForSelector('.goalnum');
     await pp.goto(URL + '#/read/JHN/1'); await pp.waitForSelector('[data-t]');
     const o = await pp.evaluate(() => ({ cw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth }));
     ok(o.sw <= o.cw + 1, 'reader fits a 320px phone without sideways scrolling ' + JSON.stringify(o)); await pctx.close(); }

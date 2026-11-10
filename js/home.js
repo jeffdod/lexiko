@@ -9,6 +9,8 @@ import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
 import { counts, smart } from './smart.js';
 import { renderWelcome, renderParseWelcome } from './welcome.js';
 import { readHref } from './reader.js';
+import { homeSections } from './progress.js';
+import { layout, renderCustomize } from './dash.js';
 
 const DAY = 86400000;
 export const MAX_PER_DAY = 40;
@@ -74,28 +76,29 @@ export function goalDetailCard(redraw) {
   draw(); return box;
 }
 
-/** The goal on Home: a short summary. A tap opens Progress; Change › opens the picker in place. */
 /** For a new person, until the first session is finished: one clear next step. */
 const startHere = (n, ci = 0) => h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Start here'),
   h('p.muted.small', { style: { margin: 0 } }, (ci ? fmt(n + ci) + ' words are ready (' + fmt(n) + ' new · ' + fmt(ci) + (ci === 1 ? ' check-in' : ' check-ins') + ')' : n ? fmt(n) + ' new ' + (n === 1 ? 'word is' : 'words are') + ' ready' : 'Today’s new words are ready') + '. Start with a short session.'),
   h('div.row', h('a.btn.primary', { href: smart('words').href }, 'Start with today’s new words')));
-function goalSummary(view) {
+/** The goal on Home: a short summary with your numbers in one line; Change › opens the picker in place. */
+function goalSummary(view, stats) {
   if (K.goal && goalFinished(currentGoal())) return finishedCard(() => renderHome(view));
   const box = h('div.card.stack'), g = currentGoal();
   const draw = (open) => {
     clear(box);
     if (open) return add(box, h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: (e) => { e.stopPropagation(); draw(false); } }, 'Cancel')), goalPicker({ initial: g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } }));
-    if (!K.goal) return add(box, h('b', icon('target', 18), ' Set a goal'), h('div.muted.small', 'Pick the words you want to know, by how common they are or by the passage you want to read.'), h('button.btn.primary', { onclick: () => draw(true) }, 'Choose a goal ›'));
+    if (!K.goal) return add(box, h('b', icon('target', 18), ' Set a goal'), h('div.muted.small', 'Pick the words you want to know, by how common they are or by the passage you want to read.'), h('button.btn.primary', { onclick: () => draw(true) }, 'Choose a goal ›'), stats());
     const gs = goalStats(g), per = Math.max(1, setting('newPerDay') || 10), days = Math.ceil(gs.left / per);
     add(box, h('div.row.between', { style: { flexWrap: 'nowrap' } }, h('span.glabel', icon('target', 16), 'Goal'), h('button.btn.ghost.sm', { style: { flex: 'none' }, onclick: (e) => { e.stopPropagation(); draw(true); } }, 'Change ›')), h('b', goalLabel(g)),
       h('div.goalnum', fmt(gs.known) + ' of ' + fmt(gs.total) + ' goal words known · ' + pct(gs.pct)),
       h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })),
-      h('div.muted.small', gs.left ? gs.left + ' word' + (gs.left === 1 ? '' : 's') + ' to go · ' + (days <= 1 ? 'about a day' : 'about ' + days + ' days') + ' at ' + per + ' a day' : 'You know every word in this goal.'));
+      h('div.muted.small', gs.left ? gs.left + ' word' + (gs.left === 1 ? '' : 's') + ' to go · ' + (days <= 1 ? 'about a day' : 'about ' + days + ' days') + ' at ' + per + ' a day' : 'You know every word in this goal.'), stats());
   };
   draw(false); return box;
 }
 
-export function renderHome(view) {
+export function renderHome(view, parts = []) {
+  if (parts[0] === 'customize') return renderCustomize(view);
   const lvl = setting('level');
   if (lvl == null && !K.settings.levelAsked && !studiedCount('w:')) return renderWelcome(view, (href) => { if (href) location.hash = href; else renderHome(view); });
   if (parseAskDue()) return renderParseWelcome(view, () => renderHome(view));
@@ -105,23 +108,17 @@ export function renderHome(view) {
 
   const stack = h('div.stack');
   stack.append(h('div.row.between', { style: { flexWrap: 'nowrap' } },
-    h('h1', { style: { fontSize: '1.7rem', margin: 0 } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko')));
+    h('h1', { style: { fontSize: '1.7rem', margin: 0 } }, h('span', { style: { color: 'var(--accent)' } }, 'λ'), 'exiko'),
+    h('a.btn.ghost.icon.sm', { href: '#/home/customize', 'aria-label': 'Customize Home', title: 'Customize Home' }, icon('sliders', 22))));
 
   if (needsBackup) { const last = K.settings.lastBackup, days = last ? Math.floor((clockNow() - last) / DAY) : 0;
     stack.append(h('div.banner', icon('download', 22), h('div.grow', h('b', 'Back up your progress'), h('div.small', (last ? 'Your last backup was ' + days + ' days ago. ' : 'You have not made a backup yet. ') + 'Your progress is stored only on this device.'),
       h('div.row.wrap', { style: { marginTop: '.6rem' } }, h('button.btn.primary.sm', { onclick: async () => { if (await runBackup()) renderHome(view); } }, 'Back up now'), h('button.btn.sm', { onclick: async () => { await snoozeBackupReminder(); renderHome(view); } }, 'Not now'))))); }
 
-  // 1. the goal: a summary, and a tap opens Progress
+  // Start here (new learners) is always first; then the sections in the order the person chose, minus the ones they hid
   if (!cnt.words.studied && !cnt.words.due) stack.append(startHere(cnt.words.fresh, cnt.words.checkins));
-  stack.append(goalSummary(view));
-
-  // 2. the areas
-  const area = (href, ic, title, sub, badges = []) => { const bs = badges.filter(Boolean); return h('a.area', { href }, icon(ic, 30), h('div', h('b', title), h('span', sub)), bs.length ? h('div.badges', bs.map((t) => h('em.due', t))) : null); };
-  const wordsBadges = [cnt.words.total ? cnt.words.total + (cnt.words.total === 1 ? ' word' : ' words') : ''];      // one total, always the same as the count inside the session
-  const nothingYet = !cnt.words.studied && !cnt.parse.due && !cnt.parse.fresh;
-  stack.append(area('#/learn/words', 'learn', 'Vocabulary', 'Learn, review, look ahead', wordsBadges),
-    area('#/parse', 'text', 'Parsing', nothingYet ? 'Opens as you learn words' : 'Practice forms and unlock verb types', [cnt.parse.total ? cnt.parse.total + (cnt.parse.total === 1 ? ' form' : ' forms') : '']),
-    area('#/reference', 'table', 'Reference', 'Glossary, charts and paradigms'));
-  stack.append(h('a.small.center', { href: '#/help', style: { textAlign: 'center' } }, 'How lexiko works ›'));
+  const sec = homeSections(), { order, hidden } = layout();
+  const make = { goal: () => goalSummary(view, sec.stats), reads: sec.reads, growth: sec.growth, passages: sec.passages, recent: sec.recent };
+  for (const id of order) if (!hidden.has(id)) { const el = make[id](); if (el) stack.append(el); }
   clear(view).append(stack);
 }
