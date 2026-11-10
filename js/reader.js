@@ -253,7 +253,7 @@ export function renderReader(view, params) {
     const sw = (label, desc, key, before) => h('label.switch', h('span', h('div.t', label), h('div.d', desc)),
       h('input', { type: 'checkbox', checked: !!setting(key), onchange: async (e) => { await setSetting(key, e.target.checked); if (before) await before(e.target.checked); draw(); } }));
     const choice = (label, desc, key, opts) => {
-      const seg = h('div.seg', { role: 'group', 'aria-label': label }, opts.map(([v, t]) => h('button', { 'aria-pressed': String(setting(key) === v), onclick: async () => { await setSetting(key, v); [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(opts[i][0] === v))); draw(); } }, t)));
+      const seg = h('div.seg.fit', { role: 'group', 'aria-label': label }, opts.map(([v, t]) => h('button', { 'aria-pressed': String(setting(key) === v), onclick: async () => { await setSetting(key, v); [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(opts[i][0] === v))); draw(); } }, t)));
       return h('div', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('div.t', { style: { fontWeight: 600 } }, label), desc ? h('div.d.muted.small', { style: { marginBottom: '.4rem' } }, desc) : null, seg);
     };
     dlg.append(h('div.row.between', h('h2', 'Reading options'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close', onclick: () => dlg.close() }, icon('close', 18))),
