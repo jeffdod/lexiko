@@ -27,6 +27,15 @@ const { chromium } = require('playwright');
     ['present middle/passive participle vs active', 'V-PMP-NSM', 'voice', 'A', /^A middle or passive participle ends in -μενος, -μενη, -μενον\. An active participle does not\.$/],
     ['aorist passive infinitive vs active', 'V-APN', 'voice', 'A', /^A middle or passive infinitive ends in -σθαι\./],
     ['present passive vs middle, spelled alike', 'V-PPI-3S', 'voice', 'M', /^These two forms look exactly the same\. Only the context decides\. Choose “Middle or passive” when you cannot tell\.$/],
+    ['infinitive answered as indicative', 'V-AAN', 'mood', 'I', /^An infinitive has no person, number, case or gender\. Look at the ending: -ειν, -σαι, -ναι or -σθαι/],
+    ['indicative answered as infinitive', 'V-AAI-3S', 'mood', 'N', /^An infinitive has no person, number, case or gender\./],
+    ['subjunctive, active answered as middle', 'V-PAS-3S', 'voice', 'M', /^Look at the ending\. Middle and passive subjunctives end in -μαι, -ται, -νται/],
+    ['imperative, active answered as middle', 'V-PAM-2S', 'voice', 'M', /^Look at the ending\. Middle and passive imperatives have -σθ-/],
+    ['present vs imperfect: the front', 'V-PAI-3S', 'tense', 'I', /^Look at the front of the word\. This word has nothing in front of the stem; an imperfect active has an augment in front/],
+    ['present vs perfect: the front', 'V-PAI-3S', 'tense', 'R', /^Look at the front of the word\. This word has nothing in front of the stem; an? (1st )?perfect active has reduplication in front/],
+    ['imperfect vs 1st aorist: the marker', 'V-IAI-3S', 'tense', 'A', /^Look at what follows the stem\. This word has no tense marker; a 1st aorist active has the tense marker -σα-\./],
+    ['aorist passive vs middle: the marker', 'V-API-3S', 'voice', 'M', /^Look at what follows the stem\. This word has the tense marker -θη-; /],
+    ['present active vs middle/passive: the ending', 'V-PAI-3S', 'voice', 'M', /^Look at the ending\. This word ends in -ω, -εις, -ει, -ομεν, -ετε, -ουσι; a present middle\/passive ends in -μαι, -σαι, -ται/],
     ['subjunctive vs indicative', 'V-AAS-3S', 'mood', 'I', /^The subjunctive has long vowels in its endings/],
     ['indicative vs subjunctive', 'V-AAI-3S', 'mood', 'S', /^The subjunctive has long vowels in its endings/],
     ['imperative vs indicative', 'V-AAM-2S', 'mood', 'I', /^Imperatives are the only forms with endings like -τω, -τωσαν, -σθω\./],
@@ -81,8 +90,29 @@ const { chromium } = require('playwright');
     const a = W.whyWrong(it, M.check(it, { ...best.slots, tense: 'I' })), b = W.whyWrong(it, M.check(it, { ...best.slots, person: '1' }));
     return { a: a ? a.textContent : '', b: b ? b.textContent : '' };
   });
-  ok(/; an? imperfect/.test(old.a), 'indicative rows still get the chart-row rule');
+  ok(/This word has the tense marker -θη-; an imperfect [a-z\/]+ has no tense marker/.test(old.a), 'an indicative pair names the one clue: ' + old.a.slice(-160));
   ok(/compare how the two words end/.test(old.b), 'person errors still get the ending rule');
+  const clues = await p.evaluate(async () => {
+    const M = await import('/lexiko/js/parse-model.js'), { D } = await import('/lexiko/js/data.js'), W = await import('/lexiko/js/whywrong.js');
+    const bare = (w) => w.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    let multi = 0, contractEnd = 0, alikeFront = 0, n = 0, c = 0, a = 0;
+    for (let i = 0; i < D.forms.length; i++) {
+      const m = D.forms[i].an[0].m; if (!/^V-[PIA][AMP]I-3S$/.test(m)) continue;
+      const it = M.buildItem(M.mergeForms(D.forms, [i])); if (!it) continue;
+      const best = M.check(it, {}).best; if (!best) continue;
+      for (const [slot, val] of [['tense', 'P'], ['tense', 'I'], ['tense', 'A'], ['tense', 'R'], ['voice', 'M'], ['voice', 'A']]) {
+        if (best.slots[slot] === val) continue;
+        const el = W.whyWrong(it, M.check(it, { ...best.slots, [slot]: val })); if (!el) continue; n++;
+        const r = el.querySelector('.whyrule'); if (!r) continue;
+        if ((r.textContent.match(/Look at /g) || []).length > 1) multi++;
+        const L = D.lexByN.get(it.strongs);
+        if (/^Look at the ending/.test(r.textContent) && L && /[αεο]ω$/.test(bare(L.head)) && /pres|impf|present|imperfect/i.test(r.textContent)) contractEnd++;
+      }
+    }
+    return { multi, contractEnd, n };
+  });
+  ok(clues.n > 300 && clues.multi === 0, 'every indicative rule names one clue only (' + clues.n + ' misses checked, ' + clues.multi + ' with two clues)');
+  ok(clues.contractEnd === 0, 'contract verbs never get the plain-ending list in the present or imperfect (' + clues.contractEnd + ')');
   ok(errs.length === 0, 'no page errors: ' + errs.join(' | '));
   await b.close(); console.log(process.exitCode ? 'verbhints: FAILED' : 'verbhints: ok');
 })();
