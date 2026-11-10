@@ -30,7 +30,13 @@ function buildNav() {
   clear(navEl).append(...TABS.map(([id, label, ic]) => h('a', { href: tabRoot(id), dataset: { tab: id },
     onclick: (e) => { e.preventDefault(); const here = navEl.querySelector('a[aria-current]'); location.hash = here && here.dataset.tab === id ? tabRoot(id) : (lastIn[id] || tabRoot(id)); } }, icon(ic, 24), label)));
 }
+let routed = false;
 function route() {
+  // The browser's (or the phone's) back and forward buttons must never land in a quiz or exercise: every screen is stamped once it has been shown, so
+  // arriving on a stamped one means a trip through history, and a quiz screen reached that way is skipped.
+  const stamped = !!(history.state && history.state.lx), viaHistory = routed && stamped;
+  routed = true; if (!stamped) { try { history.replaceState({ lx: 1 }, ''); } catch (e) { /* not available: skip nothing */ } }
+  if (viaHistory && NOT_RESUMABLE(location.hash) && history.length > 1) { history.back(); return; }
   noteRoute(location.hash);
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/').map(decodeURIComponent);
   const name = routes[parts[0]] ? parts[0] : 'home';

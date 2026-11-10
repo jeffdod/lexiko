@@ -177,7 +177,7 @@ export function readBack() {
 /** A page heading with a visible way back, for when there is no browser back button (installed app). */
 export function backHead(title, href, label) {
   const p = backTarget(), hit = p && ORIGIN_LABEL.find(([re]) => re.test(p)), name = p ? (hit ? hit[1] : 'Back') : 'Back to ' + label;      // like the browser's back button when there is a screen to go back to
-  return h('div.pagehead', h('a.btn.ghost.icon.sm', { href: p || href, 'aria-label': name, title: name, onclick: p ? (e) => { e.preventDefault(); history.back(); } : undefined }, icon('chevL', 22)), h('h1', title));
+  return h('div.pagehead', h('a.btn.ghost.icon.sm', { href: p || href, 'aria-label': name, title: name }, icon('chevL', 22)), h('h1', title));
 }
 
 /** A round button at the lower right of a long page: the arrow points the way you last scrolled, a tap jumps to the top or bottom,

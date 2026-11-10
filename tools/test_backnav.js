@@ -38,6 +38,24 @@ const { chromium } = require('playwright');
   // 6. a redirect is not a screen to go back to
   await p.goto(U + '#/home'); await p.goto(U + '#/learn'); await p.waitForTimeout(400); ok((await hash()) === '#/home', 'the Learn hub redirects to Home');
   await tab('settings'); await p.waitForSelector('.pagehead'); await back(); ok((await hash()) === '#/home', 'back after a redirect does not return to the hub: ' + await hash());
+  // 7. after a quiz, "Back to Parsing" and then the arrow go to Home, not back into the finished quiz
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setGate('verbs', true); });
+  await p.goto(U + '#/home'); await p.waitForSelector('.area'); await p.goto(U + '#/parse'); await p.waitForTimeout(500);
+  await p.evaluate(() => { location.hash = '#/parse/run'; }); await p.waitForTimeout(800);
+  await p.evaluate(() => { location.hash = '#/parse'; }); await p.waitForTimeout(600);
+  await back(); ok((await hash()) === '#/home', 'the arrow on Parsing after a quiz goes to Home, not back into the quiz: ' + await hash());
+  await p.goto(U + '#/home'); await p.goto(U + '#/learn/words'); await p.waitForTimeout(300);
+  await p.evaluate(() => { location.hash = '#/learn/review'; }); await p.waitForTimeout(800);
+  await p.evaluate(() => { location.hash = '#/learn/words'; }); await p.waitForTimeout(500);
+  await back(); ok(!/^#\/(learn\/(review|daily)|parse\/run)/.test(await hash()), 'the arrow on Vocabulary after a quiz does not go back into it: ' + await hash());
+  // 8. the browser's own back and forward buttons skip a finished quiz too
+  await p.goto(U + '#/home'); await p.waitForSelector('.area'); await p.goto(U + '#/parse'); await p.waitForTimeout(500);
+  await p.evaluate(() => { location.hash = '#/parse/run'; }); await p.waitForTimeout(800);
+  await p.evaluate(() => { location.hash = '#/parse'; }); await p.waitForTimeout(600);
+  await p.goBack(); await p.waitForTimeout(900); ok(!/^#\/parse\/run/.test(await hash()), 'the browser back button does not land in the finished quiz: ' + await hash());
+  await p.goForward(); await p.waitForTimeout(900); ok(!/^#\/parse\/run/.test(await hash()), 'the browser forward button does not land in it either: ' + await hash());
+  await p.evaluate(() => { location.hash = '#/learn/review'; }); await p.waitForTimeout(800); const live = await hash();
+  await p.reload(); await p.waitForTimeout(1200); ok((await hash()) === live, 'reloading on a screen keeps you on it: ' + await hash());
   ok(errs.length === 0, 'no page errors: ' + errs.join(' | '));
   await b.close(); console.log(process.exitCode ? 'backnav: FAILED' : 'backnav: ok');
 })();
