@@ -135,14 +135,14 @@ function verseHTML(vs, toks, seenGloss, opts) {
 /** Section heading with its readiness; a study shortcut and a read toggle open from the ⋯ button. */
 function headingHTML(p) {
   const sc = periScope(p), rd = scopeReadiness(sc), read = sectionRead(p);
-  // a quiet heading: the title, then one muted line (range, how much you know, marked as read); Study and the read mark are behind the ⋯ button
+  // a quiet heading: the title, then one muted line (range, how much you know, section read); Study and the read mark are behind the ⋯ button
   return h('h3.peri', { id: 'pe-' + p.c1 + '-' + p.v1 },
     h('span.pt', p.title),
-    h('span.psub', h('span', periRange(p) + ' · ' + pct(rd.known) + ' known' + (read ? ' · Marked as read' : '')),
+    h('span.psub', h('span', periRange(p) + ' · ' + pct(rd.known) + ' known' + (read ? ' · Section read' : '')),
       h('button.pmore', { type: 'button', dataset: { act: 'pmenu' }, 'aria-expanded': 'false', 'aria-label': 'Section options', title: 'Section options' }, '⋯')),
     h('span.pmenu', { hidden: true },
       rd.distinctUnknown ? h('a.btn.sm', { href: '#/learn/passage/' + [sc.book, sc.c1, sc.v1, sc.c2, sc.v2].join('/') }, 'Study these words') : null,
-      h('button.btn.sm' + (read ? '.primary' : ''), { dataset: { act: 'pread', pid: p.id, pspan: p.c1 + '-' + p.c2 }, 'aria-pressed': String(read) }, read ? '✓ Marked as read' : 'Mark section as read'))).outerHTML;
+      h('button.btn.sm' + (read ? '.primary' : ''), { dataset: { act: 'pread', pid: p.id, pspan: p.c1 + '-' + p.c2 }, 'aria-pressed': String(read) }, read ? '✓ Section marked as read' : 'Mark section as read'))).outerHTML;
 }
 
 /* ---------------- view ---------------- */
@@ -200,7 +200,7 @@ export function renderReader(view, params) {
     const read = !!K.read[book.code + ':' + ch];
     clear(foot).append(
       h('div.readfoot', h('a.btn', { href: nav(-1) }, icon('chevL', 18), 'Previous'),
-        h('button.btn' + (read ? '.primary' : ''), { onclick: async () => { await markRead(book.code, ch, !read); toast(read ? 'Unmarked' : 'Marked as read'); draw(); } }, read ? [icon('check', 18), 'Marked as read'] : 'Mark as read'),
+        h('button.btn' + (read ? '.primary' : ''), { onclick: async () => { await markRead(book.code, ch, !read); toast(read ? 'Chapter unmarked' : 'Chapter marked as read'); draw(); } }, read ? [icon('check', 18), 'Chapter marked as read'] : 'Mark chapter as read'),
         h('a.btn', { href: nav(1) }, 'Next', icon('chevR', 18))));
   };
   draw();
@@ -259,7 +259,7 @@ export function renderReader(view, params) {
     const mb = e.target.closest && e.target.closest('[data-act="pmenu"]');
     if (mb) { const m = mb.closest('.peri').querySelector('.pmenu'); m.hidden = !m.hidden; mb.setAttribute('aria-expanded', String(!m.hidden)); return; }
     const act = e.target.closest && e.target.closest('[data-act="pread"]');
-    if (act) { const id = act.dataset.pid, [c1, c2] = act.dataset.pspan.split('-').map(Number), sec = { id, code: id.split(':')[1], c1, c2 }, on = !sectionRead(sec); if (on) await setReadKey(id, true); else await unmarkSection(sec); toast(on ? 'Section marked as read' : 'Unmarked'); return redraw(); }
+    if (act) { const id = act.dataset.pid, [c1, c2] = act.dataset.pspan.split('-').map(Number), sec = { id, code: id.split(':')[1], c1, c2 }, on = !sectionRead(sec); if (on) await setReadKey(id, true); else await unmarkSection(sec); toast(on ? 'Section marked as read' : 'Section unmarked'); return redraw(); }
     const w = wordOf(e); if (w) { e.preventDefault(); showPop(w, true, redraw); } };
   const redraw = () => { const y = scrollY; calm = performance.now() + 500; draw(); scrollTo(0, y); if (popAnchor) { const el = body.querySelector('.w[data-t="' + popAnchor.dataset.t + '"]'); if (el) showPop(el, true, redraw); } };
   const outside = (e) => { if (pop && !pop.hidden && popPinned && !pop.contains(e.target) && !wordOf(e)) hidePop(); };

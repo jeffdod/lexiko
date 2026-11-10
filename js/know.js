@@ -127,10 +127,13 @@ export function sectionRead(p) {
   for (let ch = p.c1; ch <= p.c2; ch++) if (!K.read[p.code + ':' + ch]) return false;
   return true;
 }
-/** Unmark a section, including the chapter marks that made it count as read. */
+/** Unmark one section. If a chapter mark made it count as read, that mark goes, and the other sections that counted as read through it
+ *  keep their read state as marks of their own: unmarking one section never unmarks its neighbors. */
 export async function unmarkSection(p) {
+  const keep = D.periList.filter((x) => x.code === p.code && x.id !== p.id && x.c2 >= p.c1 && x.c1 <= p.c2 && sectionRead(x));
   if (K.read[p.id]) delete K.read[p.id];
   for (let ch = p.c1; ch <= p.c2; ch++) delete K.read[p.code + ':' + ch];
+  const t = clockNow(); for (const x of keep) if (!K.read[x.id]) K.read[x.id] = t;
   await store.set('read', K.read);
 }
 
