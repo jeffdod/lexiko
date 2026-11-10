@@ -18,6 +18,9 @@ export const HINTS = {
   subInd: 'The subjunctive has long vowels in its endings (ω, η, ῃ, ωμεν, ητε, ωσιν) where the indicative has short ones (ο, ε). The aorist subjunctive also has no augment.',
   imp: 'Imperatives are the only forms with endings like -τω, -τωσαν, -σθω. In the 2nd person, look for -ε (present) or -σον (aorist).',
   ptc: 'A participle is the only verb form that declines. It has case, number and gender endings.',
+  inf: 'An infinitive has no person, number, case or gender. Look at the ending: -ειν, -σαι, -ναι or -σθαι (contract verbs: -ᾶν, -εῖν, -οῦν).',
+  subVoice: 'Look at the ending. Middle and passive subjunctives end in -μαι, -ται, -νται (also -μεθα, -σθε). Active subjunctives end in -ω, -ῃς, -ῃ, -ωμεν, -ητε, -ωσι. The aorist passive is the exception: it has -θ- and takes the active endings.',
+  impVoice: 'Look at the ending. Middle and passive imperatives have -σθ- (-σθω, -σθε, -σθωσαν) or end in -ου or -σαι in the 2nd person singular. Active imperatives end in -τω, -τε, -τωσαν. The aorist passive is the exception: it has -θη- and takes the active endings.',
   same: 'These two forms look exactly the same. Only the context decides.',
 };
 
@@ -66,6 +69,8 @@ export function hintFor({ strongs, quiz, ans, got, slot }) {
       const aorPas = act.tense === 'A' && act.voice === 'P';
       if (mood === 'P') return { text: aorPas ? HINTS.ptcVoiceAorPas : HINTS.ptcVoice };
       if (mood === 'N') return { text: HINTS.infVoice };
+      if (mood === 'S') return { text: HINTS.subVoice };
+      if (mood === 'M') return { text: HINTS.impVoice };
     }
     return null;
   }
@@ -75,6 +80,7 @@ export function hintFor({ strongs, quiz, ans, got, slot }) {
     if (quiz.tense === 'P' && pair(mq, ma, 'I', 'S') && quiz.voice === 'A' && quiz.person === '1' && quiz.number === 'S') return { text: HINTS.same, same: true };
     if (quiz.tense === 'P' && pair(mq, ma, 'I', 'M') && quiz.person === '2' && quiz.number === 'P') return { text: HINTS.same, same: true };
     if (pair(mq, ma, 'I', 'S')) return { text: HINTS.subInd };
+    if ((mq === 'N' && 'ISM'.includes(ma)) || (ma === 'N' && 'ISM'.includes(mq))) return { text: mq === 'M' || ma === 'M' ? HINTS.imp : HINTS.inf };
     if (mq === 'M' || ma === 'M') return 'ISNP'.includes(mq === 'M' ? ma : mq) ? { text: HINTS.imp } : null;
     if (mq === 'P' || ma === 'P') return 'ISN'.includes(mq === 'P' ? ma : mq) ? { text: HINTS.ptc } : null;
   }
