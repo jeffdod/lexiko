@@ -10,7 +10,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached' });
-  await page.click('.choice:has-text("I know the basics")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")');
+  await page.click('.choice:has-text("I know the basics")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")');
   await page.waitForSelector('.area');
   ok(await page.locator('.area').count() === 3 && await page.locator('.card .goalnum, .card:has-text("Set a goal")').count() >= 1, 'home: a goal card and three areas');
   ok(await page.locator('.kpis').count() === 0, 'home has no row of number boxes');
@@ -79,7 +79,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
         out[sc.book] = { n: ids.length, uniq: new Set(keys).size, ids: new Set(ids).size }; }
       // progress on a non-main variant (made before variants were merged) still counts
       const { canon, members } = pm.groupForms(D.forms); let main = -1, variant = -1;
-      for (const [c, ids] of members) if (ids.length > 1 && D.forms[c].an[0] && D.forms[c].an[0].s) { main = c; variant = ids[1]; break; }
+      for (const [c, ids] of members) if (ids.length > 1 && D.forms[c].an[0] && D.forms[c].an[0].s && !(D.lexByN.get(D.forms[c].an[0].s) || {}).name) { main = c; variant = ids[1]; break; }
       let where = null; for (const bk of D.books) { for (const [ch, vs] of D.text[bk.code]) { for (const [v, toks] of vs) if (toks.some((t) => canon[t >> 4] === main)) { where = { book: bk.code, c1: ch, v1: v, c2: ch, v2: v }; break; } if (where) break; } if (where) break; }
       const before = pa.planParseSession({ scope: where, kind: 'all', size: 50, newLimit: 50 }).fresh.some((x) => x.id === main);
       await k.rateParse(k.parseId(D.forms[variant]), 3);
@@ -176,7 +176,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   // phone width: the reader (with its Previous / Mark as read / Next footer) must not stretch the page
   { const pctx = await b.newContext({ viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true }); const pp = await pctx.newPage();
     await pp.goto(URL); await pp.waitForSelector('#loading', { state: 'detached' });
-    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Start with this goal")'); await pp.waitForSelector('.area');
+    await pp.click('.choice:has-text("I know the basics")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Continue")'); await pp.click('button:has-text("Start with this goal")'); await pp.waitForSelector('.area');
     await pp.goto(URL + '#/read/JHN/1'); await pp.waitForSelector('[data-t]');
     const o = await pp.evaluate(() => ({ cw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth }));
     ok(o.sw <= o.cw + 1, 'reader fits a 320px phone without sideways scrolling ' + JSON.stringify(o)); await pctx.close(); }

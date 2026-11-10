@@ -4,7 +4,7 @@ import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
 import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, sameSpelledMP, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
-import { h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
+import { redirect, h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
 import { verbsInProgress } from './verbs.js';
 import { whyWrong } from './whywrong.js';
@@ -19,7 +19,7 @@ import { paceNote } from './pace.js';
 import { readHref } from './reader.js';
 import { verbChoices } from './verbq.js';
 import { requiredStems } from './stems.js';
-import { currentGoal, goalWords, formOpen, gateOpen } from './know.js';
+import { currentGoal, goalWords, formOpen, gateOpen, skipsArticle } from './know.js';
 import { isLiquidVerb } from './families.js';
 import { gateKey } from './kinds.js';
 import { unlockSection, renderKinds, renderRows, renderGates, renderHowto } from './gatesui.js';
@@ -58,7 +58,7 @@ const cardIdFor = (id) => {
 const isFresh = (id) => { const c = K.cards.get(cardIdFor(id)); return !c || c.state === 'new'; };
 const rawItem = (id) => { if (!items.has(id)) items.set(id, buildItem(mergeForms(D.forms, members.get(canon[id]) || [id]))); return items.get(id); };
 /** A verb form whose gate is not open (or while verb parsing is off) is treated as if it were not there: not due, not new, not counted. */
-const itemOf = (id) => { const it = rawItem(id); return it && it.group === 'V' && !formOpen(it.valid.map((v) => v.code), it.strongs) ? null : it; };
+const itemOf = (id) => { const it = rawItem(id); if (!it) return it; if (it.group === 'V') return formOpen(it.valid.map((v) => v.code), it.strongs) ? it : null; if (it.strongs === 3588 && skipsArticle()) return null; return D.lexByN.get(it.strongs)?.name ? null : it; };        // a proper name is never asked; nor is the article, unless the learner said they are just starting
 /** The forms a verb requires (its chosen forms in each required stem), as form ids; cached per verb. */
 const reqCache = new Map();
 const requiredFormIds = (n) => {
@@ -675,7 +675,7 @@ export function renderParse(view, params) {
     } else kind = rest[1] || 'all';
     const q = buildParseSession({ scope, kind });
     if (!q.length) {
-      if (!scope) { const alt = smart('parse'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }
+      if (!scope) { const alt = smart('parse'); if (alt.kind !== 'go') { redirect(alt.href); return; } }
       clear(view).append(h('div.pagehead', h('h1', 'Parsing')), h('div.card.stack',
         h('p', scope ? 'There is nothing to parse in ' + scopeLabel(scope) + ' for this selection.' : 'You’re all caught up. 🎉'), ...backLinks('#/parse', 'Back')));
       return;

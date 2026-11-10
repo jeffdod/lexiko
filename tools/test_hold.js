@@ -10,7 +10,7 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
   await p.goto(URL + '#/home'); await p.waitForSelector('#nav a[data-tab]', { timeout: 60000 });
   // the rule, on cards made by hand
   const r = await p.evaluate(async () => {
-    const K = await import('./js/know.js'), C = await import('./js/clock.js'); await K.setLevel(50); K.setSetting('levelAsked', true);
+    const K = await import('./js/know.js'), C = await import('./js/clock.js'); await K.setLevel(50); K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true);
     const ns = [2316, 3056, 1161, 2424]; const gr = [1, 2, 3, 4];
     for (let i = 0; i < 4; i++) await K.rate(ns[i], gr[i], 'new', 3000);          // Again, Hard, Good, Easy on first sight
     const now = C.clockNow(); const h1 = await K.holdToday(ns, now);

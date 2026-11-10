@@ -39,7 +39,7 @@ const AUDIT = () => {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme, isMobile: true, hasTouch: true });
     const page = await ctx.newPage();
     await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached' });
-    await page.click('.choice >> nth=2'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")'); await page.waitForSelector('.area');
+    await page.click('.choice >> nth=2'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Continue")'); await page.click('button:has-text("Start with this goal")'); await page.waitForSelector('.area');
     await page.evaluate(async () => { const m = await import('./js/know.js'); await m.markLearning(3056); });
     for (const r of ROUTES) {
       await page.goto(URL + r); await page.waitForTimeout(450);

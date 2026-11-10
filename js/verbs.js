@@ -1,7 +1,7 @@
 // The Verbs page (verbs you are working on) and each verb's own page: which stems and forms are worth learning, and how far along you are.
 import { D, lexeme } from './data.js';
 import { verbStatus, startedVerbs, verbBrake } from './know.js';
-import { h, clear, pct, fold, backHead } from './util.js';
+import { redirect, h, clear, pct, fold, backHead } from './util.js';
 import { partsGrid } from './partforms.js';
 import { eligible, SLOT_NAMES } from './parts.js';
 
@@ -34,7 +34,7 @@ export function renderVerbsPage(view) {
 
 export function renderVerbPage(view, n) {
   const L = D.lexByN.get(+n), v = L && verbStatus(+n);
-  if (!v) { location.replace('#/learn/verbs'); return; }
+  if (!v) { redirect('#/learn/verbs'); return; }
   const e = eligible().get(v.n);
   clear(view).append(backHead(L.head, '#/learn/verbs', 'Verbs'),
     h('div.stack',

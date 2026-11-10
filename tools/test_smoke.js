@@ -19,7 +19,9 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   // two plain questions, then Skip lands on Home
   await page.click('.choice:has-text("I know the basics")');
   await page.click('button:has-text("Continue")');
-  await page.waitForSelector('.goal-pick'); ok(/goal/i.test(await page.textContent('#view')), 'step 2 suggests a goal');
+  await page.waitForSelector('h1:has-text("How well do you parse")'); ok(true, 'step 2 asks how well you parse Greek');
+  await page.click('button:has-text("Continue")');
+  await page.waitForSelector('.goal-pick'); ok(/goal/i.test(await page.textContent('#view')), 'step 3 suggests a goal');
   await page.click('button:has-text("Start with this goal")');
   await page.waitForSelector('.area');
   ok(await page.locator('.area').count() === 3, 'home after first run: three areas');
@@ -52,7 +54,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.locator('.reader .w', { hasText: 'λόγος' }).first().click();
   await page.waitForSelector('#pop:not([hidden])');
   const popText = await page.textContent('#pop');
-  ok(/λόγος/.test(popText) && /G3056/.test(popText) && /Noun/.test(popText), 'popup shows lemma, Strong\'s, parse');
+  ok(/λόγος/.test(popText) && /Strong’s 3056/.test(popText) && /Noun/.test(popText), 'popup shows lemma, Strong\'s, parse');
   await page.screenshot({ path: out + '/03-popup.png' });
   await page.keyboard.press('Escape');
 
@@ -101,7 +103,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.goto(URL + '#/read/JHN/1'); await page.waitForSelector('.reader .w');
 
   // gloss mode on
-  await page.click('button:has-text("Glosses")'); await page.waitForSelector('.gl');
+  await page.click('button:has-text("Meanings")'); await page.waitForSelector('.gl');
   const nGl = await page.locator('.gl').count();
   ok(nGl > 5, 'unknown-word glosses shown: ' + nGl);
   await page.screenshot({ path: out + '/04-reader-glosses.png' });

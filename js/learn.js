@@ -9,7 +9,7 @@ import { verbBrake, holdToday, HOLD_MIN } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore, MAX_MISSES } from './retry.js';
-import { todayKey, h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
+import { redirect, todayKey, h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { verbQuestion } from './gatesui.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards, CHECKIN_NOTE, counts as sessionCounts } from './smart.js';
 import { readHref } from './reader.js';
@@ -190,7 +190,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
     t0 = clockNow();
     const L = lexeme(item.n), flash = setting('mode') !== 'choice' && !item.rescue;
     const pos = POSNAME[L.pos] || L.pos;
-    const head = [h('div.qgreek', { lang: 'grc' }, L.head), h('div.qmeta', pos + ' · G' + (L.base || L.n) + ' · ' + fmt(L.freq) + '×')];
+    const head = [h('div.qgreek', { lang: 'grc' }, L.head), h('div.qmeta', pos + ' · ' + fmt(L.freq) + '×')];
     const reveal = (extra) => {
       const card = getCard(item.n) || F.newCard('w:' + item.n);
       const pv = F.preview(card, clockNow(), setting('retention'));
@@ -235,7 +235,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
 function startFrom(view, kind, scope, title, only = null) {
   const items = buildSession({ scope, only, kind });
   if (!items.length) {
-    if (!scope) { const alt = smart('words'); if (alt.kind !== 'go') { location.replace(alt.href); return; } }       // caught up: go to something useful instead
+    if (!scope) { const alt = smart('words'); if (alt.kind !== 'go') { redirect(alt.href); return; } }       // caught up: go to something useful instead
     clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? (passageStudy(scope).held + passageStudy(scope).started ? waitNote(passageStudy(scope)) : 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉') : 'You’re all caught up. 🎉'),
       h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1) }, 'Read it') : null, h('a.btn', { href: '#/home' }, 'Back'))));
     return;
@@ -284,7 +284,7 @@ export function renderLearn(view, params) {
     if (!D.bookByCode.has(book)) return void (location.hash = '#/home');
     return void startFrom(view, 'passage', scope, scopeLabel(scope));
   }
-  location.replace('#/home');                                   // the Learn hub is gone: Home opens the areas
+  redirect('#/home');                                   // the Learn hub is gone: Home opens the areas
 }
 
 /* ---------- Vocabulary page ---------- */

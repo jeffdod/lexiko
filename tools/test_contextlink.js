@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   const U = 'http://localhost:8123/lexiko/'; let ask = null, answer = false;
   p.on('dialog', async (d) => { ask = d.message(); answer ? await d.accept() : await d.dismiss(); });
   await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('gates', K.allGatesOpen()); });
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); await K.setSetting('gates', K.allGatesOpen()); });
   const go = async (h) => { await p.goto(U + '#/home'); await p.waitForTimeout(150); await p.goto(U + h); await p.waitForTimeout(700); };
   const check = async (what) => {
     const a = p.locator('.qctx .ctxread a'); await a.waitFor({ timeout: 4000 }).catch(() => {});

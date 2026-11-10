@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   const ok = (c, m) => { if (!c) { console.log('FAIL: ' + m); process.exitCode = 1; } };
   const U = 'http://localhost:8123/lexiko/';
   await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
-  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('gates', K.allGatesOpen()); await K.setSetting('wordsPace', 'fixed'); });
+  await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); await K.setLevel(50); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); await K.setSetting('gates', K.allGatesOpen()); await K.setSetting('wordsPace', 'fixed'); });
   const r = await p.evaluate(async () => {
     const k = await import('/lexiko/js/know.js'), S = await import('/lexiko/js/smart.js'), { todayKey } = await import('/lexiko/js/util.js'), out = [];
     const d = (k.K.daily[todayKey()] ||= {});

@@ -93,6 +93,7 @@ button { font: inherit; color: inherit; }
 .btn.block { display: flex; width: 100%; }
 mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding: 0 .15em; }
 .chip { display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; gap: .3rem; padding: .1rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
+.chip.strongs { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 600; }   /* the Strong’s number is a reference, so it stays quiet */
 .chip.good { background: var(--good-soft); color: var(--good); } .chip.warn { background: var(--warn-soft); color: var(--warn); } .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.accent { background: var(--accent-soft); color: var(--accent); } .chip.gold { background: var(--gold-soft); color: var(--gold); }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; gap: 2px; max-width: 100%; }
 .seg button { flex: 1 1 auto; white-space: nowrap; border: 0; background: transparent; padding: .4rem .85rem; border-radius: 999px; font-weight: 600; font-size: .88rem; color: var(--ink-2); cursor: pointer; min-height: 2.5rem; }
@@ -139,13 +140,20 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 .readbar { position: sticky; top: 0; z-index: 10; margin: calc(-1 * (env(safe-area-inset-top) + .9rem)) -1rem .6rem; padding: calc(env(safe-area-inset-top) + .5rem) 1rem .5rem; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
 .readbar .title { font-family: var(--greek); font-weight: 700; font-size: 1.1rem; background: none; border: 0; cursor: pointer; display: flex; align-items: center; gap: .3rem; padding: .3rem .5rem; border-radius: 10px; }
 .readbar .title:hover { background: var(--surface-2); }
-.reader { font-family: var(--greek); font-size: var(--reader-size); line-height: 1.95; text-align: justify; text-justify: inter-word; hyphens: manual; -webkit-hyphens: manual; overflow-wrap: break-word; font-kerning: normal; padding: .4rem 0 1rem; }
+.reader { font-family: var(--greek); font-size: var(--reader-size); line-height: var(--lh, 1.95); text-align: justify; text-justify: inter-word; hyphens: manual; -webkit-hyphens: manual; overflow-wrap: break-word; font-kerning: normal; padding: .4rem 0 1rem; }
 .reader p { margin: 0 0 1.1rem; }
+/* reading options: paragraph style (marks exist for Matthew, Mark and Luke), line ends, line spacing */
+.reader.pi p { margin: 0; text-indent: 1.5em; }
+.reader.pb p { margin: 0 0 .7rem; }
+.reader.pi h3.peri + p { text-indent: 0; }                    /* the paragraph under a section heading starts flush left */
+.reader.rag { text-align: left; hyphens: none; -webkit-hyphens: none; }
+.reader[data-lh='tight'] { --lh: 1.6; } .reader[data-lh='roomy'] { --lh: 2.3; } .reader[data-lh='extra'] { --lh: 2.7; }
 .w { cursor: pointer; border-radius: 4px; padding: 0 .06em; -webkit-touch-callout: none; transition: background .1s; }
 .w:hover, .w.sel { background: var(--accent-soft); }
 .w.sel { box-shadow: 0 0 0 2px var(--accent-soft); }
-.hl .w.u { text-decoration: underline dotted color-mix(in srgb, var(--bad) 65%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: .24em; }
-.hl .w.l { text-decoration: underline dashed color-mix(in srgb, var(--warn) 75%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: .24em; }
+.cathead { display: flex; align-items: center; gap: .6rem; }
+.hl .w.u { background: color-mix(in srgb, var(--accent) 24%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.hl .w.l { background: color-mix(in srgb, var(--gold) 22%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .vn { font-family: var(--ui); font-size: .55em; vertical-align: .55em; color: var(--muted); font-weight: 700; margin-right: .25em; user-select: none; -webkit-user-select: none; }
 .gl { font-family: var(--ui); font-size: .6em; color: var(--accent); margin: 0 .2em 0 .1em; font-weight: 600; line-height: 1.2; }
 .verse.focus { background: var(--gold-soft); border-radius: 6px; box-shadow: 0 0 0 4px var(--gold-soft); }

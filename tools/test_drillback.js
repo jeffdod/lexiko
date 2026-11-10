@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
   const U = 'http://localhost:8123/lexiko/';
   const go = async (hash) => { await p.goto(U + '#/home'); await p.waitForTimeout(150); await p.goto(U + hash); await p.waitForTimeout(500); };
   await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
-  const set = (lvl) => p.evaluate(async (l) => { const K = await import('/lexiko/js/know.js'); await K.setLevel(l); await K.setSetting('levelAsked', true); await K.setSetting('gates', { verbs: true }); }, lvl);
+  const set = (lvl) => p.evaluate(async (l) => { const K = await import('/lexiko/js/know.js'); await K.setLevel(l); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); await K.setSetting('gates', { verbs: true }); }, lvl);
   await set(50);
   const txt = () => p.locator('#view').innerText();
   const btns = async () => (await p.locator('#view .row a.btn').allInnerTexts()).map((s) => s.trim());

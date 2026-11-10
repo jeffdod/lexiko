@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   const U = 'http://localhost:8123/lexiko/';
   const go = async (hash) => { await p.goto(U + '#/home'); await p.waitForTimeout(150); await p.goto(U + hash); await p.waitForTimeout(600); };
   await p.goto(U + '#/home'); await p.waitForSelector('#nav a[data-tab]');
-  const set = (gates, lvl = 50) => p.evaluate(async ([g, l]) => { const K = await import('/lexiko/js/know.js'); await K.setLevel(l); await K.setSetting('levelAsked', true); await K.setSetting('gates', g === 'all' ? K.allGatesOpen() : g); }, [gates, lvl]);
+  const set = (gates, lvl = 50) => p.evaluate(async ([g, l]) => { const K = await import('/lexiko/js/know.js'); await K.setLevel(l); await K.setSetting('levelAsked', true); await K.setSetting('parseAsked', true); await K.setSetting('gates', g === 'all' ? K.allGatesOpen() : g); }, [gates, lvl]);
   const txt = () => p.locator('#view').innerText();
 
   // the buttons

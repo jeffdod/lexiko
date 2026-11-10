@@ -103,11 +103,11 @@ function detail(view, n, back) {
     clear(wrap).append(
       h('div.pagehead', h('button.btn.ghost.icon.sm', { 'aria-label': 'Back to results', onclick: back }, icon('chevL', 20)), h('h1', { lang: 'grc' }, L.head)),
       h('div.card.stack',
-        h('div.row.wrap', h('span.chip', posOf(L) || '—'), h('span.chip.accent', 'G' + base), statusChip(L.n)),
+        h('div.row.wrap', h('span.chip', posOf(L) || '—'), h('span.chip.strongs', 'Strong’s ' + base), L.name ? null : statusChip(L.n)),
         h('div.gloss', { style: { fontSize: '1.15rem', fontWeight: 700 } }, L.brief),
         addsInfo(L) ? h('div.muted', L.full) : null,
         h('div.muted.small', 'Occurs ' + fmt(L.freq) + '× in the text · frequency rank ' + fmt(L.rank)),
-        h('div.row.wrap',
+        L.name ? null : h('div.row.wrap',
           status(L.n) === 'known' ? h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to words to review'); draw(); } }, '↺ Review this')
             : h('button.btn.primary.sm', { onclick: async () => { await markLearning(L.n); toast('Added to your learning list'); draw(); } }, '+ Learn this'),
           status(L.n) !== 'known' || !K.cards.has('w:' + L.n) ? h('span.row.wrap', knowButtons(L, markKnown, draw)) : null)));

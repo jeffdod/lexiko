@@ -55,7 +55,7 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
     const block = h('div', { style: i ? { marginTop: '.8rem', paddingTop: '.7rem', borderTop: '1px dashed var(--line)' } : {} });
     if (i) block.append(h('div.muted.small', { style: { marginBottom: '.2rem', fontWeight: 700 } }, 'Also possible'));
     block.append(
-      h('div.row.wrap', h('span.head', { lang: 'grc' }, L.head), h('span.chip.accent', 'G' + (L.base || L.n)), statusChip(L.n)),
+      h('div.row.wrap', h('span.head', { lang: 'grc' }, L.head), h('span.chip.strongs', 'Strong’s ' + (L.base || L.n)), L.name ? null : statusChip(L.n)),
       h('div.gloss', L.brief),
       h('div.parse', h('b', m.posName), m.summary ? ' · ' + m.summary : '', h('div', h('code', m.code))),
       h('div.muted.small', 'Occurs ' + fmt(L.freq) + '× in the text · frequency rank ' + fmt(L.rank)),
@@ -67,18 +67,23 @@ export function popupBody(token, { onStatus, eff = 0, unsure = false } = {}) {
     } else if (L.verb) block.append(h('div.muted.small', 'This verb doesn’t have principal parts.'));
     {
       const act = h('div.row.wrap', { style: { marginTop: '.6rem' } });
-      if (status(L.n) !== 'known' || !K.cards.has('w:' + L.n)) {
+      if (!L.name && (status(L.n) !== 'known' || !K.cards.has('w:' + L.n))) {
         act.append(...knowButtons(L, markKnown, onStatus));
       }
       if (L.verb && rowOfTag(a.m, a.s)) act.append(h('button.btn.sm', { onclick: () => {
         const vs = popAnchor && popAnchor.isConnected ? popAnchor.closest('.verse') : null;
         clueRef.back = location.hash; clueRef.verse = null;
-        if (vs) { const c = vs.cloneNode(true); c.querySelectorAll('.vn, .gl, .en').forEach((e) => e.remove()); clueRef.verse = c.textContent.replace(/\u00ad/g, '').replace(/\s+/g, ' ').trim(); }
+        if (vs) {                                                 // a verse split by a paragraph break is in two parts; join them
+          const parts = vs.dataset.vs ? [...document.querySelectorAll('.verse[data-vs="' + vs.dataset.vs + '"]')] : [vs], txt = [];
+          for (const part of parts) { const c = part.cloneNode(true); c.querySelectorAll('.vn, .gl, .en').forEach((e) => e.remove()); txt.push(c.textContent); }
+          clueRef.verse = txt.join(' ').replace(/\u00ad/g, '').replace(/\s+/g, ' ').trim();
+        }
         location.hash = '#/parse/run/clues/form/' + (token >> 4) + '/' + f.an.indexOf(a);
       } }, 'Find the clues'));
-      if (status(L.n) === 'known') act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to words to review'); onStatus && onStatus(); } }, '↺ Review this'));
+      if (L.name) { /* a name is never quizzed, so there is nothing to add */ }
+      else if (status(L.n) === 'known') act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to words to review'); onStatus && onStatus(); } }, '↺ Review this'));
       else act.append(h('button.btn.sm', { onclick: async () => { await markLearning(L.n); toast('Added to your learning list'); onStatus && onStatus(); } }, '+ Learn this'));
-      block.append(act);
+      if (act.children.length) block.append(act);
     }
     wrap.append(block);
   });
@@ -102,12 +107,13 @@ function showPop(el, pinned, rerender) {
 
 /* ---------------- text rendering ---------------- */
 function verseHTML(vs, toks, seenGloss, opts) {
-  let out = '<span class="verse" id="v' + vs + '">';
+  let out = '<span class="verse" id="v' + vs + '" data-vs="' + vs + '">';
   if (opts.english) out += '<span class="gk">';           // the Greek in one piece, so the English can sit under it (or beside it on a wide screen)
   if (opts.verseNums) out += '<span class="vn">' + vs + '</span>';
   const sn = senseNs(toks);
   for (let k = 0; k < toks.length; k++) {
     const t = toks[k];
+    if (k && opts.breaks && opts.breaks.includes(k + 1)) out += '</span></p><p><span class="verse" data-vs="' + vs + '">';          // a paragraph begins in the middle of this verse
     const f = tokenForm(t), s = sn.ns[k], st = status(s);
     const cls = 'w' + (st === 'unknown' ? ' u' : st === 'learning' ? ' l' : '');
     const dash = tokenFlag(t);                         // source marker: an em-dash follows, with no space after it
@@ -161,12 +167,21 @@ export function renderReader(view, params) {
     view.style.setProperty('--reader-size', setting('readerSize') + 'rem');
     body.classList.toggle('hl', !!setting('highlight'));
     body.classList.toggle('par', !!eng);
+    // paragraphs: only where the marks exist for this book, and not beside the English (that layout is one verse at a time)
+    const paras = D.parasBooks.has(book.code) && !eng;
+    body.classList.toggle('pi', paras && setting('paraStyle') !== 'block');
+    body.classList.toggle('pb', paras && setting('paraStyle') === 'block');
+    body.classList.toggle('rag', setting('lineEnds') === 'ragged');
+    body.dataset.lh = setting('lineSpacing');
+    const heads = setting('sectionHeads') !== false;           // off: no headings, and a section no longer breaks the paragraph
     const seen = new Set(); let html = '', open = false;
     for (const [vs, toks] of chapterVerses(book.code, ch)) {
       const sec = D.periAt.get(book.code + ':' + ch + ':' + vs);
-      if (sec) { if (open) html += '</p>'; html += headingHTML(sec); html += '<p>'; open = true; }
+      const marks = paras ? D.paras.get(book.code + ':' + ch + ':' + vs) : null;
+      if (sec && heads) { if (open) html += '</p>'; html += headingHTML(sec); html += '<p>'; open = true; }       // a section heading starts a new paragraph
       else if (!open) { html += '<p>'; open = true; }
-      html += verseHTML(vs, toks, seen, opts);
+      else if (marks && marks[0] === 1) html += '</p><p>';
+      html += verseHTML(vs, toks, seen, marks ? { ...opts, breaks: marks } : opts);
     }
     body.innerHTML = html + (open ? '</p>' : '');
     // readiness
@@ -175,7 +190,7 @@ export function renderReader(view, params) {
     clear(meta).append(
       h('span.rdy.' + readinessClass(rd.known), pct(rd.known) + ' known · ' + readinessLabel(rd.known)),
       h('span.row', rd.distinctUnknown ? (isGoal ? h('span.chip.good', 'Your goal') : h('button.btn.sm', { onclick: async () => { await setGoal({ kind: 'passage', book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 }); toast('This chapter is now your goal'); draw(); } }, icon('target', 16), 'Make this my goal')) : h('span.chip.good', 'No new words'),
-        h('button.btn.sm' + (setting('glossMode') ? '.primary' : ''), { 'aria-pressed': !!setting('glossMode'), onclick: async () => { await setSetting('glossMode', !setting('glossMode')); draw(); } }, 'Glosses')),
+        h('button.btn.sm' + (setting('glossMode') ? '.primary' : ''), { 'aria-pressed': !!setting('glossMode'), onclick: async () => { await setSetting('glossMode', !setting('glossMode')); draw(); } }, 'Meanings')),
     );
     const read = !!K.read[book.code + ':' + ch];
     clear(foot).append(
@@ -203,14 +218,22 @@ export function renderReader(view, params) {
     const dlg = h('dialog');
     const sw = (label, desc, key, before) => h('label.switch', h('span', h('div.t', label), h('div.d', desc)),
       h('input', { type: 'checkbox', checked: !!setting(key), onchange: async (e) => { await setSetting(key, e.target.checked); if (before) await before(e.target.checked); draw(); } }));
+    const choice = (label, desc, key, opts) => {
+      const seg = h('div.seg', { role: 'group', 'aria-label': label }, opts.map(([v, t]) => h('button', { 'aria-pressed': String(setting(key) === v), onclick: async () => { await setSetting(key, v); [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(opts[i][0] === v))); draw(); } }, t)));
+      return h('div', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('div.t', { style: { fontWeight: 600 } }, label), desc ? h('div.d.muted.small', { style: { marginBottom: '.4rem' } }, desc) : null, seg);
+    };
     dlg.append(h('div.row.between', h('h2', 'Reading options'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close', onclick: () => dlg.close() }, icon('close', 18))),
-      sw('Glosses for unknown words', 'Show a short gloss in parentheses after words you don’t know yet.', 'glossMode'),
-      sw('Repeat glosses', 'Show the gloss on every occurrence, not just the first in the chapter.', 'glossRepeat'),
-      sw('Underline unknown words', 'Dotted = new to you, dashed = still learning.', 'highlight'),
+      sw('Meanings for unknown words', 'Show a short meaning in parentheses after words you don’t know yet.', 'glossMode'),
+      sw('Repeat meanings', 'Show the meaning on every occurrence, not just the first in the chapter.', 'glossRepeat'),
+      sw('Highlight unknown words', 'Blue = new to you, gold = still learning.', 'highlight'),
+      sw('Section headings', 'Show the section titles, with each section’s progress, Study button and read check.', 'sectionHeads'),
       sw('Verse numbers', '', 'verseNums'),
       sw('English translation', 'Show the American Standard Version Byzantine Text with each verse.', 'english', async (on) => {
         if (on && !D.english[book.code]) { try { await loadEnglish(book.code); } catch { toast('The English translation could not be loaded'); } }
       }),
+      choice('Paragraphs', 'Not used while the English translation is on.', 'paraStyle', [['indent', 'Indented'], ['block', 'Block']]),
+      choice('Line ends', '', 'lineEnds', [['justify', 'Justified, hyphenated'], ['ragged', 'Left, ragged right']]),
+      choice('Line spacing', '', 'lineSpacing', [['tight', 'Tight'], ['normal', 'Normal'], ['roomy', 'Roomy'], ['extra', 'Extra']]),
       h('div.row.between', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('span.t', { style: { fontWeight: 600 } }, 'Text size'),
         h('span.row', h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.max(0.95, +(setting('readerSize') - 0.1).toFixed(2))); draw(); } }, 'A−'),
           h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.min(2.4, +(setting('readerSize') + 0.1).toFixed(2))); draw(); } }, 'A+'))));
@@ -268,7 +291,7 @@ export function renderReader(view, params) {
   const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) hold(4000); };
   addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
 
-  const placeVerse = () => { const v = body.querySelector('#v' + (+vsS)); if (v) { v.classList.add('focus'); requestAnimationFrame(() => v.scrollIntoView({ block: 'center' })); } };
+  const placeVerse = () => { const vv = [...body.querySelectorAll('.verse[data-vs="' + (+vsS) + '"]')]; if (vv.length) { vv.forEach((v) => v.classList.add('focus')); requestAnimationFrame(() => vv[0].scrollIntoView({ block: 'center' })); } };
   if (vsS) placeVerse(); else scrollTo(0, 0);
   // The route renderer is synchronous, so the Greek shows first and this book's English folds in when it has loaded.
   let alive = true;

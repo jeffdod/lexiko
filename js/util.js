@@ -125,10 +125,25 @@ export function missedBlock(rows, onPractice) {
 
 /* ---------- "Back to …" after a quiz: offer the place the quiz was started from ---------- */
 export const origin = { href: null, prev: null, readFrom: null };
-const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage|charts\/run|charts\/participles\/run|charts\/infinitives\/run|charts\/subjunctive\/run|charts\/imperative\/run)|parse\/run|parts\/exercise)/;
+export const QUIZ = /^#\/(learn\/(daily|review|set|practice|level|passage|charts\/run|charts\/participles\/run|charts\/infinitives\/run|charts\/subjunctive\/run|charts\/imperative\/run)|parse\/run|parts\/exercise)/;
 /** Called on every route change: remembers where a quiz was launched from (not from another quiz). */
+/* ---------- Back: the screens visited, so the arrow at the top of a page can behave like the browser's back button ---------- */
+const trail = []; let replacing = false;
+/** Screens you must never be sent back to or restored: a quiz or practice session (it would start again), the one-time how-to, and the redirecting Learn hub. */
+export const NOT_RESUMABLE = (hash) => QUIZ.test(hash || '') || /^#\/(parse\/(form|howto)|learn$)/.test(hash || '');
+/** Go to another screen in place of this one (a redirect), so it never counts as a screen you can go back to. */
+export const redirect = (hash) => { replacing = true; location.replace(hash); };
+const noteTrail = (cur) => {
+  if (replacing) { replacing = false; if (trail.length) trail[trail.length - 1] = cur; else trail.push(cur); }
+  else if (trail[trail.length - 1] === cur) { /* same screen again */ }
+  else if (trail.length >= 2 && trail[trail.length - 2] === cur) trail.pop();                // the browser's back button (or ours)
+  else { trail.push(cur); if (trail.length > 60) trail.shift(); }
+};
+/** The screen before this one, when going back to it makes sense; otherwise null (the page's own fixed destination is used). */
+export const backTarget = () => { const p = trail[trail.length - 2]; return p && !NOT_RESUMABLE(p) ? p : null; };
 export function noteRoute(hash) {
   const cur = hash || '#/';
+  noteTrail(cur);
   if (QUIZ.test(cur) && !QUIZ.test(origin.prev || '')) origin.href = origin.prev == null ? null : origin.prev || '#/';
   if (cur.startsWith('#/read') && !(origin.prev || '').startsWith('#/read')) origin.readFrom = origin.prev || null;      // where the reader was entered from
   origin.prev = cur;
@@ -161,7 +176,8 @@ export function readBack() {
 
 /** A page heading with a visible way back, for when there is no browser back button (installed app). */
 export function backHead(title, href, label) {
-  return h('div.pagehead', h('a.btn.ghost.icon.sm', { href, 'aria-label': 'Back to ' + label, title: 'Back to ' + label }, icon('chevL', 22)), h('h1', title));
+  const p = backTarget(), hit = p && ORIGIN_LABEL.find(([re]) => re.test(p)), name = p ? (hit ? hit[1] : 'Back') : 'Back to ' + label;      // like the browser's back button when there is a screen to go back to
+  return h('div.pagehead', h('a.btn.ghost.icon.sm', { href: p || href, 'aria-label': name, title: name, onclick: p ? (e) => { e.preventDefault(); history.back(); } : undefined }, icon('chevL', 22)), h('h1', title));
 }
 
 /** A round button at the lower right of a long page: the arrow points the way you last scrolled, a tap jumps to the top or bottom,
