@@ -132,6 +132,9 @@ function verseHTML(vs, toks, seenGloss, opts) {
   return out + '</span> ';
 }
 
+/** A book name for a small button: Corinthians and Thessalonians are shortened, the rest stay as they are. */
+export const shortBook = (name) => name.replace('Corinthians', 'Cor').replace('Thessalonians', 'Thess');
+
 /** Section heading with its readiness; a study shortcut and a read toggle open from the ⋯ button. */
 function headingHTML(p) {
   const sc = periScope(p), rd = scopeReadiness(sc), read = sectionRead(p);
@@ -154,12 +157,15 @@ export function renderReader(view, params) {
   if (!chs.includes(ch)) ch = chs[0];
   setSetting('lastBook', book.code); setSetting('lastCh', ch);
   const idx = chs.indexOf(ch);
-  const nav = (dir) => {
+  const target = (dir) => {                                       // the chapter before or after this one (the Bible wraps around at its ends)
     let bi = book.i, ci = idx + dir;
-    if (ci < 0) { bi = (bi + D.books.length - 1) % D.books.length; const b = D.books[bi]; return readHref(b.code, b.chapters[b.chapters.length - 1][0]); }
-    if (ci >= chs.length) { bi = (bi + 1) % D.books.length; return readHref(D.books[bi].code, D.books[bi].chapters[0][0]); }
-    return readHref(book.code, chs[ci]);
+    if (ci < 0) { bi = (bi + D.books.length - 1) % D.books.length; const b = D.books[bi]; return { b, ch: b.chapters[b.chapters.length - 1][0] }; }
+    if (ci >= chs.length) { bi = (bi + 1) % D.books.length; return { b: D.books[bi], ch: D.books[bi].chapters[0][0] }; }
+    return { b: book, ch: chs[ci] };
   };
+  const nav = (dir) => { const t = target(dir); return readHref(t.b.code, t.ch); };
+  /** Where a bottom button goes, in a few words: "1 John 3". The two longest book names are shortened so the label stays on one line. */
+  const navLabel = (dir) => { const t = target(dir); return shortBook(t.b.name) + ' ' + t.ch; };
 
   const body = h('div.reader', { lang: 'grc' });
   const meta = h('div.row.wrap.between', { style: { margin: '.2rem 0 .6rem' } });
@@ -199,9 +205,9 @@ export function renderReader(view, params) {
     );
     const read = !!K.read[book.code + ':' + ch];
     clear(foot).append(
-      h('div.readfoot', h('a.btn', { href: nav(-1) }, icon('chevL', 18), 'Previous'),
+      h('div.readfoot', h('a.btn', { href: nav(-1), 'aria-label': 'Previous chapter: ' + target(-1).b.name + ' ' + target(-1).ch }, icon('chevL', 18), navLabel(-1)),
         h('button.btn' + (read ? '.primary' : ''), { onclick: async () => { await markRead(book.code, ch, !read); toast(read ? 'Chapter unmarked' : 'Chapter marked as read'); draw(); } }, read ? [icon('check', 18), 'Chapter marked as read'] : 'Mark chapter as read'),
-        h('a.btn', { href: nav(1) }, 'Next', icon('chevR', 18))));
+        h('a.btn', { href: nav(1), 'aria-label': 'Next chapter: ' + target(1).b.name + ' ' + target(1).ch }, navLabel(1), icon('chevR', 18))));
   };
   draw();
 
