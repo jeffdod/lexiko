@@ -25,7 +25,7 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   await page.click('button:has-text("Start with this goal")');
   await page.waitForSelector('.goalnum');
   ok(await page.locator('.area').count() === 0 && await page.locator('#nav a').count() === 4, 'home after first run: the dashboard (the three areas moved to Study)');
-  await page.goto(URL + '#/study'); await page.waitForSelector('.area'); ok(await page.locator('.area').count() === 3, 'Study: three areas');
+  await page.goto(URL + '#/study'); await page.waitForSelector('.area'); ok(await page.locator('.area').count() === 4, 'Study: four areas');
 
   // search: by Greek form without accents, by Beta Code, by English, by Strong's number
   const found = async (q) => { await page.goto(URL + '#/search'); await page.waitForSelector('#sq'); await page.fill('#sq', q); await page.waitForTimeout(150); return page.locator('.list .li b').allTextContents(); };

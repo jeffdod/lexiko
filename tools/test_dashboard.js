@@ -29,7 +29,10 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   await p.goto(U + '#/home/customize'); await p.waitForSelector('.cz'); await p.click('button:has-text("Reset to default")'); await p.waitForTimeout(200);
   ok(await p.locator('.cz input:checked').count() === 5 && (await p.locator('.cz b').allInnerTexts()).join() === 'Start here,Goal,Good next reads,Growth,Passages within reach,Recent practice', 'Reset to default restores every section and the order');
   // Study and the old Progress route
-  await p.goto(U + '#/study'); await p.waitForSelector('.area'); ok(await p.locator('a.area').count() === 3 && /Study/.test(await p.textContent('h1')), 'Study has Vocabulary, Parsing and Reference');
+  await p.goto(U + '#/study'); await p.waitForSelector('.area'); ok(await p.locator('a.area').count() === 4 && /Study/.test(await p.textContent('h1')), 'Study has Vocabulary, Parsing, Reference and Glossary');
+  ok((await p.locator('a.area').last().textContent()).startsWith('Glossary'), 'Glossary is the bottom tile');
+  await p.click('a.area[href="#/search"]'); await p.waitForSelector('#sq'); ok((await p.getAttribute('.pagehead a.btn.ghost', 'href')) === '#/study', 'the Glossary arrow goes back to Study');
+  await p.goto(U + '#/study'); await p.click('a.area[href="#/reference"]'); await p.waitForSelector('a.area[href="#/learn/charts"]'); ok(await p.locator('a[href="#/search"], input[type=search]').count() === 0, 'Reference has no Glossary row or search box (one way in)');
   ok(await p.getAttribute('#nav a[data-tab=study]', 'aria-current') === 'page', 'Study is the current tab');
   await p.goto(U + '#/parse'); await p.waitForSelector('.pagehead'); ok(await p.getAttribute('#nav a[data-tab=study]', 'aria-current') === 'page', 'Parsing sits under the Study tab');
   await p.goto(U + '#/home'); await p.goto(U + '#/progress'); await p.waitForSelector('.goalnum'); ok((await p.evaluate(() => location.hash)) === '#/home', '#/progress opens Home');

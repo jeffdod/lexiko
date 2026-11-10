@@ -1,6 +1,5 @@
-// Reference: things to look up and study (word search, the verb charts, the kinds of form). No exercises here: those live in Parsing.
+// Reference: things to look up and study (the verb charts, the kinds of form, principal parts). No exercises here: those live in Parsing.
 import { h, clear, backHead, areaCard, icon } from './util.js';
-import { setSearchQuery } from './search.js';
 import { chartsButton } from './charts.js';
 import { D } from './data.js';
 import { eligible, SLOT_NAMES } from './parts.js';
@@ -30,12 +29,7 @@ function partsList(view) {
 
 export function renderReference(view, params = []) {
   if (params[0] === 'parts') return partsList(view);
-  const input = h('input', { type: 'search', placeholder: 'Search Greek, Beta Code, English or a Strong’s number', autocomplete: 'off', autocapitalize: 'off', 'aria-label': 'Search words', style: { flex: 1, minWidth: 0 } });
-  input.spellcheck = false;
-  const go = (e) => { e.preventDefault(); setSearchQuery(input.value); location.hash = '#/search'; };
   clear(view).append(backHead('Reference', '#/study', 'Study'), h('div.stack',
-    h('form.row', { style: { flexWrap: 'nowrap', gap: '.5rem' }, onsubmit: go }, input, h('button.btn.icon', { type: 'submit', 'aria-label': 'Search' }, icon('search', 20))),
-    areaCard({ href: '#/search', ic: 'search', title: 'Glossary', sub: 'Every word in the text, α to ω or by how common' }),
     h('div.sec', 'Quick charts'),
     h('div.row.wrap', chartsButton(), h('span.muted.small', 'Verb and noun endings, contractions')),
     h('div.sec', 'Verb charts'),
