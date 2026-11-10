@@ -204,7 +204,7 @@ export function renderReader(view, params) {
       h('span.row', rd.distinctUnknown ? (isGoal ? h('span.chip.good', 'Your goal') : h('button.btn.sm', { onclick: async () => { const ng = { kind: 'passage', book: book.code, c1: ch, v1: 1, c2: ch, v2: 999 };
           if (K.goal && !(await askDialog({ title: 'Replace your goal?', body: ['Your goal is “' + goalLabel(cg) + '”. Make ' + goalLabel(ng) + ' your goal instead?', 'Your word progress stays as it is. Only the target changes.'], yes: 'Replace goal', no: 'Keep my goal' }))) return;      // a goal you chose is not swapped by one stray tap
           await setGoal(ng); toast('This chapter is now your goal'); draw(); } }, icon('target', 16), 'Make this my goal')) : h('span.chip.good', 'No new words'),
-        h('button.btn.sm' + (setting('glossMode') ? '.primary' : ''), { 'aria-pressed': !!setting('glossMode'), onclick: async () => { await setSetting('glossMode', !setting('glossMode')); draw(); } }, setting('glossMode') ? 'Hide meanings' : 'Show meanings')),
+        rd.distinctUnknown ? h('button.btn.sm' + (setting('glossMode') ? '.primary' : ''), { 'aria-pressed': !!setting('glossMode'), onclick: async () => { await setSetting('glossMode', !setting('glossMode')); draw(); } }, setting('glossMode') ? 'Hide meanings' : 'Show meanings') : null),      // meanings are for words you do not know yet: with none, there is nothing to show
     );
     const read = !!K.read[book.code + ':' + ch];
     clear(foot).append(
