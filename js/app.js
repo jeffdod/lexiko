@@ -31,6 +31,16 @@ function buildNav() {
   clear(navEl).append(...TABS.map(([id, label, ic]) => h('a', { href: tabRoot(id), dataset: { tab: id },
     onclick: (e) => { e.preventDefault(); const here = navEl.querySelector('a[aria-current]'); location.hash = here && here.dataset.tab === id ? tabRoot(id) : (lastIn[id] || tabRoot(id)); } }, icon(ic, 24), label)));
 }
+/** The badge on the Study tab: how many words and forms are due, or nothing at all. */
+function updateBadge() {
+  const link = navEl.querySelector('a[data-tab="study"]'); if (!link) return;
+  let n = 0; try { const c = counts(); n = c.words.sessionDue + c.parse.due; } catch (e) { n = 0; }
+  const old = link.querySelector('.navbadge');
+  if (!n) { if (old) old.remove(); return; }
+  const text = n > 99 ? '99+' : String(n), label = n + (n === 1 ? ' review due' : ' reviews due');
+  if (old) { old.textContent = text; old.setAttribute('aria-label', label); }
+  else link.append(h('span.navbadge', { role: 'img', 'aria-label': label }, text));
+}
 let routed = false;
 function route() {
   // The browser's (or the phone's) back and forward buttons must never land in a quiz or exercise: every screen is stamped once it has been shown, so
@@ -49,6 +59,7 @@ function route() {
   try { cleanup = routes[name](view, parts.slice(1)) || null; }
   catch (e) { console.error(e); clear(view).append(h('div.card', h('h2', 'Something went wrong'), h('p.muted', String(e && e.message || e)), h('a.btn', { href: '#/home' }, 'Home'))); }
   view.focus({ preventScroll: true });
+  updateBadge();
 }
 
 /* Keep the "next review in…" text and the big button honest while a screen stays open: redraw when something changes. */
@@ -56,6 +67,7 @@ const LIVE = new Set(['', '#/home', '#/study', '#/learn', '#/learn/words', '#/pa
 let liveSig = '';
 const signature = () => { const u = upcoming(), c = counts(), a = smartAll(); return [u.all.due, whenText(u.all.next), c.words.due, c.parse.due, a.label, a.sub].join('|'); };
 function refreshLive() {
+  if (document.visibilityState === 'visible') updateBadge();
   if (document.visibilityState !== 'visible' || !LIVE.has(location.hash.replace(/\/$/, ''))) return;
   try { const sig = signature(); if (liveSig && sig !== liveSig) { const y = window.scrollY; route(); window.scrollTo(0, y); } liveSig = sig; } catch (e) { console.error(e); }
 }

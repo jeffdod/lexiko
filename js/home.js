@@ -6,7 +6,7 @@ import { goalLabel, parseAskDue } from './know.js';
 import { goalPicker, previewLine, miniGoalCard } from './goals.js';
 import { h, clear, add, pct, fmt, icon } from './util.js';
 import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
-import { counts, smart } from './smart.js';
+import { counts, smart, TOPICS } from './smart.js';
 import { renderWelcome, renderParseWelcome } from './welcome.js';
 import { readHref } from './reader.js';
 import { homeSections } from './progress.js';
@@ -80,6 +80,14 @@ export function goalDetailCard(redraw) {
 const startHere = (n, ci = 0) => h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Start here'),
   h('p.muted.small', { style: { margin: 0 } }, (ci ? fmt(n + ci) + ' words are ready (' + fmt(n) + ' new · ' + fmt(ci) + (ci === 1 ? ' check-in' : ' check-ins') + ')' : n ? fmt(n) + ' new ' + (n === 1 ? 'word is' : 'words are') + ' ready' : 'Today’s new words are ready') + '. Start with a short session.'),
   h('div.row', h('a.btn.primary', { href: smart('words').href }, 'Start with today’s new words')));
+/** What is due for review, with a button for each kind. Null when nothing is due, so it only ever appears when there is something to do. */
+function dueCard(cnt) {
+  const w = cnt.words.sessionDue, f = cnt.parse.due; if (!w && !f) return null;
+  const n = (k, one, many) => fmt(k) + ' ' + (k === 1 ? one : many);
+  const text = [w ? n(w, 'word', 'words') : '', f ? n(f, 'form', 'forms') : ''].filter(Boolean).join(' and ') + (w && f || w + f > 1 ? ' are' : ' is') + ' ready for review.';
+  return h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Due today'), h('p.muted.small', { style: { margin: 0 } }, text),
+    h('div.row.wrap', w ? h('a.btn.primary', { href: TOPICS.words.go }, 'Review ' + n(w, 'word', 'words')) : null, f ? h('a.btn' + (w ? '' : '.primary'), { href: TOPICS.parse.go }, 'Review ' + n(f, 'form', 'forms')) : null));
+}
 /** The goal on Home: a short summary with your numbers in one line; Change › opens the picker in place. */
 function goalSummary(view, stats) {
   if (K.goal && goalFinished(currentGoal())) return finishedCard(() => renderHome(view));
@@ -117,6 +125,7 @@ export function renderHome(view, parts = []) {
 
   // Start here (new learners) is always first; then the sections in the order the person chose, minus the ones they hid
   if (!cnt.words.studied && !cnt.words.due) stack.append(startHere(cnt.words.fresh, cnt.words.checkins));
+  const due = dueCard(cnt); if (due) stack.append(due);          // what is due comes right after "Start here", before the sections you arranged
   const sec = homeSections(), { order, hidden } = layout();
   const make = { goal: () => goalSummary(view, sec.stats), reads: sec.reads, growth: sec.growth, passages: sec.passages, recent: sec.recent };
   for (const id of order) if (!hidden.has(id)) { const el = make[id](); if (el) stack.append(el); }
