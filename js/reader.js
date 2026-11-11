@@ -173,9 +173,12 @@ export function renderReader(view, params) {
   const nav = (dir) => { const t = target(dir); return readHref(t.b.code, t.ch); };
   /** Where a bottom button goes, in a few words: "1 John 3". The two longest book names are shortened so the label stays on one line. */
   const navLabel = (dir) => { const t = target(dir); return shortBook(t.b.name) + ' ' + t.ch; };
-  /** The Previous (-1) or Next (1) button. The top bar and the foot of the chapter both use this, so they always match. */
-  const navBtn = (dir) => h('a.btn.navbtn', { href: nav(dir), 'aria-label': (dir < 0 ? 'Previous chapter: ' : 'Next chapter: ') + target(dir).b.name + ' ' + target(dir).ch },
+  const navAria = (dir) => (dir < 0 ? 'Previous chapter: ' : 'Next chapter: ') + target(dir).b.name + ' ' + target(dir).ch;
+  /** The Previous (-1) or Next (1) button at the foot of the chapter. */
+  const navBtn = (dir) => h('a.btn.navbtn', { href: nav(dir), 'aria-label': navAria(dir) },
     ...(dir < 0 ? [icon('chevL', 18), navLabel(dir)] : [navLabel(dir), icon('chevR', 18)]));
+  /** The small round arrow beside the title in the top bar; the chapter it goes to is in its label. */
+  const arrowBtn = (dir) => h('a.btn.arrow', { href: nav(dir), 'aria-label': navAria(dir), title: navAria(dir) }, icon(dir < 0 ? 'chevL' : 'chevR', 22));
 
   const body = h('div.reader', { lang: 'grc' });
   const meta = h('div.row.wrap.between', { style: { margin: '.2rem 0 .6rem' } });
@@ -273,11 +276,12 @@ export function renderReader(view, params) {
     document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   };
 
+  // The top bar: the chapter you are in is the big thing, with a small arrow either side. While the bar is slid away, a slim strip keeps the chapter and section in view.
   const bar = h('div.readbar',
-    h('div.row', h('button.title.grow', { onclick: pick, 'aria-label': 'Choose book and chapter' }, book.name + ' ' + ch, h('span.muted', '▾')),
-      h('button.btn.ghost.sm', { onclick: options, 'aria-label': 'Reading options' }, 'Aa')),
-    h('div.navpair', navBtn(-1), navBtn(1)));
-  clear(view).append(...[readBack(), bar, meta, body, foot].filter(Boolean));      // readBack() is null unless the reader was opened from search or a Learn page
+    h('div.row', arrowBtn(-1), h('button.title.grow', { onclick: pick, 'aria-label': 'Choose book and chapter' }, h('span.tt', book.name + ' ' + ch), h('span.muted', '▾')), arrowBtn(1),
+      h('button.btn.ghost.sm', { onclick: options, 'aria-label': 'Reading options' }, 'Aa')));
+  const secName = h('span', ''), strip = h('button.readstrip', { type: 'button', 'aria-label': 'Show the top bar', onclick: () => { bars(true, 'strip'); hold(4000); } }, h('b', book.name + ' ' + ch), secName);
+  clear(view).append(...[readBack(), bar, strip, meta, body, foot].filter(Boolean));      // readBack() is null unless the reader was opened from search or a Learn page
 
   // word interactions (delegated)
   const wordOf = (e) => e.target.closest && e.target.closest('.w');
@@ -296,7 +300,11 @@ export function renderReader(view, params) {
 
   // On a phone the top bar and the bottom navigation slide away while you read down the page, and come back when you scroll up,
   // tap a blank spot, press a key, or reach the top. Tapping a word leaves them as they are. (CSS only applies it on a narrow screen.)
-  const tr = barTracker(), bars = (on, why) => { document.body.classList.toggle('rd-hide', !on); tr.set(on, scrollY); };
+  // The section you are in is the last heading that has scrolled past the top; before the first heading (or with headings off) it is just the chapter.
+  let stripRaf = 0;
+  const stripNow = () => { stripRaf = 0; let cur = ''; for (const hd of body.querySelectorAll('h3.peri')) { if (hd.getBoundingClientRect().top < 40) cur = hd.querySelector('.pt').textContent; else break; } secName.textContent = cur ? ' · ' + cur : ''; };
+  const stripSoon = () => { if (!stripRaf) stripRaf = requestAnimationFrame(stripNow); };
+  const tr = barTracker(), bars = (on, why) => { document.body.classList.toggle('rd-hide', !on); tr.set(on, scrollY); if (!on) stripNow(); };
   // Shown by scrolling up, a tap or a key, the bars slide away again a moment after you stop. A check every 300ms does it, so it holds
   // however the bars came up. They wait while you are at the top or bottom of the chapter, a dialog is open, or keyboard focus is in a bar.
   let holdUntil = performance.now() + 3000, lastWhy = '';
@@ -323,7 +331,7 @@ export function renderReader(view, params) {
   const blankTap = (e) => { if (!e.target.closest('.w, a, button, input, select, textarea, #pop, dialog')) { bars(true, 'blank tap'); hold(3500); } };
   const anyKey = (e) => { bars(true, 'key ' + e.key); hold(4000); };
   const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) hold(4000); };
-  addEventListener('scroll', onScroll, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
+  addEventListener('scroll', onScroll, { passive: true }); addEventListener('scroll', stripSoon, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
 
   const placeVerse = () => { const vv = [...body.querySelectorAll('.verse[data-vs="' + (+vsS) + '"]')]; if (vv.length) { vv.forEach((v) => v.classList.add('focus')); requestAnimationFrame(() => vv[0].scrollIntoView({ block: 'center' })); } };
   if (vsS) placeVerse(); else scrollTo(0, 0);
@@ -337,5 +345,5 @@ export function renderReader(view, params) {
       if (vsS && y < 80) placeVerse(); else scrollTo(0, y);
     }).catch(() => toast('The English translation could not be loaded'));
   }
-  return () => { alive = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  return () => { alive = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); removeEventListener('scroll', stripSoon); cancelAnimationFrame(stripRaf); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }
