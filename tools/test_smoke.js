@@ -13,7 +13,9 @@ const passVerb = async (pg) => { const g = await pg.$('.vgrid'); if (!g) return 
   const errors = []; page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   await page.goto(URL); await page.waitForSelector('#loading', { state: 'detached', timeout: 20000 });
   ok(await page.title() === 'lexiko — build your Greek vocabulary and read the Greek New Testament with confidence', 'title');
-  ok(/How much Greek do you know/.test(await page.textContent('#view')), 'first run asks how much Greek you know');
+  ok(/no sign-up. no cost. no ads/.test(await page.textContent('#view')), 'first run opens with the hello screen');
+  await page.click('button:has-text("Get started")'); await page.waitForSelector('.choice');
+  ok(/How much Greek do you know/.test(await page.textContent('#view')), 'then asks how much Greek you know');
   await page.screenshot({ path: out + '/01-home-light.png' });
 
   // two plain questions, then Skip lands on Home

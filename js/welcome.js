@@ -1,4 +1,4 @@
-// First run: plain questions (how much Greek do you know? how well do you parse it? what first?), then straight into the app.
+// First run: a one-screen hello (free, no sign-up, no ads), then plain questions (how much Greek do you know? how well do you parse it? what first?), then straight into the app.
 import { setSetting, setLevel, setGoal, suggestGoal, goalLabel, freqCoverage, setParseLevel, PARSE_LEVELS } from './know.js';
 import { goalPicker, previewLine } from './goals.js';
 import { levelStats } from './settings.js';
@@ -36,6 +36,14 @@ export function renderWelcome(view, done) {
   const steps = () => (level == null ? 2 : 3);                       // a beginner skips the parsing question: verbs stay off
   const finish = async (href) => { await setLevel(level); await setParseLevel(level == null ? 'start' : parse); await setSetting('probeRate', pick === 'rusty' ? 0.2 : 0.12); await setSetting('levelAsked', true); done(href); };
   const choice = (title, sub, on, onclick) => h('button.choice', { 'aria-pressed': String(on), onclick }, h('b', title), h('span', sub));
+  // The very first screen: what lexiko is and what it costs. It is not a numbered step.
+  const splash = () => clear(view).append(h('div.welcome.splash',
+    h('img.splash-logo', { src: 'icons/icon-192.png', alt: '', width: 96, height: 96 }),
+    h('div.brand-word', 'lexiko'),
+    h('p.muted.splash-intro', 'learn Greek vocabulary.', h('br'), 'read the Greek New Testament.'),
+    h('p.splash-promise', 'no sign-up. no cost. no ads.'),
+    h('blockquote.splash-quote', h('p', 'freely ye received,', h('br'), 'freely give.'), h('cite.muted.small', 'Matthew 10:8b · ASV Byzantine Text')),
+    h('button.btn.primary.block', { onclick: step1 }, 'Get started')));
   const step1 = () => {
     const list = h('div.choices');
     const drawList = () => clear(list).append(...LEVEL_CHOICES.map(([lv, t, s, , key = t]) => {
@@ -81,5 +89,5 @@ export function renderWelcome(view, done) {
     const go = async () => { await setGoal(goal); finish(null); };
     draw();
   };
-  step1();
+  splash();
 }

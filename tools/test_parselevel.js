@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
   const b = await chromium.launch(); const errs = [];
   const ok = (c, m) => { if (!c) { console.log('FAIL: ' + m); process.exitCode = 1; } else console.log('  ok  ' + m); };
   const U = 'http://localhost:8123/lexiko/';
-  const fresh = async () => { const p = await (await b.newContext({ viewport: { width: 390, height: 860 } })).newPage(); p.on('pageerror', (e) => errs.push(String(e))); await p.goto(U); await p.waitForSelector('.welcome'); return p; };
+  const fresh = async () => { const p = await (await b.newContext({ viewport: { width: 390, height: 860 } })).newPage(); p.on('pageerror', (e) => errs.push(String(e))); await p.goto(U); await p.waitForSelector('.welcome'); await p.click('button:has-text("Get started")'); await p.waitForSelector('.choice'); return p; };
   const level = async (p, title) => { await p.click('.choice:has-text("' + title + '")'); await p.click('button:has-text("Continue")'); };
   // 1. a beginner skips the question
   let p = await fresh();
