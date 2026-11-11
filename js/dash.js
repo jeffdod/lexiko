@@ -4,6 +4,7 @@ import { K, setSetting } from './know.js';
 import { h, icon, backHead } from './util.js';
 
 export const SECTIONS = [
+  { id: 'continue', name: 'Continue reading', sub: 'Back to where you stopped in the reader' },
   { id: 'goal', name: 'Goal', sub: 'Your goal, its progress and your numbers' },
   { id: 'reads', name: 'Good next reads', sub: 'Sections you could read now' },
   { id: 'growth', name: 'Growth', sub: 'Words you started learning over time (appears after a couple of days)' },
@@ -15,7 +16,7 @@ const IDS = SECTIONS.map((s) => s.id);
 /** All sections in the order chosen (new ones go last), and the set that is hidden. */
 export function layout() {
   const saved = (K.settings.homeOrder || []).filter((id) => IDS.includes(id));
-  const order = [...new Set([...saved, ...IDS])];
+  const order = [...new Set([...(saved.includes('continue') ? [] : ['continue']), ...saved, ...IDS])];      // Continue reading is first until you move it
   return { order, hidden: new Set((K.settings.homeHidden || []).filter((id) => IDS.includes(id))) };
 }
 

@@ -89,6 +89,17 @@ function readyCard(cnt) {
   return h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Ready today'), h('p.muted.small', { style: { margin: 0 } }, text),
     h('div.row.wrap', w ? h('a.btn.primary', { href: TOPICS.words.go }, 'Study ' + n(w, 'word', 'words')) : null, f ? h('a.btn' + (w ? '' : '.primary'), { href: TOPICS.parse.go }, 'Practice ' + n(f, 'form', 'forms')) : null));
 }
+/** "Continue reading": the chapter (and verse, once you have scrolled) where you stopped in the reader, with the section it is in. Null until the reader has been opened. */
+function continueCard() {
+  const code = K.settings.lastBook, book = code && D.books.find((b) => b.code === code); if (!book) return null;
+  const ch = K.settings.lastCh || 1, vs = K.settings.lastVs || 0;
+  const sec = D.periList.filter((p) => p.code === code && (p.c1 < ch || (p.c1 === ch && p.v1 <= (vs || 1)))).pop();
+  const inSec = sec && (sec.c2 > ch || (sec.c2 === ch && sec.v2 >= (vs || 1)));
+  return h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Continue reading'), h('p.contref', book.name + ' ' + ch + (vs ? ':' + vs : '')),
+    inSec ? h('p.muted.small', { style: { margin: 0 } }, sec.title) : null,
+    h('div.row.wrap', h('a.btn', { href: '#/read/' + code + '/' + ch + (vs ? '/' + vs : '') }, 'Continue')));
+}
+
 /** The goal on Home: a short summary with your numbers in one line; Change › opens the picker in place. */
 function goalSummary(view, stats) {
   if (K.goal && goalFinished(currentGoal())) return finishedCard(() => renderHome(view));
@@ -128,7 +139,7 @@ export function renderHome(view, parts = []) {
   if (!cnt.words.studied && !cnt.words.due) stack.append(startHere(cnt.words.fresh, cnt.words.checkins));
   const ready = readyCard(cnt); if (ready) stack.append(ready);          // today's session comes right after "Start here", before the sections you arranged
   const sec = homeSections(), { order, hidden } = layout();
-  const make = { goal: () => goalSummary(view, sec.stats), reads: sec.reads, growth: sec.growth, passages: sec.passages, recent: sec.recent };
+  const make = { continue: continueCard, goal: () => goalSummary(view, sec.stats), reads: sec.reads, growth: sec.growth, passages: sec.passages, recent: sec.recent };
   for (const id of order) if (!hidden.has(id)) { const el = make[id](); if (el) stack.append(el); }
   clear(view).append(stack);
 }

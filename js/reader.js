@@ -162,7 +162,8 @@ export function renderReader(view, params) {
   const chs = book.chapters.map((c) => c[0]);
   let ch = +chS || (K.settings.lastBook === book.code && K.settings.lastCh) || 1;
   if (!chs.includes(ch)) ch = chs[0];
-  setSetting('lastBook', book.code); setSetting('lastCh', ch);
+  const sameSpot = K.settings.lastBook === book.code && K.settings.lastCh === ch;      // reopening the chapter you were in keeps your saved verse until you scroll
+  setSetting('lastBook', book.code); setSetting('lastCh', ch); setSetting('lastVs', vsS ? +vsS : sameSpot ? (K.settings.lastVs || 0) : 0);
   const idx = chs.indexOf(ch);
   const target = (dir) => {                                       // the chapter before or after this one (the Bible wraps around at its ends)
     let bi = book.i, ci = idx + dir;
@@ -333,6 +334,12 @@ export function renderReader(view, params) {
   const barTouch = (e) => { if (e.target.closest('.readbar, #nav')) hold(4000); };
   addEventListener('scroll', onScroll, { passive: true }); addEventListener('scroll', stripSoon, { passive: true }); view.addEventListener('click', blankTap); document.addEventListener('keydown', anyKey); document.addEventListener('pointerdown', barTouch);
 
+  // Remember the verse at the top of the screen a moment after scrolling stops, so Home can offer "Continue reading" there.
+  let rememberT = 0;
+  const remember = () => { clearTimeout(rememberT); rememberT = setTimeout(() => {
+    let vs = 0; if (scrollY >= 80) for (const v of body.querySelectorAll('.verse[data-vs]')) if (v.getBoundingClientRect().bottom > 60) { vs = +v.dataset.vs; break; }
+    if (vs !== K.settings.lastVs) setSetting('lastVs', vs); }, 300); };
+  addEventListener('scroll', remember, { passive: true });
   const placeVerse = () => { const vv = [...body.querySelectorAll('.verse[data-vs="' + (+vsS) + '"]')]; if (vv.length) { vv.forEach((v) => v.classList.add('focus')); requestAnimationFrame(() => vv[0].scrollIntoView({ block: 'center' })); } };
   if (vsS) placeVerse(); else scrollTo(0, 0);
   // The route renderer is synchronous, so the Greek shows first and this book's English folds in when it has loaded.
@@ -345,5 +352,5 @@ export function renderReader(view, params) {
       if (vsS && y < 80) placeVerse(); else scrollTo(0, y);
     }).catch(() => toast('The English translation could not be loaded'));
   }
-  return () => { alive = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); removeEventListener('scroll', stripSoon); cancelAnimationFrame(stripRaf); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  return () => { alive = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); removeEventListener('scroll', stripSoon); removeEventListener('scroll', remember); clearTimeout(rememberT); cancelAnimationFrame(stripRaf); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }
