@@ -94,7 +94,7 @@ button { font: inherit; color: inherit; }
 .btn.icon { padding: 0; width: 2.75rem; } .btn.icon.sm { width: 2.5rem; }
 .btn[disabled] { opacity: .45; pointer-events: none; }
 .btn.block { display: flex; width: 100%; }
-mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding: 0 .15em; }
+mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding: 0 0 0 .15em; }
 .chip { display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; gap: .3rem; padding: .1rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
 .chip.strongs { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 600; }   /* the Strong’s number is a reference, so it stays quiet */
 .chip.good { background: var(--good-soft); color: var(--good); } .chip.warn { background: var(--warn-soft); color: var(--warn); } .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.accent { background: var(--accent-soft); color: var(--accent); } .chip.gold { background: var(--gold-soft); color: var(--gold); }
@@ -201,7 +201,7 @@ label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--
 .qgloss { font-size: 1.35rem; font-weight: 700; margin-top: .3rem; } .qdef { color: var(--ink-2); max-width: 30rem; font-size: .95rem; }
 .qctx { margin-top: .6rem; padding: .7rem .9rem; background: var(--surface-2); border-radius: 12px; font-family: var(--greek); font-size: 1.15rem; line-height: 1.6; text-align: left; max-width: 34rem; width: 100%; hyphens: manual; }
 .qctx .ctxread { margin-top: .9rem; } .qctx .ctxread a { display: inline-block; padding: .35rem .1rem; font-family: var(--ui); }
-.qctx .ref { display: block; font-family: var(--ui); font-size: .75rem; color: var(--muted); font-weight: 700; margin-bottom: .2rem; } .qctx mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding: 0 .12em; font-weight: 700; }
+.qctx .ref { display: block; font-family: var(--ui); font-size: .75rem; color: var(--muted); font-weight: 700; margin-bottom: .2rem; } .qctx mark { background: var(--gold-soft); color: inherit; border-radius: 4px; padding: 0 0 0 .12em; font-weight: 700; }
 .opts { display: grid; gap: .55rem; width: 100%; max-width: 30rem; }
 .opt { display: flex; align-items: center; gap: .7rem; text-align: left; padding: .8rem 1rem; min-height: 3.1rem; border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; cursor: pointer; font-weight: 600; width: 100%; }
 .opt:hover { border-color: var(--accent); } .opt .mark { margin-left: auto; font-weight: 800; }
