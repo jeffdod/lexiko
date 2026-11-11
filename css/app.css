@@ -60,6 +60,8 @@ button { font: inherit; color: inherit; }
   .readbar, #nav { transition: transform .25s ease, visibility 0s linear 0s; }
   body.rd-hide .readbar { transform: translateY(-100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; }
   body.rd-hide #nav { transform: translateY(100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; }
+  body.rd-hide .readstrip { display: block; position: fixed; z-index: 9; top: 0; left: 0; right: 0; height: calc(30px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 1rem 0; border: 0; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--muted); font: 700 .82rem/30px var(--ui); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  body.rd-hide .readstrip b { color: var(--text); font-family: var(--greek); font-size: .9rem; }
 }
 @media (prefers-reduced-motion: reduce) { .readbar, #nav, body.rd-hide .readbar, body.rd-hide #nav { transition: none; } }
 .pickgroup h3 { margin: .9rem 0 0; font-size: 1.02rem; } .pickgroup:first-of-type h3 { margin-top: .2rem; }
@@ -538,8 +540,12 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .cz { gap: .7rem; } .cz input[type=checkbox] { width: 1.3rem; height: 1.3rem; flex: none; accent-color: var(--accent); }
 .czmove { display: flex; gap: .25rem; flex: none; } .czlock { width: 1.3rem; display: flex; justify-content: center; color: var(--muted); flex: none; }
 .navbtn { padding-left: .7rem; padding-right: .7rem; gap: .3rem; white-space: nowrap; }       /* the two chapter names must stay on one line at narrow phone widths */
-.readbar .navpair { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: .35rem; }
-@media (min-width: 461px) { .readbar .navpair { display: flex; justify-content: space-between; } }
+.readbar .row { gap: .35rem; align-items: center; }
+.readbar .arrow { width: 44px; height: 44px; padding: 0; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.readbar .title { font-size: clamp(1.1rem, 12.8vw - 28px, 1.5rem); justify-content: center; min-width: 0; }     /* shrinks on narrow phones so the longest book name still fits between the arrows */
+.readbar .title .tt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.readbar .title .muted { font-size: 1rem; flex: none; }
+.readstrip { display: none; }       /* the slim strip that stays when the top bar slides away (phones only, below) */
 
 .tlink { color: inherit; text-decoration: none; }      /* the name of a kind of verb form links to its summary page */
 .tlink b::after { content: ' ›'; color: var(--muted); font-weight: 400; }
