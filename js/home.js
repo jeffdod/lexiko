@@ -4,8 +4,9 @@ import { D } from './data.js';
 import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, studiedCount, currentGoal, setGoal, setSetting, wordsPace, goalFinished, noteGoalDone, nextGoal, goalStats, ntShareKnown, freqCoverage } from './know.js';
 import { goalLabel, parseAskDue } from './know.js';
 import { goalPicker, previewLine, miniGoalCard } from './goals.js';
-import { h, clear, add, pct, fmt, icon } from './util.js';
+import { h, clear, add, pct, fmt, icon, askDialog } from './util.js';
 import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
+import { installDue, installNotNow, installDone, isIOS } from './install.js';
 import { counts, smart, TOPICS } from './smart.js';
 import { renderWelcome, renderParseWelcome } from './welcome.js';
 import { readHref } from './reader.js';
@@ -89,6 +90,16 @@ function readyCard(cnt) {
   return h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Ready today'), h('p.muted.small', { style: { margin: 0 } }, text),
     h('div.row.wrap', w ? h('a.btn.primary', { href: TOPICS.words.go }, 'Study ' + n(w, 'word', 'words')) : null, f ? h('a.btn' + (w ? '' : '.primary'), { href: TOPICS.parse.go }, 'Practice ' + n(f, 'form', 'forms')) : null));
 }
+/** The nudge to put lexiko on the Home Screen (see js/install.js). On an iPhone or iPad it explains how; elsewhere its button opens the browser's own install prompt. */
+function installBanner(view) {
+  const ios = isIOS(), again = () => renderHome(view);
+  const act = ios ? async () => { await askDialog({ title: 'Add lexiko to your Home Screen', body: ['Tap the Share button in Safari, then “Add to Home Screen”. It then opens full-screen and works offline.'], yes: 'Got it', no: 'Close' }); }
+    : async () => { const e = window.__installEvt; if (!e) return again(); e.prompt(); const r = await e.userChoice; window.__installEvt = null; if (r && r.outcome === 'accepted') await installDone(); else await installNotNow(); again(); };
+  return h('div.banner.info', h('div.grow', h('b', ios ? 'Add lexiko to your Home Screen' : 'Install lexiko'),
+    h('div.small', ios ? 'It opens full screen and works offline. Your progress is also safer from being cleared by Safari.' : 'It opens full screen and works offline.'),
+    h('div.row.wrap', { style: { marginTop: '.6rem' } }, h('button.btn.sm', { onclick: act }, ios ? 'Show me how' : 'Install'), h('button.btn.sm', { onclick: async () => { await installNotNow(); again(); } }, 'Not now'))));
+}
+
 /** "Continue reading": the chapter (and verse, once you have scrolled) where you stopped in the reader, with the section it is in. Null until the reader has been opened. */
 function continueCard() {
   const code = K.settings.lastBook, book = code && D.books.find((b) => b.code === code); if (!book) return null;
@@ -138,6 +149,7 @@ export function renderHome(view, parts = []) {
   // Start here (new learners) is always first; then the sections in the order the person chose, minus the ones they hid
   if (!cnt.words.studied && !cnt.words.due) stack.append(startHere(cnt.words.fresh, cnt.words.checkins));
   const ready = readyCard(cnt); if (ready) stack.append(ready);          // today's session comes right after "Start here", before the sections you arranged
+  if (!needsBackup && installDue(studied)) stack.append(installBanner(view));          // one nudge at a time: the backup reminder goes first
   const sec = homeSections(), { order, hidden } = layout();
   const make = { continue: continueCard, goal: () => goalSummary(view, sec.stats), reads: sec.reads, growth: sec.growth, passages: sec.passages, recent: sec.recent };
   for (const id of order) if (!hidden.has(id)) { const el = make[id](); if (el) stack.append(el); }
