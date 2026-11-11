@@ -31,13 +31,13 @@ function buildNav() {
   clear(navEl).append(...TABS.map(([id, label, ic]) => h('a', { href: tabRoot(id), dataset: { tab: id },
     onclick: (e) => { e.preventDefault(); const here = navEl.querySelector('a[aria-current]'); location.hash = here && here.dataset.tab === id ? tabRoot(id) : (lastIn[id] || tabRoot(id)); } }, icon(ic, 24), label)));
 }
-/** The badge on the Study tab: how many words and forms are due, or nothing at all. */
+/** The badge on the Study tab: how many words and forms today's session holds (the two Study tile numbers added), or nothing at all. */
 function updateBadge() {
   const link = navEl.querySelector('a[data-tab="study"]'); if (!link) return;
-  let n = 0; try { const c = counts(); n = c.words.sessionDue + c.parse.due; } catch (e) { n = 0; }
+  let n = 0; try { const c = counts(); n = (!c.words.studied && !c.words.due) ? 0 : c.words.total + c.parse.total; } catch (e) { n = 0; }
   const old = link.querySelector('.navbadge');
   if (!n) { if (old) old.remove(); return; }
-  const text = n > 99 ? '99+' : String(n), label = n + (n === 1 ? ' review due' : ' reviews due');
+  const text = n > 99 ? '99+' : String(n), label = n + ' ready today';
   if (old) { old.textContent = text; old.setAttribute('aria-label', label); }
   else link.append(h('span.navbadge', { role: 'img', 'aria-label': label }, text));
 }
