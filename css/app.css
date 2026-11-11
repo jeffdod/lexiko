@@ -545,6 +545,7 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .readbar .title { font-size: clamp(1.1rem, 12.8vw - 28px, 1.5rem); justify-content: center; min-width: 0; }     /* shrinks on narrow phones so the longest book name still fits between the arrows */
 .readbar .title .tt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .readbar .title .muted { font-size: 1rem; flex: none; }
+.contref { margin: 0; font-family: var(--greek); font-size: 1.25rem; font-weight: 700; }      /* the place on the Continue reading card */
 .readstrip { display: none; }       /* the slim strip that stays when the top bar slides away (phones only, below) */
 
 .tlink { color: inherit; text-decoration: none; }      /* the name of a kind of verb form links to its summary page */
