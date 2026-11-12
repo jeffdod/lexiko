@@ -596,3 +596,9 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .pchip.lifted { opacity: .35; }
 .pchip.ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -60%); background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #fff); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }
 @media (min-width: 880px) { .ptray { bottom: .6rem; } }
+
+/* Reading options: the options scroll, the note and Done stay in view at the bottom */
+dialog.opts { max-height: 90dvh; overflow: auto; padding-bottom: 0; }
+dialog.opts h2 { margin-top: 0; }
+.dfoot { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: .7rem 0 1.1rem; margin-top: .4rem; text-align: center; }
+.dfoot .muted { margin-bottom: .5rem; }

@@ -253,14 +253,14 @@ export function renderReader(view, params) {
     render(); document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   };
   const options = () => {
-    const dlg = h('dialog');
+    const dlg = h('dialog.opts');
     const sw = (label, desc, key, before) => h('label.switch', h('span', h('div.t', label), h('div.d', desc)),
       h('input', { type: 'checkbox', checked: !!setting(key), onchange: async (e) => { await setSetting(key, e.target.checked); if (before) await before(e.target.checked); draw(); } }));
     const choice = (label, desc, key, opts) => {
       const seg = h('div.seg.fit', { role: 'group', 'aria-label': label }, opts.map(([v, t]) => h('button', { 'aria-pressed': String(setting(key) === v), onclick: async () => { await setSetting(key, v); [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(opts[i][0] === v))); draw(); } }, t)));
       return h('div', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('div.t', { style: { fontWeight: 600 } }, label), desc ? h('div.d.muted.small', { style: { marginBottom: '.4rem' } }, desc) : null, seg);
     };
-    dlg.append(h('div.row.between', h('h2', 'Reading options'), h('button.btn.ghost.icon.sm', { 'aria-label': 'Close', onclick: () => dlg.close() }, icon('close', 18))),
+    dlg.append(h('h2', 'Reading options'),
       sw('Repeat meanings', 'When meanings are showing, show one on every occurrence, not just the first in the chapter.', 'glossRepeat'),
       sw('Highlight unknown words', 'Blue = new to you, gold = still learning.', 'highlight'),
       sw('Section headings', 'Show the section titles, with each section’s progress and a ⋯ menu for Study and the read mark.', 'sectionHeads'),
@@ -273,7 +273,8 @@ export function renderReader(view, params) {
       choice('Line spacing', '', 'lineSpacing', [['tight', 'Tight'], ['normal', 'Normal'], ['roomy', 'Roomy'], ['extra', 'Extra']]),
       h('div.row.between', { style: { padding: '.7rem 0', borderTop: '1px solid var(--line)' } }, h('span.t', { style: { fontWeight: 600 } }, 'Text size'),
         h('span.row', h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.max(0.95, +(setting('readerSize') - 0.1).toFixed(2))); draw(); } }, 'A−'),
-          h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.min(2.4, +(setting('readerSize') + 0.1).toFixed(2))); draw(); } }, 'A+'))));
+          h('button.btn.sm', { onclick: async () => { await setSetting('readerSize', Math.min(2.4, +(setting('readerSize') + 0.1).toFixed(2))); draw(); } }, 'A+'))),
+      h('div.dfoot', h('div.muted.small', 'Changes are saved as you go.'), h('button.btn.primary.block', { onclick: () => dlg.close() }, 'Done')));      // every option applies the moment it is changed, so there is nothing to save: Done just closes
     document.body.append(dlg); dlg.addEventListener('close', () => dlg.remove()); dlg.showModal();
   };
 
