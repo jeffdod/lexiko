@@ -280,27 +280,20 @@ export function passageWords(scope) {
   return [...m.entries()].filter(([n]) => status(n) !== 'known').map(([n, c]) => ({ n, c }));
 }
 /** New words for a goal, in teaching order: passages and sections by first occurrence, frequency goals most frequent first.
- *  Words you have started or already know are left out, and new verbs are let in only as the verb gate allows. */
-const goalFresh = (g) => {
-  const fresh = (n) => { const c = K.cards.get('w:' + n); return (!c || c.state === 'new') && status(n) !== 'known'; };
-  if (g && g.kind === 'freq') return D.lex.filter((L) => L.freq >= g.min && fresh(L.n)).sort((a, b) => b.freq - a.freq).map((L) => L.n);
-  return passageWords(g).map((x) => x.n).filter(fresh);
-};
+ *  Words you have started or already know are left out. Verbs are taught like any other word: nothing about verb forms or Parsing holds them back. */
 export function goalNext(g = currentGoal(), limit = 200) {
-  return admitVerbs(goalFresh(g)).slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
+  const fresh = (n) => { const c = K.cards.get('w:' + n); return (!c || c.state === 'new') && status(n) !== 'known'; };
+  const ns = g && g.kind === 'freq' ? D.lex.filter((L) => L.freq >= g.min && fresh(L.n)).sort((a, b) => b.freq - a.freq).map((L) => L.n) : passageWords(g).map((x) => x.n).filter(fresh);
+  return ns.slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
 }
-/** How many goal words you have not started are being held back (new verbs are paused). Meaningful once goalNext has nothing to offer. */
-export function goalHeld(g = currentGoal()) { const all = goalFresh(g); return all.length - admitVerbs(all).length; }
-/** The new words to teach: the goal's. Only when nothing in the goal is left to start (it is finished or every word is begun) does this carry on with the commonest unknown words;
- *  while goal words are merely held back (paused verbs) it offers nothing, so words outside the goal are never taught in their place. */
+/** The new words to teach: the goal's, verbs and all, in teaching order. Only when nothing in the goal is left to start does this carry on with the commonest unknown words. */
 export function newWordsFor(g = currentGoal(), limit = 200) {
   const next = goalNext(g, limit);
-  return next.length || goalHeld(g) ? next : nextByLevel(limit);
+  return next.length ? next : nextByLevel(limit);
 }
 /** Plain-words reason a passage has nothing to study right now. */
 export function waitNote(ps, now = clockNow()) {
   const bits = [];
-  if (ps.held) bits.push(ps.held + (ps.held === 1 ? ' verb is' : ' verbs are') + ' paused for now (see Verbs)');
   if (ps.started) bits.push(ps.started + (ps.started === 1 ? ' word you’ve started comes' : ' words you’ve started come') + ' back ' + (isFinite(ps.soonest) ? whenIn(ps.soonest, now) : 'on schedule'));
   return bits.length ? 'Nothing to study right now: ' + bits.join('; ') + '.' : '';
 }
@@ -315,14 +308,13 @@ export function passageStudy(scope, now = clockNow()) {
     else if (dueSet.has(n)) due++;
     else { started++; if (c.due < soonest) soonest = c.due; }          // already begun; comes back on its own schedule
   }
-  const open = admitVerbs(fresh);
-  return { fresh: open.length, held: fresh.length - open.length, due, started, soonest, ready: open.length + due };
+  return { fresh: fresh.length, due, started, soonest, ready: fresh.length + due };
 }
 /** Next most-frequent words the learner doesn't know yet (level builder). */
 export function nextByLevel(limit) {
   const out = [];
-  for (const L of D.lex) { if (status(L.n) === 'unknown') { out.push(L.n); if (out.length >= limit * 3) break; } }
-  return admitVerbs(out).slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
+  for (const L of D.lex) { if (status(L.n) === 'unknown') { out.push({ n: L.n, c: L.freq }); if (out.length >= limit) break; } }
+  return out;
 }
 /** Assumed-known words (no card yet) to spot-check, weighted toward the edge of the declared level. */
 export function probeCandidates(limit, exclude = new Set()) {
@@ -351,7 +343,6 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
   else if (only) fresh = D.lex.filter((L) => only.has(L.n) && (!K.cards.has('w:' + L.n) || getCard(L.n).state === 'new') && status(L.n) === 'unknown').map((L) => L.n);
   else if (scope) fresh = passageWords(scope).filter((x) => !K.cards.has('w:' + x.n) || getCard(x.n).state === 'new').map((x) => x.n);
   else fresh = newWordsFor(currentGoal(), 200).map((x) => x.n);      // the goal's words; the commonest unknown ones only once nothing in the goal is left to start
-  if (kind !== 'review' && (only || scope)) fresh = admitVerbs(fresh);
   const cap = newLimit != null ? newLimit : scope || only ? K.settings.newPerDay : wordsPace().left;
   dueList.slice(0, Math.max(size, 30)).forEach((n) => push(n, 'review'));
   fresh.slice(0, cap).forEach((n) => push(n, 'new'));
@@ -376,8 +367,6 @@ export function dailyPlan() {
 
 /* ---------- verbs: what you must know, when the forms are learned, and how new verbs arrive ---------- */
 export const LEARNED_ACC = 0.9, LEARNED_WINDOW = 10;          // a verb's forms are learned at 90% right over your last 10 answers (and each chosen form known)
-export const BRAKE_ACC = 0.75, BRAKE_WINDOW = 20, BRAKE_MIN = 15, UNLEARNED_MAX = 5;   // new verbs pause under 75% right over the last 20 verb-form answers, or when more than 5 verbs are unlearned
-export const VERB_SHARE = 4;                                  // about one new verb for every four other new words
 const isVerb = (n) => { const L = D.lexByN.get(n); return !!L && L.verb; };
 const cardKnown = (c) => !!c && c.state === 'review' && ((c.stability || 0) >= 7 || (c.reps || 0) >= 2);       // the word-card rule
 const formKnown = (rows) => rows.some((i) => cardKnown(K.cards.get(parseId(D.forms[i]))));
@@ -405,24 +394,6 @@ export function startedVerbs() {
     else if (id.startsWith('f:')) { const n = +id.split(':')[2]; if (isVerb(n)) out.add(n); }
   }
   return [...out].sort((a, b) => D.lexByN.get(b).freq - D.lexByN.get(a).freq);
-}
-/** Begun verbs whose forms are not yet learned. */
-export const unlearnedVerbs = () => startedVerbs().filter((n) => { const v = verbStatus(n); return v && !v.learned; });
-/** The soft brake on new verbs: pause when recent verb-form answers are under 75% right, or when more than five verbs are still unlearned. */
-export function verbBrake() {
-  const open = unlearnedVerbs().length, a = K.verbAcc.slice(-BRAKE_WINDOW), acc = a.length >= BRAKE_MIN ? mean(a) : null;
-  if (open > UNLEARNED_MAX) return { braked: true, open, acc, why: 'New verbs are paused while you finish the ' + open + ' you are learning.' };
-  if (acc != null && acc < BRAKE_ACC) return { braked: true, open, acc, why: 'You are answering ' + Math.round(acc * 100) + '% of verb forms correctly, so new verbs are paused while these settle.' };
-  return { braked: false, open, acc, why: '' };
-}
-/** Keeps every other word, and lets verbs in at about one for every four others, unless the brake is on. */
-export function admitVerbs(ns) {
-  const brake = verbBrake().braked; let verbs = 0, others = 0;
-  return ns.filter((n) => {
-    if (!isVerb(n)) { others++; return true; }
-    if (brake || verbs > Math.floor(others / VERB_SHARE)) return false;
-    verbs++; return true;
-  });
 }
 /** Words you started learning in the last few days (for a quick refresher; never touches the schedule). */
 export function recentWords(days = 3, now = clockNow()) {

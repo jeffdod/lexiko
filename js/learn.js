@@ -1,11 +1,11 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { clockNow } from './clock.js';
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, newWordsFor, goalNext, goalHeld, currentGoal, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
+import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, newWordsFor, currentGoal, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
 import { paceNote } from './pace.js';
-import { verbBrake, holdToday, HOLD_MIN } from './know.js';
+import { holdToday, HOLD_MIN } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { goalDetailCard } from './home.js';
 import { missOutcome, snap, restore, MAX_MISSES } from './retry.js';
@@ -237,7 +237,7 @@ function startFrom(view, kind, scope, title, only = null) {
   const items = buildSession({ scope, only, kind });
   if (!items.length) {
     if (!scope) { const alt = smart('words'); if (alt.kind !== 'go') { redirect(alt.href); return; } }       // caught up: go to something useful instead
-    clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? (passageStudy(scope).held + passageStudy(scope).started ? waitNote(passageStudy(scope)) : 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉') : 'You’re all caught up. 🎉'),
+    clear(view).append(h('div.pagehead', h('h1', title || 'Study')), h('div.card.stack', h('p', scope ? (passageStudy(scope).started ? waitNote(passageStudy(scope)) : 'You already know every word in ' + scopeLabel(scope) + ', and nothing is due. 🎉') : 'You’re all caught up. 🎉'),
       h('div.row.wrap', scope ? h('a.btn.primary', { href: readHref(scope.book, scope.c1) }, 'Read it') : null, h('a.btn', { href: '#/study' }, 'Back'))));
     return;
   }
@@ -290,13 +290,6 @@ export function renderLearn(view, params) {
 /* ---------- Vocabulary page ---------- */
 /* ---------- study words by how common they are ---------- */
 const bandLabel = ([lo, hi]) => hi >= 1e9 ? 'Words used ' + lo.toLocaleString('en-US') + '+ times' : lo === hi ? 'Words used once' : 'Words used ' + lo + '–' + hi + ' times';
-/** Shown on the Vocabulary page when the verb brake is on. */
-function verbHold() {
-  const b = verbBrake(); if (!b.braked) return null;
-  const held = goalNext(currentGoal(), 1).length ? 0 : goalHeld();      // nothing but paused verbs is left in the goal
-  return h('div.card.small', h('b', b.why), held ? ' The rest of your goal (' + fmt(held) + (held === 1 ? ' word' : ' words') + ') is verbs, so new words wait until these settle. Reviews and check-ins continue.' : ' Other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See your verbs →')));
-}
-
 /** One plain sentence on what a check-in is, shown only when today's session has some. */
 const checkinNote = () => (smart('words').kind === 'go' && sessionCounts().words.checkins ? h('div.small.muted', CHECKIN_NOTE) : null);
 
@@ -308,7 +301,6 @@ function wordsPage(view) {
       ...(doneCards('words') || [startButton(sm)]),
       checkinNote(),
       paceNote(wordsPace(), 'words'),
-      verbHold(),
       goalDetailCard(() => wordsPage(view)),
       h('div.sec', 'More practice'),
       sm.kind === 'review' ? null : h('a.tile', { href: TOPICS.words.review }, h('h3', 'Review what I’ve learned'), h('p', 'Go back over words you already know')),
