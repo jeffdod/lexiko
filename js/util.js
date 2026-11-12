@@ -147,6 +147,10 @@ const trail = []; let replacing = false;
 export const NOT_RESUMABLE = (hash) => QUIZ.test(hash || '') || /^#\/(parse\/(form|howto)|learn$)/.test(hash || '');
 /** Go to another screen in place of this one (a redirect), so it never counts as a screen you can go back to. */
 export const redirect = (hash) => { replacing = true; location.replace(hash); };
+/** Tabs whose remembered screen is forgotten once: the next tap opens the tab's own first screen (Read after "Keep my place"). */
+const forgotten = new Set();
+export const forgetTab = (id) => { forgotten.add(id); };
+export const takeForgotten = (id) => forgotten.delete(id);
 let pendingRoot = null;
 /** A bottom-bar tab is about to reopen a deeper screen (Study opening Vocabulary): the arrow on that screen goes to the tab's own first screen, not to the tab you came from. */
 export const enterTab = (root) => { pendingRoot = root; };

@@ -76,6 +76,8 @@ let bad = 0; const ok = (c, m, x) => { console.log((c ? 'ok   ' : 'FAIL ') + m +
   ok((await saved()) === other + ':8:1', 'Keep: scrolling does not move it', await saved());
   await p.goto(URL + '#/read/' + vc + '/' + (+vch === 1 ? 2 : 1)); await p.waitForSelector('.reader .w'); await p.waitForTimeout(500);
   ok((await saved()) === other + ':8:1', 'Keep: changing chapter does not move it either', await saved());
+  await p.click('nav a[data-tab="home"]'); await p.waitForTimeout(500); await p.click('nav a[data-tab="read"]'); await p.waitForSelector('.reader .w'); await p.waitForTimeout(400);
+  ok(/#\/read\/?$/.test(p.url()) && (await saved()) === other + ':8:1', 'Keep: the Read tab opens the saved place, not the verse: ' + p.url(), await saved());
   await p.goto(URL + '#/home'); await p.waitForTimeout(800); await p.goto(URL + '#/read/MAT/2'); await p.waitForSelector('.reader .w'); await p.waitForTimeout(300);
   ok((await saved()).startsWith('MAT:2'), 'after leaving the reader, the next visit saves the place again', await saved());
   await home(); await place(other, 8, 1); await p.click('.votd a'); await p.waitForSelector('dialog.ask[open]');

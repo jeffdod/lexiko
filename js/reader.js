@@ -6,7 +6,7 @@ import { partsGrid } from './partforms.js';
 import { barTracker } from './readbars.js';
 import { clueRef } from './clueref.js';
 import { rowOfTag } from './families.js';
-import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack, askDialog } from './util.js';
+import { h, clear, toAcute, pct, toast, icon, fmt, knowButtons, readBack, askDialog, forgetTab } from './util.js';
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /** A verse's English as HTML. [Bracketed] words are words the translators supplied; they show in italics, without the brackets. */
@@ -168,7 +168,7 @@ function headingHTML(p) {
 /* ---------------- view ---------------- */
 let holdPlace = false;
 /** Open the reader once without moving the saved place ("Continue reading"): for the visit that follows, however many chapters it covers, until the reader is left. */
-export const keepMyPlace = () => { holdPlace = true; };
+export const keepMyPlace = () => { holdPlace = true; forgetTab('read'); };      // and the Read tab opens the saved place next time, not this verse
 export function renderReader(view, params) {
   const [code = K.settings.lastBook || 'JHN', chS, vsS] = params;
   const book = D.bookByCode.get(code) || D.bookByCode.get('JHN');
