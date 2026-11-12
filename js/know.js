@@ -350,10 +350,7 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
     const nProbe = Math.round(items.length * K.settings.probeRate / (1 - K.settings.probeRate)) || (items.length ? 1 : 0);
     probeCandidates(nProbe, seen).forEach((x) => push(x.n, 'probe'));
   }
-  const order = items.filter((x) => x.type === 'new'), mixed = shuffle(items);
-  const newSlots = mixed.map((x, i) => x.type === 'new' ? i : -1).filter((i) => i >= 0);
-  newSlots.forEach((i, k) => { mixed[i] = order[k]; });                  // new words keep their teaching order; reviews and probes are mixed in around them
-  return mixed.slice(0, scope || only ? 400 : Math.max(size, 40));
+  return shuffle(items.slice(0, scope || only ? 400 : Math.max(size, 40)));      // trim first (items are in priority order: reviews, then new words most-wanted first, then probes), then shuffle what is left, new words included: mixed order is better for memory
 }
 
 /** What the normal Vocabulary session will actually contain, counted from the session itself (reviews, new words, spot-checks), so a summary never promises less than it delivers.

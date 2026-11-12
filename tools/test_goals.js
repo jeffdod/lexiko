@@ -32,10 +32,10 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
     await k.setLevel(null); await k.setGoal({ kind: 'freq', min: 50 });
     const f = k.goalNext(undefined, 60).map((x) => D.lexByN.get(x.n).freq);
     const s = k.buildSession({}); const nw = s.filter((x) => x.type === 'new').map((x) => D.lexByN.get(x.n).freq);
-    return { sorted: f.every((v, i) => i === 0 || f[i - 1] >= v), minF: Math.min(...f), n: f.length, nwSorted: nw.every((v, i) => i === 0 || nw[i - 1] >= v), nNew: nw.length };
+    return { sorted: f.every((v, i) => i === 0 || f[i - 1] >= v), minF: Math.min(...f), n: f.length, nwTop: [...nw].sort((x, y) => y - x).every((v, i) => v === f[i]), nNew: nw.length };
   });
   ok(a.sorted && a.minF >= 50 && a.n > 0, 'frequency goal: most frequent first, none below the cut', JSON.stringify(a));
-  ok(a.nNew > 0 && a.nwSorted, 'a session keeps new words in teaching order');
+  ok(a.nNew > 0 && a.nwTop, 'a session teaches the most frequent new words (their order within the session is shuffled)');
   await p.goto(URL + '#/read'); await p.waitForTimeout(1500);
   const b2 = await p.evaluate(async () => {
     const k = await import('./js/know.js'), { D, scopeVerses, loadBook } = await import('./js/data.js');
@@ -45,10 +45,10 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
     const w = k.goalNext(g, 500).map((x) => x.n), all = k.passageWords(g).map((x) => x.n);
     const s = k.buildSession({}); const nw = s.filter((x) => x.type === 'new').map((x) => x.n);
     const pos = nw.map((n) => w.indexOf(n));
-    return { n: w.length, same: all.filter((n) => w.includes(n)).join() === w.join(), inOrder: pos.every((v, i) => v >= 0 && (i === 0 || pos[i - 1] < v)), nNew: nw.length };
+    return { n: w.length, same: all.filter((n) => w.includes(n)).join() === w.join(), inOrder: [...pos].sort((x, y) => x - y).every((v, i) => v === i), nNew: nw.length };
   });
   ok(b2.n > 10 && b2.same, 'passage goal: words listed in order of first occurrence', JSON.stringify(b2));
-  ok(b2.nNew > 0 && b2.inOrder, 'a session teaches the passage in order');
+  ok(b2.nNew > 0 && b2.inOrder, 'a session teaches the passage’s first new words (their order within the session is shuffled)');
 
   // Home goal card
   await p.evaluate(async () => { const k = await import('./js/know.js'); await k.setLevel(50); await k.setSetting('parseAsked', true); await k.setGoal({ kind: 'freq', min: 30 }); });
