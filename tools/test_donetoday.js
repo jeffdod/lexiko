@@ -65,6 +65,7 @@ const { chromium } = require('playwright');
   await p.goto(U + '#/home'); await p.waitForTimeout(150); await p.goto(U + '#/learn/words'); await p.waitForTimeout(600);
   const t2 = await p.locator('body').innerText();
   ok(/Almost done\./.test(t2) && /Cards you just studied come back soon\./.test(t2) && /Next review in/.test(t2) && !/You’re done for today\./.test(t2), 'the card says "Almost done" while a word is waiting: ' + t2.slice(0, 200).replace(/\n/g, '|'));
+  ok(/Next review in \d+ min · 1 word due/.test(t2), 'the next-review line counts words of this page: ' + t2.slice(0, 300).replace(/\n/g, '|'));
   ok(errs.length === 0, 'no page errors: ' + errs.join(' | '));
   await b.close(); console.log(process.exitCode ? 'donetoday: FAILED' : 'donetoday: ok');
 })();
