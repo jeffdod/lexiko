@@ -281,12 +281,21 @@ export function passageWords(scope) {
 }
 /** New words for a goal, in teaching order: passages and sections by first occurrence, frequency goals most frequent first.
  *  Words you have started or already know are left out, and new verbs are let in only as the verb gate allows. */
-export function goalNext(g = currentGoal(), limit = 200) {
+const goalFresh = (g) => {
   const fresh = (n) => { const c = K.cards.get('w:' + n); return (!c || c.state === 'new') && status(n) !== 'known'; };
-  let ns;
-  if (g && g.kind === 'freq') ns = D.lex.filter((L) => L.freq >= g.min && fresh(L.n)).sort((a, b) => b.freq - a.freq).map((L) => L.n);
-  else ns = passageWords(g).map((x) => x.n).filter(fresh);
-  return admitVerbs(ns).slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
+  if (g && g.kind === 'freq') return D.lex.filter((L) => L.freq >= g.min && fresh(L.n)).sort((a, b) => b.freq - a.freq).map((L) => L.n);
+  return passageWords(g).map((x) => x.n).filter(fresh);
+};
+export function goalNext(g = currentGoal(), limit = 200) {
+  return admitVerbs(goalFresh(g)).slice(0, limit).map((n) => ({ n, c: D.lexByN.get(n).freq }));
+}
+/** How many goal words you have not started are being held back (new verbs are paused). Meaningful once goalNext has nothing to offer. */
+export function goalHeld(g = currentGoal()) { const all = goalFresh(g); return all.length - admitVerbs(all).length; }
+/** The new words to teach: the goal's. Only when nothing in the goal is left to start (it is finished or every word is begun) does this carry on with the commonest unknown words;
+ *  while goal words are merely held back (paused verbs) it offers nothing, so words outside the goal are never taught in their place. */
+export function newWordsFor(g = currentGoal(), limit = 200) {
+  const next = goalNext(g, limit);
+  return next.length || goalHeld(g) ? next : nextByLevel(limit);
 }
 /** Plain-words reason a passage has nothing to study right now. */
 export function waitNote(ps, now = clockNow()) {
@@ -341,7 +350,7 @@ export function buildSession({ scope = null, only = null, kind = 'daily', size =
   if (kind === 'review') fresh = [];
   else if (only) fresh = D.lex.filter((L) => only.has(L.n) && (!K.cards.has('w:' + L.n) || getCard(L.n).state === 'new') && status(L.n) === 'unknown').map((L) => L.n);
   else if (scope) fresh = passageWords(scope).filter((x) => !K.cards.has('w:' + x.n) || getCard(x.n).state === 'new').map((x) => x.n);
-  else { fresh = goalNext(currentGoal(), 200).map((x) => x.n); if (!fresh.length) fresh = nextByLevel(200).map((x) => x.n); }      // goal finished: carry on with the commonest unknown words
+  else fresh = newWordsFor(currentGoal(), 200).map((x) => x.n);      // the goal's words; the commonest unknown ones only once nothing in the goal is left to start
   if (kind !== 'review' && (only || scope)) fresh = admitVerbs(fresh);
   const cap = newLimit != null ? newLimit : scope || only ? K.settings.newPerDay : wordsPace().left;
   dueList.slice(0, Math.max(size, 30)).forEach((n) => push(n, 'review'));

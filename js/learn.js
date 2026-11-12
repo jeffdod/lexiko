@@ -1,7 +1,7 @@
 // Vocabulary study: scope picker + session runner (flashcard self-rating or multiple choice), FSRS-scheduled.
 import { clockNow } from './clock.js';
 import { D, lexeme, senseNs, unpack, scopeLabel, tokenForm, chapterVerses, tokenPunct, tokenFlag, periBook, periRange } from './data.js';
-import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, nextByLevel, goalNext, currentGoal, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
+import { K, passageStudy, waitNote, status, setting, setSetting, rate, undoRate, getCard, buildSession, scopeReadiness, newWordsFor, goalNext, goalHeld, currentGoal, passageWords, readinessLabel, readinessClass, markLearning, troubleCards, reviewCards, wordsPace, recentWords } from './know.js';
 import * as F from './fsrs.js';
 import { partsGrid } from './partforms.js';
 import { paceNote } from './pace.js';
@@ -246,8 +246,7 @@ function startFrom(view, kind, scope, title, only = null) {
 
 /** A few words you haven't started: from your goal passage if you have one, else the most common you don't know yet. */
 function previewWords(goal) {
-  const fromGoal = goalNext(currentGoal(), 6).map((x) => x.n);
-  return fromGoal.length ? fromGoal : nextByLevel(6).map((x) => x.n);
+  return newWordsFor(currentGoal(), 6).map((x) => x.n);
 }
 
 export function renderLearn(view, params) {
@@ -277,7 +276,7 @@ export function renderLearn(view, params) {
     return void runSession(view, items, { title: 'Strengthen weak spots', practice: true });
   }
   if (mode === 'level') {
-    const items = (goalNext(currentGoal(), setting('newPerDay')).length ? goalNext(currentGoal(), setting('newPerDay')) : nextByLevel(setting('newPerDay'))).map((x) => ({ n: x.n, type: 'new' }));
+    const items = newWordsFor(currentGoal(), setting('newPerDay')).map((x) => ({ n: x.n, type: 'new' }));
     return void (items.length ? runSession(view, items, { title: 'New words' }) : startFrom(view, 'review', null));
   }
   if (mode === 'passage') {
@@ -294,7 +293,8 @@ const bandLabel = ([lo, hi]) => hi >= 1e9 ? 'Words used ' + lo.toLocaleString('e
 /** Shown on the Vocabulary page when the verb brake is on. */
 function verbHold() {
   const b = verbBrake(); if (!b.braked) return null;
-  return h('div.card.small', h('b', b.why), ' Other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See your verbs →')));
+  const held = goalNext(currentGoal(), 1).length ? 0 : goalHeld();      // nothing but paused verbs is left in the goal
+  return h('div.card.small', h('b', b.why), held ? ' The rest of your goal (' + fmt(held) + (held === 1 ? ' word' : ' words') + ') is verbs, so new words wait until these settle. Reviews and check-ins continue.' : ' Other words keep coming.', h('div', { style: { marginTop: '.3rem' } }, h('a', { href: '#/learn/verbs' }, 'See your verbs →')));
 }
 
 /** One plain sentence on what a check-in is, shown only when today's session has some. */
