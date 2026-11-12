@@ -58,12 +58,13 @@ export function whenText(t, now = clockNow()) {
   return days === 1 ? 'tomorrow' : 'in ' + days + ' days';
 }
 
-/** "Next review in 3 h · 4 cards" for when nothing is due right now (null otherwise). */
-export function nextLine(u, due) {
-  if (due || !isFinite(u.all.next)) return null;
-  const when = whenText(u.all.next), n = u.all.nextCount;
-  return h('div.next', icon('clock', 16), h('span', h('b', 'Next review ' + when), ' · ' + n + (n === 1 ? ' card' : ' cards'),
-    u.all.tomorrow && when !== 'tomorrow' ? h('div.small', 'Then ' + u.all.tomorrow + ' more tomorrow') : null));
+/** "Next review tomorrow · 28 words due" for when nothing is due right now (null otherwise). Counts only the page's own kind (words or forms); "tomorrow" counts everything due that day. */
+export function nextLine(u, due, topic = 'words') {
+  const t = u[topic] || u.words;
+  if (due || !isFinite(t.next)) return null;
+  const when = whenText(t.next), n = when === 'tomorrow' ? t.tomorrow : t.nextCount, one = TOPICS[topic === 'parse' ? 'parse' : 'words'].noun.slice(0, -1);
+  return h('div.next', icon('clock', 16), h('span', h('b', 'Next review ' + when), ' · ' + n + ' ' + (n === 1 ? one : one + 's') + ' due',
+    t.tomorrow && when !== 'tomorrow' ? h('div.small', 'Then ' + t.tomorrow + ' more tomorrow') : null));
 }
 /** A small box counting what is coming due. */
 export function comingUp(u) {
@@ -131,7 +132,7 @@ export function doneCards(topic) {
   if (c.due || c.fresh || !c.studied) return null;
   const one = T.noun.slice(0, -1), m = moreReady(topic), total = m.reviews + m.fresh + m.checkins;
   const u = upcoming(), eod = new Date(clockNow()).setHours(24, 0, 0, 0), waiting = isFinite(u.all.next) && u.all.next < eod;      // words just studied that come back later today
-  const out = [h('div.card.stack', h('b', waiting ? 'Almost done.' : 'You’re done for today.'), h('div.small.muted', waiting ? 'Cards you just studied come back soon.' : 'Everything that was due today is finished.'), nextLine(u, 0))];
+  const out = [h('div.card.stack', h('b', waiting ? 'Almost done.' : 'You’re done for today.'), h('div.small.muted', waiting ? 'Cards you just studied come back soon.' : 'Everything that was due today is finished.'), nextLine(u, 0, topic))];
   if (!total) return out;
   out.push(h('div.card.stack', h('b', 'Want to keep going?'),
     h('div.small.muted', plural(total, one, T.noun).replace(/^(\d+)/, '$1 more') + (total === 1 ? ' is' : ' are') + ' ready: ' + work({ due: m.reviews, sessionDue: m.reviews, fresh: m.fresh, checkins: m.checkins }, topic) + '.'),
