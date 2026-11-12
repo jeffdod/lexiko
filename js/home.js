@@ -9,7 +9,8 @@ import { backupDue, runBackup, snoozeBackupReminder } from './backup.js';
 import { installDue, installNotNow, installDone, isIOS } from './install.js';
 import { counts, smart, TOPICS } from './smart.js';
 import { renderWelcome, renderParseWelcome } from './welcome.js';
-import { readHref } from './reader.js';
+import { readHref, wordPopFor } from './reader.js';
+import { votdCard } from './votd.js';
 import { homeSections } from './progress.js';
 import { layout, renderCustomize } from './dash.js';
 
@@ -151,7 +152,11 @@ export function renderHome(view, parts = []) {
   const ready = readyCard(cnt); if (ready) stack.append(ready);          // today's session comes right after "Start here", before the sections you arranged
   if (!needsBackup && installDue(studied)) stack.append(installBanner(view));          // one nudge at a time: the backup reminder goes first
   const sec = homeSections(), { order, hidden } = layout();
-  const make = { continue: continueCard, goal: () => goalSummary(view, sec.stats), reads: sec.reads, growth: sec.growth, passages: sec.passages, recent: sec.recent };
+  const make = { continue: continueCard, goal: () => goalSummary(view, sec.stats), reads: sec.reads, growth: sec.growth, passages: sec.passages, recent: sec.recent, votd: votdCard };
   for (const id of order) if (!hidden.has(id)) { const el = make[id](); if (el) stack.append(el); }
   clear(view).append(stack);
+  if (stopPop) stopPop();
+  stopPop = stack.querySelector('.votd') ? wordPopFor(stack, () => renderHome(view)) : null;          // the words of the verse of the day open the reader's word popup
+  return () => { if (stopPop) { stopPop(); stopPop = null; } };
 }
+let stopPop = null;

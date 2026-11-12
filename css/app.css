@@ -602,3 +602,6 @@ dialog.opts { max-height: 90dvh; overflow: auto; padding-bottom: 0; }
 dialog.opts h2 { margin-top: 0; }
 .dfoot { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: .7rem 0 1.1rem; margin-top: .4rem; text-align: center; }
 .dfoot .muted { margin-bottom: .5rem; }
+
+/* Verse of the day (Home): the Greek line never hyphenates, so a word is never split across lines */
+.votd-text { font-family: var(--greek); font-size: 1.2rem; line-height: 1.7; hyphens: none; -webkit-hyphens: none; }

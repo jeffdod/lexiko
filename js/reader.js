@@ -105,6 +105,16 @@ function showPop(el, pinned, rerender) {
   } else { pop.style.top = pop.style.left = ''; }
 }
 
+/** Lets the words (.w) inside `root` open this same popup, for a line of Greek outside the reader (the verse of the day on Home). Returns a function that removes the listeners and closes the popup. */
+export function wordPopFor(root, rerender) {
+  const wordOf = (e) => e.target.closest && e.target.closest('.w');
+  const click = (e) => { const w = wordOf(e); if (w) { e.preventDefault(); showPop(w, true, rerender); } };
+  const outside = (e) => { if (pop && !pop.hidden && popPinned && !pop.contains(e.target) && !wordOf(e)) hidePop(); };
+  const esc = (e) => { if (e.key === 'Escape') hidePop(); };
+  root.addEventListener('click', click); document.addEventListener('pointerdown', outside); document.addEventListener('keydown', esc);
+  return () => { root.removeEventListener('click', click); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc); hidePop(); };
+}
+
 /* ---------------- text rendering ---------------- */
 function verseHTML(vs, toks, seenGloss, opts) {
   let out = '<span class="verse" id="v' + vs + '" data-vs="' + vs + '">';
@@ -156,6 +166,9 @@ function headingHTML(p) {
 }
 
 /* ---------------- view ---------------- */
+let holdPlace = false;
+/** Open the reader once without moving the saved place ("Continue reading"): for the visit that follows, however many chapters it covers, until the reader is left. */
+export const keepMyPlace = () => { holdPlace = true; };
 export function renderReader(view, params) {
   const [code = K.settings.lastBook || 'JHN', chS, vsS] = params;
   const book = D.bookByCode.get(code) || D.bookByCode.get('JHN');
@@ -163,7 +176,7 @@ export function renderReader(view, params) {
   let ch = +chS || (K.settings.lastBook === book.code && K.settings.lastCh) || 1;
   if (!chs.includes(ch)) ch = chs[0];
   const sameSpot = K.settings.lastBook === book.code && K.settings.lastCh === ch;      // reopening the chapter you were in keeps your saved verse until you scroll
-  setSetting('lastBook', book.code); setSetting('lastCh', ch); setSetting('lastVs', vsS ? +vsS : sameSpot ? (K.settings.lastVs || 0) : 0);
+  if (!holdPlace) { setSetting('lastBook', book.code); setSetting('lastCh', ch); setSetting('lastVs', vsS ? +vsS : sameSpot ? (K.settings.lastVs || 0) : 0); }      // unless the person chose to keep their place (verse of the day)
   const idx = chs.indexOf(ch);
   const target = (dir) => {                                       // the chapter before or after this one (the Bible wraps around at its ends)
     let bi = book.i, ci = idx + dir;
@@ -339,7 +352,7 @@ export function renderReader(view, params) {
   let rememberT = 0;
   const remember = () => { clearTimeout(rememberT); rememberT = setTimeout(() => {
     let vs = 0; if (scrollY >= 80) for (const v of body.querySelectorAll('.verse[data-vs]')) if (v.getBoundingClientRect().bottom > 60) { vs = +v.dataset.vs; break; }
-    if (vs !== K.settings.lastVs) setSetting('lastVs', vs); }, 300); };
+    if (!holdPlace && vs !== K.settings.lastVs) setSetting('lastVs', vs); }, 300); };
   addEventListener('scroll', remember, { passive: true });
   const placeVerse = () => { const vv = [...body.querySelectorAll('.verse[data-vs="' + (+vsS) + '"]')]; if (vv.length) { vv.forEach((v) => v.classList.add('focus')); requestAnimationFrame(() => vv[0].scrollIntoView({ block: 'center' })); } };
   if (vsS) placeVerse(); else scrollTo(0, 0);
@@ -353,5 +366,5 @@ export function renderReader(view, params) {
       if (vsS && y < 80) placeVerse(); else scrollTo(0, y);
     }).catch(() => toast('The English translation could not be loaded'));
   }
-  return () => { alive = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); removeEventListener('scroll', stripSoon); removeEventListener('scroll', remember); clearTimeout(rememberT); cancelAnimationFrame(stripRaf); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
+  return () => { alive = false; if (!location.hash.startsWith('#/read')) holdPlace = false; hidePop(); clearInterval(beat); bars(true, 'leaving'); document.removeEventListener('pointerdown', barTouch); removeEventListener('scroll', onScroll); removeEventListener('scroll', stripSoon); removeEventListener('scroll', remember); clearTimeout(rememberT); cancelAnimationFrame(stripRaf); view.removeEventListener('click', blankTap); document.removeEventListener('keydown', anyKey); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc_); view.style.removeProperty('--reader-size'); };
 }
