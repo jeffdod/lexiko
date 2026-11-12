@@ -14,7 +14,7 @@ import { renderReference } from './reference.js';
 import { renderSearch } from './search.js';
 import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
-import { h, clear, icon, noteRoute, NOT_RESUMABLE } from './util.js';
+import { h, clear, icon, noteRoute, NOT_RESUMABLE, enterTab } from './util.js';
 import { travelBar } from './timetravel.js';
 import { startAutoBackup } from './backup.js';
 
@@ -29,7 +29,9 @@ const lastIn = {};          // the last screen you were on in each tab, so a tab
 const tabRoot = (id) => '#/' + id;
 function buildNav() {
   clear(navEl).append(...TABS.map(([id, label, ic]) => h('a', { href: tabRoot(id), dataset: { tab: id },
-    onclick: (e) => { e.preventDefault(); const here = navEl.querySelector('a[aria-current]'); location.hash = here && here.dataset.tab === id ? tabRoot(id) : (lastIn[id] || tabRoot(id)); } }, icon(ic, 24), label)));
+    onclick: (e) => { e.preventDefault(); const here = navEl.querySelector('a[aria-current]'), to = here && here.dataset.tab === id ? tabRoot(id) : (lastIn[id] || tabRoot(id));
+      if (id !== 'read' && to !== tabRoot(id) && to !== location.hash) enterTab(tabRoot(id));          // reopening a deeper screen: its back arrow goes to the tab's own first screen (Read has no first screen of its own)
+      location.hash = to; } }, icon(ic, 24), label)));
 }
 /** The badge on the Study tab: how many words and forms today's session holds (the two Study tile numbers added), or nothing at all. */
 function updateBadge() {

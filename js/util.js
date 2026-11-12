@@ -147,7 +147,11 @@ const trail = []; let replacing = false;
 export const NOT_RESUMABLE = (hash) => QUIZ.test(hash || '') || /^#\/(parse\/(form|howto)|learn$)/.test(hash || '');
 /** Go to another screen in place of this one (a redirect), so it never counts as a screen you can go back to. */
 export const redirect = (hash) => { replacing = true; location.replace(hash); };
+let pendingRoot = null;
+/** A bottom-bar tab is about to reopen a deeper screen (Study opening Vocabulary): the arrow on that screen goes to the tab's own first screen, not to the tab you came from. */
+export const enterTab = (root) => { pendingRoot = root; };
 const noteTrail = (cur) => {
+  if (pendingRoot) { const r = pendingRoot; pendingRoot = null; if (cur !== r && !replacing) { trail.push(r, cur); if (trail.length > 60) trail.splice(0, trail.length - 60); return; } }
   if (replacing) { replacing = false; if (trail.length) trail[trail.length - 1] = cur; else trail.push(cur); }
   else if (trail[trail.length - 1] === cur) { /* same screen again */ }
   else if (trail.length >= 2 && trail[trail.length - 2] === cur) trail.pop();                // the browser's back button (or ours)
