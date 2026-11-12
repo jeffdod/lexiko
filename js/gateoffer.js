@@ -4,7 +4,7 @@ import { clockNow } from './clock.js';
 import { K, setSetting, setGate, verbsOn, gateOpen, FAM_WINDOW, FAM_MIN, FAM_ACC } from './know.js';
 import { allGateKeys } from './kinds.js';
 import { poolForms } from './gatenote.js';
-import { rowPool, trickleActive } from './parse.js';
+import { rowPool } from './parse.js';
 import { D } from './data.js';
 
 export const SNOOZE_DAYS = 7;
@@ -14,19 +14,24 @@ function weightOf(key) {
   const [fam, kind] = key.split(':'); return poolForms(fam, kind).reduce((a, f) => a + (f.count || 0), 0);
 }
 let memo = null;
-/** The one kind to offer now, or null: verbs are on, the last answers on verb forms are at least FAM_ACC right (FAM_MIN or more of them), no offer was put off in the last week,
- *  and no kind you just added is still easing in. It is the unopened kind that occurs most among the verbs you know. */
+/** Every kind not open yet that occurs among the verbs you know, most common first. */
+export function ranking(now = clockNow()) {
+  const sig = [K.cards.size, K.settings.level, JSON.stringify(K.settings.gates || null), JSON.stringify(K.settings.gatesHeld || null), Math.floor(now / 60000)].join('|');
+  if (!memo || memo.sig !== sig) {
+    const list = [];
+    for (const key of allGateKeys()) { if (gateOpen(key)) continue; const w = weightOf(key); if (w > 0) list.push({ key, w }); }
+    memo = { sig, list: list.sort((a, b) => b.w - a.w) };
+  }
+  return memo.list;
+}
+/** The offer now, or null: verbs are on, the last answers on verb forms are at least FAM_ACC right (FAM_MIN or more of them) and no offer was put off in the last week. A kind that is still easing in does not hold it back.
+ *  It recommends the unopened kind that occurs most among the verbs you know, plus up to two runners-up to choose instead. */
 export function gateOffer(now = clockNow()) {
   if (!verbsOn() || now < (K.settings.gateOffer || 0)) return null;
   const a = K.verbAcc.slice(-FAM_WINDOW); if (a.length < FAM_MIN) return null;
   const acc = a.reduce((x, y) => x + y, 0) / a.length; if (acc < FAM_ACC) return null;
-  const sig = [K.cards.size, K.settings.level, JSON.stringify(K.settings.gates || null), JSON.stringify(K.settings.gateTrickle || null), Math.floor(now / 60000)].join('|');
-  if (!memo || memo.sig !== sig) {
-    let best = null;
-    if (!trickleActive()) for (const key of allGateKeys()) { if (gateOpen(key)) continue; const w = weightOf(key); if (w > 0 && (!best || w > best.w)) best = { key, w }; }
-    memo = { sig, best };
-  }
-  return memo.best ? { key: memo.best.key, acc, n: a.length } : null;
+  const r = ranking(now); if (!r.length) return null;
+  return { key: r[0].key, w: r[0].w, runners: r.slice(1, 3), acc, n: a.length };
 }
 /** Yes: open the kind and start it slowly. */
 export async function acceptOffer(key) {

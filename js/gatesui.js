@@ -6,7 +6,7 @@ import { FAMILIES, FAMILY, ROW_KEYS, kindName, allGateKeys } from './kinds.js';
 import { poolOf } from './gatenote.js';
 import { h, clear, icon, fold, backHead, toast } from './util.js';
 import { setSetting } from './know.js';
-import { gateOffer, acceptOffer, putOffOffer } from './gateoffer.js';
+import { gateOffer, acceptOffer, putOffOffer, ranking } from './gateoffer.js';
 import { typeName, typeHref, longName } from './typepage.js';
 import { TRICKLE_DAILY } from './parse.js';
 
@@ -18,15 +18,25 @@ const nOpen = (f) => f.kinds.filter((k) => gateOpen(f.id + ':' + k.key)).length;
 export async function turnOnVerbs() { await setGate('verbs', true); }
 async function turnOn(go = true) { await turnOnVerbs(); if (go) location.hash = '#/parse/howto'; }
 
-/** The offer on the Parsing page, or null when there is none. */
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1), times = (n) => n.toLocaleString('en-US') + ' times in the text';
+/** The offer on the Parsing page, or null when there is none: one recommended kind, plus runners-up to choose instead. */
 function offerCard() {
   const o = gateOffer(); if (!o) return null;
-  const name = typeName(o.key), box = h('div.card.stack');
+  const name = typeName(o.key), box = h('div.card.stack'), add = async (key) => { await acceptOffer(key); location.hash = typeHref(key); };
   box.append(h('b', { style: { fontSize: '1.05rem' } }, 'Ready for the ' + name + '?'),
-    h('p.muted.small', { style: { margin: 0 } }, 'Your verb parsing is going well: ' + Math.round(o.acc * 100) + '% right over your last ' + o.n + '. The ' + name + ' is the next most common kind among the verbs you know. It would add ' + TRICKLE_DAILY + ' new forms a day to begin with.'),
-    h('div.row.wrap', h('button.btn.primary', { onclick: async () => { await acceptOffer(o.key); location.hash = typeHref(o.key); } }, 'Yes, add it'),
-      h('button.btn', { onclick: async () => { await putOffOffer(); box.remove(); } }, 'Not yet')));
+    h('p.muted.small', { style: { margin: 0 } }, 'Your verb parsing is going well: ' + Math.round(o.acc * 100) + '% right over your last ' + o.n + '. The ' + name + ' is the most common kind you haven’t opened yet: it appears ' + o.w.toLocaleString('en-US') + ' times in the text among the verbs you know. It would add ' + TRICKLE_DAILY + ' new forms a day to begin with.'),
+    h('div.row.wrap', h('button.btn.primary', { onclick: () => add(o.key) }, 'Yes, add it'),
+      h('button.btn', { onclick: async () => { await putOffOffer(); box.remove(); } }, 'Not yet')),
+    o.runners.length ? h('div.sec', 'Or pick a different one') : null,
+    o.runners.length ? h('div.list', o.runners.map((r) => h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', cap(typeName(r.key))), h('div.muted.small', 'Appears ' + times(r.w))), h('button.btn.sm', { onclick: () => add(r.key) }, 'Add')))) : null);
   return box;
+}
+/** "Up next": the kinds lexiko would offer next, most common first (the same order and counts as the offer). */
+function upNext() {
+  const r = ranking().slice(0, 5); if (!r.length) return null;
+  const offered = gateOffer();
+  return h('div.stack', h('div.sec', 'Up next'), h('p.muted.small', 'The kinds lexiko will offer next, most common first. Each number is how often the kind appears in the text among the verbs you know.'),
+    h('div.list', r.map((x) => h('div.li', { style: { gap: '.7rem' } }, h('span.grow', h('b', cap(typeName(x.key))), h('div.muted.small', times(x.w))), offered && offered.key === x.key ? h('span.chip.good', 'Offered now') : null))));
 }
 
 /** On the Parsing page: the "Turn on verb parsing" card while verbs are off, otherwise the unlock list. */
@@ -43,7 +53,8 @@ export function unlockSection() {
     h('div.list',
       row('#/parse/kinds/ind', 'Indicative', rows + ' of ' + ROW_KEYS.length + ' rows open'),
       ...FAMILIES.map((f) => row('#/parse/kinds/' + f.id, f.name, nOpen(f) + ' of ' + f.kinds.length + ' kinds open')),
-      row('#/parse/gates', 'Choose forms', 'Tick or untick any type of verb form, or whole groups at once')));
+      row('#/parse/gates', 'Choose forms', 'Tick or untick any type of verb form, or whole groups at once')),
+    upNext());
 }
 
 const TENSES = [['pres', 'Present'], ['impf', 'Imperfect'], ['fut', 'Future'], ['aor', 'Aorist'], ['perf', 'Perfect']];

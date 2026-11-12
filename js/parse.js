@@ -148,7 +148,7 @@ setParseFreshCounter(() => {
 });
 
 /* ---------- a kind that was just offered and accepted starts slowly ---------- */
-export const TRICKLE_DAILY = 2, TRICKLE_UNTIL = 20;      // new forms a day for a kind you just added, until you have met this many of its forms
+export const TRICKLE_DAILY = 2, TRICKLE_UNTIL = 10;      // new forms a day for a kind you just added, until you have met this many of its forms
 /** The gate keys a form can belong to (a form with two parses can be in two kinds). */
 export function formGateKeys(id) { const it = rawItem(id); return it && it.valid ? it.valid.map((v) => gateKey(v.slots, v.code, it.strongs)) : []; }
 /** Accepted kinds still easing in: the gate key and how many more new forms of it today's session may add. */

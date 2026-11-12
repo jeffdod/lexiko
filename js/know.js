@@ -483,15 +483,16 @@ export const chartRowKnown = (r) => chartRowSquares(r) === CHART_ATTRS.length;
 export function gateOpen(key) {
   const g = gateMap(); if (!g.verbs) return false;
   if (key === 'row:pres-act') return true;
-  if (key.startsWith('row:')) return key in g ? !!g[key] : chartRowKnown(key.slice(4));
+  if (key.startsWith('row:')) return !!g[key] || (!(K.settings.gatesHeld || {})[key] && chartRowKnown(key.slice(4)));      // learned squares open a row unless you closed it yourself (a closed mark with no such choice behind it does not count)
   return !!g[key];
 }
 /** Can a form with these parses (RP tags) be asked? Some parse must be in an open gate, and a -μι verb needs its gate too. */
 export const formOpen = (tags, n) => verbsOn() && !miHeld(n) && tags.some((t) => gateOpen(gateKeyOfTag(t, n)));
 export const openGateKeys = () => allGateKeys().filter(gateOpen);
-export async function setGate(key, on) { await setSetting('gates', { ...gateMap(), [key]: !!on }); }
+const holdMarks = (keys, on) => { const h = { ...(K.settings.gatesHeld || {}) }; for (const q of keys) { if (on) delete h[q]; else h[q] = true; } return h; };      // unticking by hand keeps a row closed even when its squares are learned; ticking lets it open again
+export async function setGate(key, on) { await setSetting('gatesHeld', holdMarks([key], on)); await setSetting('gates', { ...gateMap(), [key]: !!on }); }
 /** Set many gates at once (a whole category, or every kind): `keys` is a list of gate keys. */
-export async function setGates(keys, on) { const g = { ...gateMap() }; for (const k of keys) g[k] = !!on; await setSetting('gates', g); }
+export async function setGates(keys, on) { const g = { ...gateMap() }; for (const k of keys) g[k] = !!on; await setSetting('gatesHeld', holdMarks(keys, on)); await setSetting('gates', g); }
 /** The answers to "How well do you parse Greek?" (first-run step). Each one sets the gates; 'start' leaves verb parsing off. */
 export const PARSE_LEVELS = [
   ['start', 'I’m just starting', 'Verbs stay off for now. You’ll be asked about nouns, adjectives and other words you know, and can turn verbs on later.'],

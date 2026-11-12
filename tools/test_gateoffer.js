@@ -30,7 +30,25 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   const after = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); return { open: K.gateOpen(location.hash.length ? '' : ''), gates: K.K.settings.gates, tr: K.K.settings.gateTrickle, hash: location.hash }; });
   ok(after.gates[key] === true && after.tr[key] > 0, 'Yes opens ' + key + ' and starts it slowly');
   ok(/#\/parse\/type\//.test(after.hash), 'and shows its summary page: ' + after.hash);
-  await go('#/parse'); ok(await offer() === null, 'no second offer while the new kind is still easing in');
+  await go('#/parse'); const t3 = await offer();
+  ok(!!t3, 'at high accuracy a next offer can arrive while the new kind is still easing in');
+  const runs = await p.evaluate(() => { const c = [...document.querySelectorAll('#view .card')].find((x) => /^Ready for the/.test(x.textContent)); return c ? { adds: c.querySelectorAll('.list button').length, text: c.textContent } : null; });
+  ok(runs && runs.adds === 2 && /Or pick a different one/.test(runs.text) && /Appears [\d,]+ times in the text/.test(runs.text), 'the card shows two runners-up with counts: ' + (runs ? runs.adds : null));
+  const un = await p.evaluate(() => { const s = [...document.querySelectorAll('#view .sec')].find((x) => x.textContent === 'Up next'); const l = s && s.nextElementSibling && s.nextElementSibling.nextElementSibling; return l ? { n: l.children.length, chip: /Offered now/.test(l.textContent), first: l.children[0].textContent } : null; });
+  ok(un && un.n === 5 && un.chip, 'the Up next list shows five kinds and marks the offered one: ' + JSON.stringify(un));
+  // the first runner-up's Add opens that kind
+  const second = await p.evaluate(async () => (await import('/lexiko/js/gateoffer.js')).gateOffer().runners[0].key);
+  await p.click('#view .card .list button:has-text("Add")'); await p.waitForTimeout(500);
+  ok(await p.evaluate(async (k) => (await import('/lexiko/js/know.js')).gateOpen(k), second), 'Add on a runner-up opens it: ' + second);
+  // a learned row opens even if an old closed mark is saved; a row you unticked yourself stays closed
+  const rows = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'), F = await import('/lexiko/js/fsrs.js'), A = await import('/lexiko/js/families.js');
+    for (const a of A.CHART_ATTRS) K.K.cards.set('c:aor1-pas:' + a, { ...F.newCard('c:aor1-pas:' + a), state: 'review', stability: 60, reps: 5, last: Date.now(), due: Date.now() + 864e5 * 30 });
+    await K.setSetting('gates', { verbs: true, 'row:aor1-pas': false }); await K.setSetting('gatesHeld', {});
+    const legacy = K.gateOpen('row:aor1-pas');
+    await K.setGate('row:aor1-pas', false); const held = K.gateOpen('row:aor1-pas');
+    await K.setGate('row:aor1-pas', true); const back = K.gateOpen('row:aor1-pas');
+    return { legacy, held, back }; });
+  ok(rows.legacy === true && rows.held === false && rows.back === true, 'learned row opens despite an old closed mark; your own untick keeps it closed: ' + JSON.stringify(rows));
   // the daily cap: for a kind with more than 2 new forms available, a session plan adds at most 2
   const cap = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); const P = await import('/lexiko/js/parse.js'); const { allGateKeys } = await import('/lexiko/js/kinds.js');
     await K.setSetting('gates', K.allGatesOpen()); await K.setSetting('gateTrickle', {});
