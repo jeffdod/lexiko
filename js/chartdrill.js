@@ -5,7 +5,7 @@ import { D } from './data.js';
 import { K, openGateKeys, rateChart, chartCardsDue } from './know.js';
 import { CHART_ATTRS } from './families.js';
 import { exampleForm, paradigm, chartVerb } from './paradigms.js';
-import { MASTER, PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, openCharts } from './charts.js';
+import { MASTER, PRIMARY_ACT, PRIMARY_MP, SECOND_ACT, SECOND_MP, openCharts, coverControls } from './charts.js';
 import { h, clear, icon, pct, shuffle, toast, missedBlock, backHead, backLinks, startedFromKinds } from './util.js';
 
 export const ROWS = MASTER.filter(Boolean).map(([key, name, aug, stem, form, vowel, ends, para]) => ({ key, name, aug: /^perf/.test(key) ? 'RED' : aug, stem, form, vowel, ends, para }));      // every perfect row reduplicates, with its own verb's first consonant
@@ -148,6 +148,7 @@ export function renderParadigm(view, key) {
     h('span.pword', { lang: 'grc' }, h('span.pstem', c.stem), h('b.pend', c.ending)), c.inText ? h('small.muted', { style: { marginLeft: '.6rem' } }, 'in the text') : null)) : [];
   clear(view).append(backHead('Paradigm', '#/learn/charts', 'Charts'), h('div.stack',
     h('div.row.wrap', h('span.chip.accent', say(r.name).replace(/^./, (c) => c.toUpperCase()) + ' indicative')),
+    ...(P ? coverControls(lines.map((l) => ({ cells: [l.querySelector('.pword')], label: null, name: '' })), { hosts: [] }) : []),
     P ? h('div.card.stack', ...lines) : h('div.card', h('p', 'The text has no clear example of this row.')),
     P ? h('p.muted.small', h('b', 'Verb: '), h('span', { lang: 'grc' }, P.head), ' · ' + P.brief + '. ' + (P.attested === 6 ? 'All six forms occur in the text.' : P.attested + ' of 6 forms occur in the text; the rest are written out as the chart builds them.')) : null,
     h('p.small', summary(r)),
