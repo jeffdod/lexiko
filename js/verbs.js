@@ -27,7 +27,7 @@ export function renderVerbsPage(view) {
         ? h('div.card', ns.map((n) => { const v = verbStatus(n), L = lexeme(n); return h('a.li.verbrow', { href: '#/learn/verb/' + n, style: { gap: '.7rem' } },
             h('div.grow', h('b', { lang: 'grc' }, L.head), ' ', h('span.muted.small', L.brief), h('div.muted.small', stemLine(v))), chip(v)); }))
         : h('div.card', h('p', 'No verbs yet. Verbs join your lessons as you learn new words.')),
-      ns.length ? h('div.row.wrap', btn('.primary', '#/parse/run/verbs', 'Practice these verbs’ forms'), btn('', '#/parts/exercise', 'Practice principal parts')) : null,
+      ns.length ? h('div.row.wrap', btn('.primary', '#/parse/run/verbs', 'Practice these verbs’ forms'), btn('', '#/parts/exercise', 'Practice principal parts'), btn('', '#/parts/build', 'Build a verb’s row')) : null,
       ns.length ? h('p.muted.small', 'Principal parts is extra practice. Nothing is scheduled, graded or counted.') : null,
       h('p.muted.small', 'A verb’s forms count as learned when you know each form we chose for it and get at least 90% of your last 10 answers on them right.')));
 }
@@ -43,6 +43,6 @@ export function renderVerbPage(view, n) {
       v.stems.map((s) => h('div.card.stack', h('div.row.between', h('b', s.name), h('span.muted.small', pctOf(s.share) + ' of its uses')),
         h('div', s.forms.map((f) => h('span.chip' + (f.known ? '.good' : ''), { lang: 'grc', style: { margin: '.15rem .3rem .15rem 0' } }, (f.known ? '✓ ' : '') + f.w, h('span.muted.small', ' ' + f.count + '×')))))),
       h('p.muted.small', 'Together these stems cover ' + pctOf(v.share) + ' of its uses. The rest are rarer forms you can read from context.'),
-      h('div.row.wrap', btn('.primary', '#/parse/run/verbs/' + v.n, 'Practice these forms'), e ? btn('', '#/parts/exercise/' + v.n, 'Practice this verb') : null),
+      h('div.row.wrap', btn('.primary', '#/parse/run/verbs/' + v.n, 'Practice these forms'), e ? btn('', '#/parts/exercise/' + v.n, 'Practice this verb') : null, e && e.parts.filter(Boolean).length >= 4 ? btn('', '#/parts/build/' + v.n, 'Build its row') : null),
       e ? fold('Principal parts chart', partsGrid(v.n, e, SLOT_NAMES)) : null));
 }

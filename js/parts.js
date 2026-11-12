@@ -2,7 +2,8 @@
 // Nothing is scheduled, graded, counted or gated: a wrong answer just shows the right form. It lives on the Verbs page and in each verb's page.
 import { D, lexeme } from './data.js';
 import { K, setting, startedVerbs } from './know.js';
-import { redirect, h, clear, shuffle, pct, icon, practiceBanner, missedBlock, backLinks } from './util.js';
+import { redirect, h, clear, shuffle, pct, icon, practiceBanner, missedBlock, backLinks, backHead } from './util.js';
+import { placeBoard } from './placedrill.js';
 import { partsGrid } from './partforms.js';
 const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';   // no animated scrolling for people who ask for less motion
 
@@ -128,9 +129,50 @@ function runSession(view, queue, { restart, back }) {
   return stop;
 }
 
+/* ---------- build the row: place a verb's parts, with wrong ones in the tray ---------- */
+const MIN_PARTS = 4;                                                 // the present and at least three more, or there is little to place
+const lower = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+const firstSense = (t) => (t || '').split(/[,;]/)[0].trim();         // “I loose, untie, release, destroy” → “I loose”, so the header stays on one line
+/** Wrong chips for a verb's row: plausible look-alikes (the same part of other verbs, a slip, another tense), never one of its own parts. */
+export function rowDecoys(entry, count = 4) {
+  const own = new Set(entry.parts.filter(Boolean)), out = [];
+  const add = (f) => { if (f && !own.has(f) && !out.includes(f) && out.length < count) out.push(f); };
+  shuffle([2, 1, 5, 3, 4].filter((i) => entry.parts[i])).forEach((i) => shuffle(recallOptions(entry, i)).forEach(add));
+  shuffle([...eligible().values()].filter((e) => e.n !== entry.n)).forEach((e) => shuffle(e.parts.slice(1).filter(Boolean)).slice(0, 1).forEach(add));
+  return out;
+}
+/** The verbs a row can be built for: verbs with at least MIN_PARTS parts. */
+export const rowVerbs = () => [...eligible().values()].filter((e) => e.parts.filter(Boolean).length >= MIN_PARTS);
+function pickRowVerb(now) {
+  const ok = new Map(rowVerbs().map((e) => [e.n, e])), mine = startedVerbs().filter((n) => ok.has(n) && n !== now);
+  const pool = mine.length >= 3 ? mine : [...ok.keys()].filter((n) => n !== now).sort((a, b) => lexeme(b).freq - lexeme(a).freq).slice(0, 25);
+  return pool.length ? shuffle(pool)[0] : null;
+}
+export function renderBuildRow(view, n, skip = null) {
+  const verb = n ? +n : pickRowVerb(skip), e = verb ? eligible().get(verb) : null;
+  const back = n ? { href: '#/learn/verb/' + verb, label: 'Back to this verb' } : { href: '#/parse/form', label: 'Back to Practice by form' };
+  if (!e || e.parts.filter(Boolean).length < MIN_PARTS) {
+    clear(view).append(backHead('Build the row', back.href, 'Back'), h('div.card.stack', h('p', e ? 'This verb has too few principal parts to build a row from.' : 'There are no verbs with enough principal parts to build yet.'), h('a.btn', { href: back.href }, back.label)));
+    return;
+  }
+  const L = lexeme(verb), own = e.parts.map((f, i) => ({ f, i })).filter((x) => x.f && x.i > 0);
+  const slots = SLOT_NAMES.map((label, i) => i === 0 ? { label, answer: '', given: e.parts[0] || '' } : { label, answer: e.parts[i] || '', given: e.parts[i] ? null : '' });
+  const chips = shuffle([...own.map((x) => x.f), ...rowDecoys(e)]);
+  const board = placeBoard({
+    head: [h('span.chip.accent', 'Build the row'), h('span.pword.vb', { lang: 'grc' }, e.lemma), h('span.muted.small', firstSense(L.short || L.brief))],
+    slots, chips, size: 'form', noun: 'parts', hint: 'Some of these belong to other verbs.',
+    explain: (chip, slot) => { const other = slots.find((x) => x !== slot && x.given == null && x.answer === chip); return other ? chip + ' is the ' + lower(other.label) + ' of ' + e.lemma + ', not the ' + lower(slot.label) + '.' : chip + ' is not a principal part of ' + e.lemma + '.'; },
+    after: () => [h('div.card.stack', partsGrid(verb, e, SLOT_NAMES), h('div.row.wrap', h('button.btn.primary', { onclick: () => renderBuildRow(view, n, verb) }, n ? 'Again' : 'Another verb'), ...backLinks(back.href, back.label)))],
+  });
+  clear(view).append(backHead('Build the row', back.href, 'Back'), h('div.stack', h('div.practice-note', h('b', 'Extra practice'), ' — nothing here is scheduled, graded or counted.'),
+    board.el));
+  return board.destroy;
+}
+
 /* ---------- route ---------- */
 export function renderParts(view, params) {
   const [mode, rest] = params;
+  if (mode === 'build') return renderBuildRow(view, rest);
   if (mode !== 'exercise') { redirect('#/learn/verbs'); return; }
   const n = rest ? +rest : null, e = n ? eligible().get(n) : null, back = n ? { href: '#/learn/verb/' + n, label: 'Back to this verb' } : { href: '#/learn/verbs', label: 'Back to Verbs' };
   const queue = exerciseQueue(n ? [n] : null);

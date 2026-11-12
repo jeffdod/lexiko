@@ -565,3 +565,34 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 /* the count of what is due, on the Study tab */
 #nav a { position: relative; }
 .navbadge { position: absolute; top: .3rem; left: calc(50% + .3rem); min-width: 1.2rem; height: 1.2rem; padding: 0 .3rem; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font: 700 .7rem/1 var(--ui); letter-spacing: 0; box-shadow: 0 0 0 2px var(--surface); }
+
+/* ---------- place the chips: a verb's principal parts row, a paradigm's endings (practice only) ---------- */
+.pboard { display: flex; flex-direction: column; gap: .8rem; }
+.pboard .card { gap: 0; padding-top: .4rem; padding-bottom: .4rem; }
+.pboard .pline { padding: .3rem 0; } .pboard .plab { width: 7rem; }
+.pbox { display: flex; align-items: center; gap: 0; min-width: 0; }
+.pstem { font: 1.5rem/1.2 var(--greek); }
+.pword.vb { font-size: 1.25rem; }
+.pslot { display: flex; align-items: center; justify-content: flex-start; text-align: left; min-height: 44px; padding: .2rem .5rem; border-radius: 8px; border: 1px dashed var(--line); background: color-mix(in srgb, var(--accent) 9%, transparent); font: 1.5rem/1.2 var(--greek); color: inherit; cursor: pointer; }
+.pslot.pform { min-width: 11rem; }
+.pslot.pend { min-width: 6.4rem; padding-left: .2rem; }
+.pslot.ready { border: 2px solid var(--accent); background: var(--accent-soft); }
+.pslot.over { border: 2px solid var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.pslot.ok { border: 1px solid var(--good); background: var(--good-soft); font-weight: 700; cursor: default; }
+.pslot.locked { border: 1px solid var(--line); background: transparent; cursor: default; color: var(--muted); }
+.pslot:disabled { opacity: 1; }
+.pslot .none { color: var(--muted); }
+.pmsg { display: flex; align-items: center; min-height: 2.6rem; margin-bottom: .35rem; border-radius: 10px; padding: .3rem .6rem; font-size: .9rem; line-height: 1.3; text-align: left; background: var(--bg); border: 1px solid var(--line); }
+.pmsg.hint { background: transparent; border-color: transparent; color: var(--muted); }
+.pfinal { border-radius: 10px; padding: .5rem .7rem; font-weight: 600; background: var(--good-soft); color: var(--good); }
+.pmsg.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.ptray { position: sticky; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + .3rem); z-index: 5; padding: .6rem .8rem .7rem; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 -6px 16px rgba(0, 0, 0, .08); }
+.ptray .tl { font-size: .8rem; color: var(--muted); text-align: left; margin-bottom: .2rem; }
+.ptray .trow { display: flex; gap: .5rem; overflow-x: auto; padding: .1rem 0 .2rem; scrollbar-width: none; }
+.ptray .trow::-webkit-scrollbar { display: none; }
+.pchip { flex: none; min-height: 44px; min-width: 44px; padding: .2rem .9rem; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 1.15rem/1 var(--greek); display: inline-flex; align-items: center; justify-content: center; text-align: center; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.pchip.sel { background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #fff); box-shadow: 0 2px 8px rgba(0, 0, 0, .18); }
+.pchip.bad { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.pchip.lifted { opacity: .35; }
+.pchip.ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -60%); background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #fff); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }
+@media (min-width: 880px) { .ptray { bottom: .6rem; } }
