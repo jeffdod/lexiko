@@ -780,11 +780,13 @@ async function landing(view) {
       areaCard({ href: '#/learn/verbs', ic: 'learn', title: 'Your verbs', sub: 'See how each verb you are learning is going', ex: nv ? nv + (nv === 1 ? ' verb' : ' verbs') + ' in progress' : null }),
       Object.keys(st.slots).length ? fold('How you’re doing', slotBars(st.slots), weak && weak[1] < 0.85 ? h('p.small.muted', 'Weakest so far: ' + SLOT_TITLE[weak[0]].toLowerCase() + '.') : null) : null));
 }
-/** Practice by form: three ways to work on real forms. Practice only. */
+/** Practice by form: ways to work on real forms and parts. Practice only. */
 function practiceForm(view) {
   clear(view).append(backHead('Practice by form', '#/parse', 'Parsing'), h('div.stack',
     h('p.muted.small', { style: { margin: 0 } }, 'Real forms from the text. Practice only: nothing here changes your review schedule.'),
     areaCard({ href: '#/parse/run/clues/known', ic: 'text', title: 'Clue hunt', sub: 'Name the form by finding its clues, one at a time', ex: h('span', 'You see ', gk('ἐπίστευσαν'), ' and pick the augment, stem, formative and ending.') }),
     areaCard({ href: '#/parse/run/build/known', ic: 'learn', title: 'Build the form', sub: 'Put a form together from its pieces', ex: h('span', 'You are told “aorist active, 3rd plural of ', gk('πιστεύω'), '” and build it step by step.') }),
+    areaCard({ href: '#/learn/charts/build', ic: 'table', title: 'Build the paradigm', sub: 'Place the endings in a row’s six forms', ex: h('span', 'You see ', gk('λύ-'), ' and place ', gk('ω'), ', ', gk('εις'), ', ', gk('ει'), ' and the rest; some endings are wrong.') }),
+    areaCard({ href: '#/parts/build', ic: 'book', title: 'Build the row', sub: 'Place a verb’s principal parts', ex: h('span', 'You see ', gk('γράφω'), ' and place its future, aorist, perfect and passive parts; some belong to other verbs.') }),
     areaCard({ href: '#/learn/charts/pick', ic: 'table', title: 'Parse from the chart', sub: 'Practice the chart rows you choose', ex: 'Pick rows, such as the imperfect, then parse real forms from them.' })));
 }
