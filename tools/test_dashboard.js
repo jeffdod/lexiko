@@ -17,7 +17,7 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   await p.click('.reads button:has-text("More")'); ok(await p.locator('.reads .li').count() > 2, 'More › opens the rest in place');
   // customize: move Goal down, hide Recent practice
   await p.click('a[aria-label="Customize Home"]'); await p.waitForSelector('h1:has-text("Customize Home")');
-  ok(await p.locator('.cz input[type=checkbox]').count() === 6, 'six sections can be shown or hidden; Start here has no checkbox');
+  ok(await p.locator('.cz input[type=checkbox]').count() === 7, 'seven sections can be shown or hidden (Verse of the day is the one that starts off); Start here has no checkbox');
   await p.click('button[aria-label="Move Goal down"]'); await p.click('input[aria-label="Show Recent practice"]');
   await p.click('#nav a[data-tab=home]'); await p.waitForSelector('.reads');
   const h1 = await heads();
@@ -27,7 +27,7 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m);
   const saved = await p.evaluate(async () => { const K = await import('/lexiko/js/know.js'); return [K.K.settings.homeOrder.join(), K.K.settings.homeHidden.join()]; });
   ok(saved[0].startsWith('continue,reads,goal') && saved[1] === 'recent', 'saved in the settings ' + JSON.stringify(saved));
   await p.goto(U + '#/home/customize'); await p.waitForSelector('.cz'); await p.click('button:has-text("Reset to default")'); await p.waitForTimeout(200);
-  ok(await p.locator('.cz input:checked').count() === 6 && (await p.locator('.cz b').allInnerTexts()).join() === 'Start here,Continue reading,Goal,Good next reads,Growth,Passages within reach,Recent practice', 'Reset to default restores every section and the order');
+  ok(await p.locator('.cz input:checked').count() === 6 && (await p.locator('.cz b').allInnerTexts()).join() === 'Start here,Continue reading,Goal,Good next reads,Growth,Passages within reach,Recent practice,Verse of the day', 'Reset to default restores every section (Verse of the day stays off) and the order');
   // Study and the old Progress route
   await p.goto(U + '#/study'); await p.waitForSelector('.area'); ok(await p.locator('a.area').count() === 4 && /Study/.test(await p.textContent('h1')), 'Study has Vocabulary, Parsing, Reference and Glossary');
   ok((await p.locator('a.area').last().textContent()).startsWith('Glossary'), 'Glossary is the bottom tile');
