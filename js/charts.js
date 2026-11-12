@@ -18,10 +18,10 @@ export const MASTER = [
   null,
   ['aor1-act', '1st aorist act', 'ε', 'aor act', 'σα', '', 'sec act', 'ἔλυσα'],
   ['aor-liq-act', 'Liquid aorist act', 'ε', 'aor act', 'α', '', 'sec act', 'ἔμεινα'],
-  ['aor2-act', '2nd aorist act', 'ε', 'aor act', '', 'ο/ε', 'sec act', 'ἔλαβον'],
   ['aor1-mid', '1st aorist mid', 'ε', 'aor act', 'σα', '', 'sec mid/pas', 'ἐλυσάμην'],
-  ['aor2-mid', '2nd aorist mid', 'ε', 'aor act', '', 'ο/ε', 'sec mid/pas', 'ἐγενόμην'],
   ['aor1-pas', '1st aorist pas', 'ε', 'aor pas', 'θη', '', 'sec act', 'ἐλύθην'],
+  ['aor2-act', '2nd aorist act', 'ε', 'aor act', '', 'ο/ε', 'sec act', 'ἔλαβον'],
+  ['aor2-mid', '2nd aorist mid', 'ε', 'aor act', '', 'ο/ε', 'sec mid/pas', 'ἐγενόμην'],
   ['aor2-pas', '2nd aorist pas', 'ε', 'aor pas', 'η', '', 'sec act', 'ἐγράφην'],
   null,
   ['perf1-act', '1st perfect act', 'λε', 'perf act', 'κα', '', 'prim act', 'λέλυκα'],
@@ -54,6 +54,52 @@ function masterTable(hi) {
   });
   return h('div.cscroll', h('table.ctable', h('thead', h('tr', MASTER_HEAD.map((t) => h('th', t)))), body));
 }
+
+/* ---------- cover the chart: every answer is a blank card you turn over to check your guess ---------- */
+const COVER_KEY = 'lexiko.chartCover';
+const coverWanted = () => { try { return localStorage.getItem(COVER_KEY) === '1'; } catch (e) { return false; } };
+const rememberCover = (on) => { try { if (on) localStorage.setItem(COVER_KEY, '1'); else localStorage.removeItem(COVER_KEY); } catch (e) { /* only a convenience */ } };
+
+/** The rows of some tables as cover items: every row with a row heading and answer cells. */
+const tableItems = (tables) => tables.flatMap((t) => [...t.tBodies[0].rows].map((tr) => {
+  const th = tr.querySelector('th[scope="row"]'), cells = [...tr.children].filter((c) => c.tagName === 'TD');
+  return th && cells.length ? { cells, label: th, name: th.textContent } : null;
+}).filter(Boolean));
+
+/** Cover all / Show all for a chart (or a paradigm). `items` are { cells, label, name }: a cell is covered by a square you tap to turn over
+ *  (an empty cell shows a dash when turned over); a label, if there is one, becomes a button that turns over its whole row.
+ *  `hosts` get the class `covering` while covered. One setting, remembered on the device, covers every chart. Returns [bar, note]. */
+export function coverControls(items, { word = null, tight = false, hosts = [] } = {}) {
+  const note = h('p.small.muted', 'Tap a square to turn it over and check your guess' + (word ? ', or ' + word + ' to turn over its whole row.' : '.'));
+  const label = (b, covered) => b.setAttribute('aria-label', covered ? 'Show answer' : 'Hide answer');
+  const flip = (b, covered) => { b.classList.toggle('cv', covered); b.classList.toggle('rv', !covered); label(b, covered); };
+  const keep = new WeakMap();
+  if (tight) hosts.forEach((t) => t.classList.add('tight'));
+  const on = (covered) => {
+    rememberCover(true); hosts.forEach((t) => t.classList.add('covering')); note.hidden = false;
+    items.forEach(({ cells, label: th, name }) => {
+      cells.forEach((td) => {
+        let b = td.querySelector('button.mcell');
+        if (!b) { keep.set(td, [...td.childNodes]); const txt = td.textContent.trim(); b = h('button.mcell', { type: 'button', onclick: () => flip(b, !b.classList.contains('cv')) }, h('span.ans', txt ? [...keep.get(td)] : h('span.none', { role: 'img', 'aria-label': 'none' }, '—'))); td.replaceChildren(b); }
+        flip(b, covered);
+      });
+      if (th && !th.querySelector('button')) { keep.set(th, [...th.childNodes]); th.replaceChildren(h('button.mrow', { type: 'button', 'aria-label': 'Turn over the ' + name + ' row', onclick: () => { const bs = cells.map((c) => c.querySelector('button.mcell')).filter(Boolean), anyCovered = bs.some((x) => x.classList.contains('cv')); bs.forEach((x) => flip(x, !anyCovered)); } }, name)); }
+    });
+  };
+  const off = () => {
+    rememberCover(false); hosts.forEach((t) => t.classList.remove('covering')); note.hidden = true;
+    items.forEach(({ cells, label: th }) => [...cells, th].forEach((cell) => { if (cell && cell.querySelector('button') && keep.has(cell)) cell.replaceChildren(...keep.get(cell)); }));
+  };
+  const bar = h('div.row.wrap.cbar', h('button.btn.sm', { onclick: () => on(true) }, 'Cover all'), h('button.btn.sm', { onclick: off }, 'Show all'));
+  note.hidden = true;
+  if (coverWanted()) on(true);
+  return [bar, note];
+}
+/** A tab's elements with the cover controls put in at position `at`, over the tables that match `sel`. */
+const withCover = (nodes, at, word, sel = 'table') => {
+  const tables = nodes.flatMap((n) => [...n.querySelectorAll(sel)]);
+  return [...nodes.slice(0, at), ...coverControls(tableItems(tables), { word, tight: true, hosts: tables }), ...nodes.slice(at)];
+};
 
 function endingsTable(title, act, mp, alt) {
   const rows = (list, withAlt) => list.map(([p, form, v, e, a]) => h('tr', h('th', { scope: 'row' }, p), h('td', grc(form)), h('td.c', grc(v)), h('td.c', grc(e)), withAlt ? h('td.c', grc(a || '')) : null));
@@ -190,12 +236,14 @@ export function openCharts({ tab = 'master', highlight = null } = {}) {
   const dlg = h('dialog.sheet.charts', { 'aria-label': 'Charts' }), body = h('div.cbody');
   const draw = (t) => {
     clear(body);
-    if (t === 'master') body.append(h('p.small.muted', 'Indicative, with λύω as the model. Any verb’s principal part follows one of these rows.'), masterTable(highlight));
-    else if (t === 'nouns') body.append(...nounEndingsTables(highlight));
-    else if (t === 'contr') body.append(...contractionTables());
-    else if (t === 'part') body.append(...participleTables(highlight && highlight.kind === 'part' ? highlight : null));
-    else if (t === 'inf') body.append(...infinitiveTables(highlight && highlight.kind === 'inf' ? highlight : null));
-    else body.append(endingsTable('Primary endings', PRIMARY_ACT, PRIMARY_MP, true), endingsTable('Secondary endings', SECOND_ACT, SECOND_MP, true));
+    const cov = (nodes, at, word, sel) => (highlight ? nodes : withCover(nodes, at, word, sel));      // opened from a quiz hint: show the answers
+    if (t === 'master') { const tbl = masterTable(highlight), table = tbl.querySelector('table');
+      body.append(h('p.small.muted', 'Indicative, with λύω as the model. Any verb’s principal part follows one of these rows.'), ...(highlight ? [] : coverControls(tableItems([table]), { word: 'a tense', hosts: [table] })), tbl); }
+    else if (t === 'nouns') body.append(...cov(nounEndingsTables(highlight), 2, 'a case'));
+    else if (t === 'contr') body.append(...cov(contractionTables(), 1, 'a vowel'));
+    else if (t === 'part') body.append(...cov(participleTables(highlight && highlight.kind === 'part' ? highlight : null), 1, 'a tense', 'table.cpart'));
+    else if (t === 'inf') body.append(...cov(infinitiveTables(highlight && highlight.kind === 'inf' ? highlight : null), 1, 'a voice', 'table.cpart'));
+    else body.append(...cov([endingsTable('Primary endings', PRIMARY_ACT, PRIMARY_MP, true), endingsTable('Secondary endings', SECOND_ACT, SECOND_MP, true)], 0, 'a person'));
     const row = body.querySelector('td.hi, tr.hi'); if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
   };
   const tabs = h('div.seg', TABS.map(([id, label]) => h('button', { 'aria-pressed': String(id === tab), onclick: (e) => { [...tabs.children].forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); draw(id); } }, label)));

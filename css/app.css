@@ -546,6 +546,17 @@ dialog, #pop, .cscroll, pre.license, .bookgrid { overscroll-behavior: contain; }
 .readbar .title .tt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .readbar .title .muted { font-size: 1rem; flex: none; }
 .contref { margin: 0; font-family: var(--greek); font-size: 1.25rem; font-weight: 700; }      /* the place on the Continue reading card */
+.cbar { gap: .5rem; margin: .2rem 0 .6rem; }
+.mcell { display: flex; align-items: center; justify-content: center; width: 100%; min-width: 2.6rem; min-height: 44px; padding: .2rem .3rem; border-radius: 8px; font: inherit; color: inherit; text-align: center; cursor: pointer; border: 1px dashed var(--line); background: color-mix(in srgb, var(--accent) 9%, transparent); transition: background .15s, border-color .15s; }
+.mcell.rv { border: 1px solid var(--accent); background: var(--accent-soft); }
+.mcell.cv .ans { visibility: hidden; }
+.mcell .none { color: var(--muted); }
+.mrow { font: inherit; font-weight: 700; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+/* the narrower charts (endings, declensions, contractions, participles, infinitives): smaller squares so a covered chart is no wider than the open one */
+.ctable.tight.covering td { padding-left: .15rem; padding-right: .15rem; }
+.ctable.tight.covering .mcell { min-width: 0; padding: .2rem .1rem; }
+.ctable.tight.covering th:first-child { padding-right: .3rem; }
+@media (prefers-reduced-motion: reduce) { .mcell { transition: none; } }
 .readstrip { display: none; }       /* the slim strip that stays when the top bar slides away (phones only, below) */
 
 .tlink { color: inherit; text-decoration: none; }      /* the name of a kind of verb form links to its summary page */
