@@ -1,7 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
 import { clockNow } from './clock.js';
-import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, buildSession, verbBrake, setting, dueCards, dueToday, unlockMore, previewUnlock, newToday, parseDueCount, parseFreshCount, parseNewToday, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, buildSession, setting, dueCards, dueToday, unlockMore, previewUnlock, newToday, parseDueCount, parseFreshCount, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
 export const TOPICS = {

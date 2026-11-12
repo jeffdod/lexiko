@@ -57,14 +57,10 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     for (const s of v0.stems) for (const fm of s.forms) for (const i of fm.rows) { const fo = D.forms[i], id = 'f:' + fo.plain + ':' + n; let c = f.newCard(id); c = f.review(c, 3, Date.now() - 9e8, 0.9); c = f.review(c, 3, Date.now() - 5e8, 0.9); c.src = 'new'; k.K.cards.set(id, c); }
     k.K.verbParse[n] = Array(10).fill(1); o.learned = k.verbStatus(n).learned; k.K.verbParse[n] = [1,1,1,1,1,1,1,0,0,0]; o.notLearned = !k.verbStatus(n).learned; k.K.verbParse[n] = Array(10).fill(1);
     o.started = k.startedVerbs().includes(n);
-    k.K.verbAcc = Array(20).fill(0).map((_, i) => i % 2); o.braked = k.verbBrake().braked; k.K.verbAcc = Array(20).fill(1); o.free = !k.verbBrake().braked && k.unlearnedVerbs().length <= 5;
-    const mix = D.lex.filter((L) => L.freq < 5000).slice(0, 60).map((L) => L.n); const nv = (a) => a.filter((m) => D.lexByN.get(m).pos === 'V').length;
-    k.K.verbAcc = Array(20).fill(1); o.quota = nv(k.admitVerbs(mix)) <= Math.floor(60 / 4) + 1;
-    k.K.verbAcc = Array(20).fill(0); o.noneWhenBraked = nv(k.admitVerbs(mix)) === 0 && k.admitVerbs(mix).length === mix.length - nv(mix);
+    o.noBrake = typeof k.verbBrake === 'undefined' && typeof k.admitVerbs === 'undefined';
     k.K.cards.clear(); for (const [id, c] of saved) k.K.cards.set(id, c); k.K.verbAcc = acc; k.K.verbParse = va; return o; });
   ok(vr.status && vr.learned && vr.notLearned && vr.started, 'learned needs every chosen form known and 90% of the last 10 answers', JSON.stringify(vr));
-  ok(vr.braked && vr.free, 'the brake comes on under 75% right and is off when answers are good', JSON.stringify(vr));
-  ok(vr.quota && vr.noneWhenBraked, 'about one new verb per four other words, none while braked', JSON.stringify(vr));
+  ok(vr.noBrake, 'there is no verb brake or verb quota any more: verbs are taught like any other word', JSON.stringify(vr));
   // ---- ἰδού and ἴδε are tagged as verbs but are interjections: vocabulary only
   const idou = await p.evaluate(async () => { const st = await import('./js/stems.js'), pm = await import('./js/parse-model.js'), k = await import('./js/know.js'), { D } = await import('./js/data.js');
     const rows = D.forms.filter((f) => f.an[0] && (f.an[0].s === 2400 || f.an[0].s === 2396));

@@ -1,6 +1,6 @@
 // The Verbs page (verbs you are working on) and each verb's own page: which stems and forms are worth learning, and how far along you are.
 import { D, lexeme } from './data.js';
-import { verbStatus, startedVerbs, verbBrake } from './know.js';
+import { verbStatus, startedVerbs } from './know.js';
 import { redirect, h, clear, pct, fold, backHead } from './util.js';
 import { partsGrid } from './partforms.js';
 import { eligible, SLOT_NAMES } from './parts.js';
@@ -13,16 +13,11 @@ const btn = (cls, href, text) => h('a.btn' + cls, { href }, text);
 /** Number of verbs worth showing as "in progress" on the Learn hub. */
 export const verbsInProgress = () => startedVerbs().filter((n) => verbStatus(n)).length;
 
-export function verbsNote() {
-  const b = verbBrake();
-  return b.braked ? b.why : 'New verbs arrive about one for every four other new words.';
-}
-
 export function renderVerbsPage(view) {
-  const ns = startedVerbs().filter((n) => verbStatus(n)), brake = verbBrake();
+  const ns = startedVerbs().filter((n) => verbStatus(n)), learned = ns.filter((n) => verbStatus(n).learned).length;
   clear(view).append(backHead('Verbs', '#/study', 'Study'),
     h('div.stack',
-      h('div.card.small', h('b', brake.braked ? 'New verbs are paused.' : 'New verbs are arriving.'), ' ', brake.braked ? brake.why : 'About one for every four other new words.'),
+      h('div.card.small', h('b', 'Verbs are taught like any other word.'), ' They arrive in the order of your goal, and practicing their forms never holds them back.' + (ns.length ? ' ' + learned + ' of your ' + ns.length + ' verbs ' + (ns.length === 1 ? 'has its forms' : 'have their forms') + ' learned.' : '')),
       ns.length
         ? h('div.card', ns.map((n) => { const v = verbStatus(n), L = lexeme(n); return h('a.li.verbrow', { href: '#/learn/verb/' + n, style: { gap: '.7rem' } },
             h('div.grow', h('b', { lang: 'grc' }, L.head), ' ', h('span.muted.small', L.brief), h('div.muted.small', stemLine(v))), chip(v)); }))
