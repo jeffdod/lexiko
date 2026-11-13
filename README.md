@@ -74,6 +74,8 @@ The arrow at the top of a page (`backHead` in `js/util.js`) goes back to the pre
 
 
 **Live refresh** (`refreshLive`, `armDue` in `js/app.js`): Home, Study, Vocabulary and Parsing redraw when the due counts, the next-review time or the Start button change. They check every 30 seconds and when the app returns to the front, and `armDue` also sets a timer for the moment the next review comes due (plus a second), so "Next review in 1 min" flips to the due count right away. `node tools/test_livedue.js`.
+
+**Participle cases** (`ptcCaseOpen` in `js/parse.js`): the daily session introduces a verb through the forms its stems require, which for a participle is the nominative masculine. Once the nominative masculine singular of that verb, tense and voice has a graduated card (state `review`), the participle's other cases, genders and numbers join the new forms, weighted by how often they occur, at the usual pace for the kind. `node tools/test_ptccases.js`.
 When a bottom-bar tab reopens a deeper screen (Study reopening Vocabulary), `enterTab(root)` in `js/util.js` is called first (from `buildNav` in `js/app.js`), so the trail gets the tab's own first screen beneath it and the arrow there goes to that screen (Study) instead of the tab you came from. Read is excluded: it has no first screen of its own. Covered by `tools/test_tabback.js`.
 
 ## First run and the Glossary
