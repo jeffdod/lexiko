@@ -97,6 +97,15 @@ const requiredFormIds = (n) => {
   if (!r) { r = new Set(); const rs = requiredStems(n); if (rs) for (const s of rs.stems) for (const f of s.forms) for (const row of f.rows) r.add(canon[row]); reqCache.set(n, r); }
   return r;
 };
+/** A participle's other cases, genders and numbers join the new forms once you know its nominative masculine singular (the same verb, tense and voice): variety comes in one verb at a time. */
+const PTC_TAG = /^[NGDAV][SP][MFN]$/;
+const ptcParts = (f) => { const t = (f.an[0].m || '').split('-'); return t[0] === 'V' && /P$/.test(t[1] || '') && PTC_TAG.test(t[2] || '') ? t : null; };
+let nsmIndex = null;
+function ptcCaseOpen(f) {
+  const t = ptcParts(f); if (!t || t[2] === 'NSM') return false;
+  if (!nsmIndex) { nsmIndex = new Map(); for (const g of D.forms) { const u = ptcParts(g); if (u && u[2] === 'NSM') { const k = g.an[0].s + '|' + u[1]; (nsmIndex.get(k) || nsmIndex.set(k, []).get(k)).push(canon[g.id]); } } }
+  return (nsmIndex.get(f.an[0].s + '|' + t[1]) || []).some((id) => { const c = K.cards.get(cardIdFor(id)); return !!c && c.state === 'review'; });
+}
 /** What the daily sessions may serve (the same as itemOf: gates decide). */
 const autoItemOf = itemOf;
 const isVerbForm = (id) => { const it = itemOf(id); return !!it && it.group === 'V'; };
@@ -127,7 +136,7 @@ function candidatePool(scope, kinds) {
     return out;
   }
   const take = (pred) => { for (const id of members.keys()) { const it = autoItemOf(id); if (it && ok.has(it.kind) && pred(D.forms[id])) out.push({ id, w: it.form.count }); } };
-  const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]);        // a verb comes in through the forms it requires; its other forms are practiced, never required
+  const mine = (f) => !isVerbForm(f.id) || requiredFormIds(f.an[0].s).has(canon[f.id]) || ptcCaseOpen(f);        // a verb comes in through the forms it requires; its other forms are practiced, never required
   take((f) => (isVerbForm(f.id) ? status(f.an[0].s) !== 'unknown' : status(f.an[0].s) === 'known') && mine(f));        // a noun, adjective or pronoun form is asked only once you know the word's meaning
   return out;
 }
