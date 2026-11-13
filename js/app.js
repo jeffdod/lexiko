@@ -16,6 +16,7 @@ import { renderHelp } from './help.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { h, clear, icon, noteRoute, NOT_RESUMABLE, enterTab, takeForgotten } from './util.js';
 import { travelBar } from './timetravel.js';
+import { clockNow } from './clock.js';
 import { startAutoBackup } from './backup.js';
 
 const view = document.getElementById('view');
@@ -73,9 +74,20 @@ function refreshLive() {
   if (document.visibilityState !== 'visible' || !LIVE.has(location.hash.replace(/\/$/, ''))) return;
   try { const sig = signature(); if (liveSig && sig !== liveSig) { const y = window.scrollY; route(); window.scrollTo(0, y); } liveSig = sig; } catch (e) { console.error(e); }
 }
-document.addEventListener('visibilitychange', refreshLive);
-setInterval(refreshLive, 30 * 1000);
-window.addEventListener('hashchange', () => { liveSig = ''; setTimeout(() => { try { if (LIVE.has(location.hash)) liveSig = signature(); } catch (e) {} }, 0); });
+/** Redraw at the moment the next review comes due (a second later), not only at the next 30-second check. Re-armed after every check and every screen change. */
+let dueTimer = 0;
+function armDue() {
+  clearTimeout(dueTimer); dueTimer = 0;
+  try {
+    if (document.visibilityState !== 'visible' || !LIVE.has(location.hash.replace(/\/$/, ''))) return;
+    const next = upcoming().all.next, wait = next - clockNow() + 1000;
+    if (isFinite(next) && wait > 0) dueTimer = setTimeout(() => { refreshLive(); armDue(); }, Math.min(wait, 36e5));
+  } catch (e) { console.error(e); }
+}
+const tick = () => { refreshLive(); armDue(); };
+document.addEventListener('visibilitychange', tick);
+setInterval(tick, 30 * 1000);
+window.addEventListener('hashchange', () => { liveSig = ''; setTimeout(() => { try { if (LIVE.has(location.hash)) liveSig = signature(); } catch (e) {} armDue(); }, 0); });
 
 async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
