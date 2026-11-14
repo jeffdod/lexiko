@@ -5,7 +5,7 @@ import { D } from './data.js';
 const TAG = /^V-([12]?)([PIFARL])([AMPEDONQX]?)([IMSONP])/;
 /** Verbs whose stem ends in λ, μ, ν or ρ: their future and aorist have rows of their own on the master chart. */
 export const isLiquidVerb = (n) => { const L = D.lexByN.get(n); return !!L && /[λμνρ]ω$/.test(L.head.normalize('NFD').replace(/[\u0300-\u036f]/g, '')); };
-const LIQ_ROW = { 'fut-act': 'fut-liq-act', 'fut-mid': 'fut-liq-mid', 'aor1-act': 'aor-liq-act' };
+export const LIQ_ROW = { 'fut-act': 'fut-liq-act', 'fut-mid': 'fut-liq-mid', 'aor1-act': 'aor-liq-act' };
 /** The master-chart row an indicative verb form belongs to, from its RP tag (null for the other moods). With the verb's number, a liquid verb gets the liquid row where the chart has one. */
 export function rowOfTag(tag, n) {
   const m = TAG.exec(tag || ''); if (!m || m[4] !== 'I') return null;

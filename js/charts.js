@@ -1,6 +1,7 @@
 // Reference charts, shown in a sheet that can be opened from any verb quiz: the master verb chart (indicative)
 // and the primary / secondary personal endings. Plain data tables, themed and available offline.
 import { h, clear, icon } from './util.js';
+import { isLiquidVerb, LIQ_ROW } from './families.js';
 
 /* tense | augment/reduplication | tense stem | tense formative | connecting vowel | personal endings | 1st singular */
 export const MASTER = [
@@ -287,7 +288,11 @@ export function participleHighlight(sl) {
 }
 export const infinitiveHighlight = (sl) => (sl && sl.mood === 'N' ? { kind: 'inf', tense: sl.tense, voice: sl.voice, second: !!sl.second } : null);
 
-export function chartRowForSlots(sl) {
+export function chartRowForSlots(sl, n = null) {
+  const row = plainRowForSlots(sl);
+  return row && n != null && isLiquidVerb(n) && LIQ_ROW[row] ? LIQ_ROW[row] : row;      // a liquid verb (stem in λ, μ, ν, ρ) gets the liquid row where the chart has one
+}
+function plainRowForSlots(sl) {
   if (!sl || !sl.tense || sl.mood !== 'I') return null;
   const act = 'AQ'.includes(sl.voice), pas = 'PO'.includes(sl.voice), sec = !!sl.second;
   switch (sl.tense) {

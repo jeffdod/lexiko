@@ -424,7 +424,7 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
   }
   const chartLink = (it, d) => (it.group === 'V' && d.slots.mood === 'P' ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'part', highlight: participleHighlight(d.slots) }) }, icon('table', 18), 'Participle chart')
     : it.group === 'V' && d.slots.mood === 'N' ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'inf', highlight: infinitiveHighlight(d.slots) }) }, icon('table', 18), 'Infinitive chart')
-    : it.group === 'V' ? h('button.btn.sm', { onclick: () => openCharts({ highlight: chartRowForSlots(d.slots) }) }, icon('table', 18), 'Verb chart')
+    : it.group === 'V' ? h('button.btn.sm', { onclick: () => openCharts({ highlight: chartRowForSlots(d.slots, it.strongs) }) }, icon('table', 18), 'Verb chart')
     : it.group === 'N' && (d.pos === 'N' || d.pos === 'A') && d.slots.case && d.slots.number ? h('button.btn.sm', { onclick: () => openCharts({ tab: 'nouns', highlight: { case: d.slots.case, number: d.slots.number } }) }, icon('table', 18), 'Noun chart') : null);
 
   /* feedback shared by both modes */
