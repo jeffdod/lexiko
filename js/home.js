@@ -1,7 +1,7 @@
 // Home: where you are, what to do today, what to read next.
 import { clockNow } from './clock.js';
 import { D } from './data.js';
-import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, studiedCount, currentGoal, setGoal, setSetting, wordsPace, goalFinished, noteGoalDone, nextGoal, goalStats, ntShareKnown, freqCoverage } from './know.js';
+import { K, setting, newToday, streak, scopeReadiness, passageStudy, waitNote, studiedCount, currentGoal, setGoal, setSetting, wordsPace, goalEta, goalFinished, noteGoalDone, nextGoal, goalStats, ntShareKnown, freqCoverage } from './know.js';
 import { goalLabel, parseAskDue } from './know.js';
 import { goalPicker, previewLine, miniGoalCard } from './goals.js';
 import { h, clear, add, pct, fmt, icon, askDialog } from './util.js';
@@ -61,13 +61,20 @@ function paceControl(left, per, cancel, save) {
   draw(); return box;
 }
 
+/** "55 words to go · about 8 days at your recent pace of 7 a day": the estimate follows how you have actually been going (see goalEta in js/know.js). With withWhy, a paused or waiting state says nothing more, because the card already explains it. */
+function toGoText(left, withWhy = false) {
+  if (!left) return 'You know every word in this goal.';
+  const e = goalEta(left), words = left + ' word' + (left === 1 ? '' : 's') + ' to go', d = (n) => (n <= 1 ? 'about a day' : 'about ' + n + ' days');
+  if (e.kind === 'waiting') return withWhy ? words + '.' : words + ' · ' + (e.paused ? 'new words are paused' : 'new words are waiting until you catch up on reviews');
+  return words + ' · ' + d(e.days) + ' at ' + (e.kind === 'pace' ? 'your recent pace of ' : '') + e.per + ' a day';
+}
 /** The goal card for the Vocabulary page: just what you act on. Which goal, how much is left, and the pace control. (The numbers and Change › live on Home and Progress.) */
 export function goalDetailCard(redraw) {
   if (!K.goal) return miniGoalCard(redraw);
   if (goalFinished(currentGoal())) return finishedCard(redraw);
-  const g = currentGoal(), gs = goalStats(g), per = Math.max(1, setting('newPerDay') || 10), days = Math.ceil(gs.left / per);
+  const g = currentGoal(), gs = goalStats(g), per = Math.max(1, setting('newPerDay') || 10);
   const ps = g.kind === 'freq' ? null : passageStudy(g), wp = wordsPace();
-  const finish = gs.left ? gs.left + ' word' + (gs.left === 1 ? '' : 's') + ' to go · ' + (days <= 1 ? 'about a day' : 'about ' + days + ' days') + ' at ' + per + ' a day' : 'You know every word in this goal.';
+  const finish = toGoText(gs.left, true);
   const box = h('div.card.stack'); let pacing = false;
   const draw = () => {
     clear(box);
@@ -126,11 +133,11 @@ function goalSummary(view, stats) {
     clear(box);
     if (open) return add(box, h('div.row.between', h('b', icon('target', 18), ' Choose a goal'), h('button.btn.ghost.sm', { onclick: (e) => { e.stopPropagation(); draw(false); } }, 'Cancel')), goalPicker({ initial: g, onPick: async (ng) => { await setGoal(ng); renderHome(view); } }));
     if (!K.goal) return add(box, h('b', icon('target', 18), ' Set a goal'), h('div.muted.small', 'Pick the words you want to know, by how common they are or by the passage you want to read.'), h('button.btn.primary', { onclick: () => draw(true) }, 'Choose a goal ›'), stats());
-    const gs = goalStats(g), per = Math.max(1, setting('newPerDay') || 10), days = Math.ceil(gs.left / per);
+    const gs = goalStats(g);
     add(box, h('div.row.between', { style: { flexWrap: 'nowrap' } }, h('span.glabel', icon('target', 16), 'Goal'), h('button.btn.ghost.sm', { style: { flex: 'none' }, onclick: (e) => { e.stopPropagation(); draw(true); } }, 'Change ›')), h('b', goalLabel(g)),
       h('div.goalnum', fmt(gs.known) + ' of ' + fmt(gs.total) + ' goal words known · ' + pct(gs.pct)),
       h('div.bar', h('i.k', { style: { width: pct(gs.pct) } })),
-      h('div.muted.small', gs.left ? gs.left + ' word' + (gs.left === 1 ? '' : 's') + ' to go · ' + (days <= 1 ? 'about a day' : 'about ' + days + ' days') + ' at ' + per + ' a day' : 'You know every word in this goal.'), stats());
+      h('div.muted.small', toGoText(gs.left)), stats());
   };
   draw(false); return box;
 }
