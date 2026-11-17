@@ -602,6 +602,15 @@ function paceNow(topic, now = clockNow()) {
   if (n === 0 && today === 0 && gap >= 3 && max > 0) { n = 1; why = 'It’s been a few days, so one new ' + noun.slice(0, -1) + ' keeps things moving. ' + why; }
   return out(Math.min(n, max), why, { acc, slow });
 }
+/** How long the goal will take, from how you have actually been going rather than from the daily limit: { kind: 'waiting' } while new words are paused or waiting on reviews (no promise), { kind: 'pace', per, days } from your average new words a day over your last 7 study days (never above the limit; at least 3 days of history), else { kind: 'limit', per, days } at the daily limit. */
+export function goalEta(left, now = clockNow()) {
+  const max = Math.max(1, setting('newPerDay') || 10), wp = wordsPace(now);
+  if (wp.paused || (wp.n === 0 && wp.slow)) return { kind: 'waiting', paused: !!wp.paused };
+  const today = todayKey(now), days = Object.keys(K.daily).filter((d) => d < today && (K.daily[d].n || 0) > 0).sort().slice(-7);
+  if (days.length < 3) return { kind: 'limit', per: max, days: Math.max(1, Math.ceil(left / max)) };
+  const per = Math.max(1, Math.min(max, Math.round(days.reduce((a, d) => a + K.daily[d].n, 0) / days.length)));
+  return { kind: 'pace', per, days: Math.max(1, Math.ceil(left / per)) };
+}
 export const wordsPace = (now) => itemPace('words', now);
 export const parsePace = (now) => itemPace('parse', now);
 
