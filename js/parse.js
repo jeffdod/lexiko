@@ -202,12 +202,24 @@ export function planParseSession({ scope = null, kind = 'all', size = setting('s
   return { due, fresh, limit, size };
 }
 
+/** Participles are ranked by how common the form is, which would fill every slot with nominative masculine forms. Keep the same slots (the same scores) but hand them out cell by cell: the case, number and gender you have met least comes first, then the next most common form in each cell. */
+function spreadParticiples(ranked) {
+  const met = new Map();
+  for (const c of K.cards.values()) { if (!c.id.startsWith('f:') || c.state === 'new') continue; const id = keyMap.get(c.id), t = id == null ? null : ptcParts(D.forms[id]); if (t) met.set(t[2], (met.get(t[2]) || 0) + 1); }
+  const P = ranked.filter((o) => ptcParts(D.forms[o.x.id])); if (P.length < 2) return;
+  const seen = new Map(), tier = new Map();
+  for (const o of P) { const c = ptcParts(D.forms[o.x.id])[2], j = seen.get(c) || 0; seen.set(c, j + 1); tier.set(o, (met.get(c) || 0) + j); }
+  const scores = P.map((o) => o.s), order = [...P].sort((a, b) => tier.get(a) - tier.get(b) || b.s - a.s);
+  order.forEach((o, i) => { o.s = scores[i]; });
+  ranked.sort((a, b) => b.s - a.s);
+}
 export function buildParseSession(opts) {
   const { due, fresh, limit, size } = planParseSession(opts);
   const dueIds = due.slice(0, size).map((x) => ({ id: x.id, type: 'due' }));
   const want = Math.min(limit, Math.max(0, size - dueIds.length));
   const goal = new Set(goalWords(currentGoal())), steer = (id) => (goal.has(D.forms[id].an[0].s) ? 1.6 : 1);          // the forms of your goal's words come first
   const ranked = fresh.map((x) => ({ x, s: Math.sqrt(x.w) * steer(x.id) * (0.6 + Math.random() * 0.8) })).sort((a, b) => b.s - a.s);
+  spreadParticiples(ranked);
   // variety: no single word (εἰμί, λέγω, the article…) fills the session; take at most a few forms of each, then relax if there aren't enough words
   // verb forms are reserved up to 40% of the new slots, so the many noun forms do not crowd them out
   const cap = size > 20 ? 3 : 2, per = new Map(), lex = (id) => D.forms[id].an[0].s, picked = [], rest = [];
