@@ -605,3 +605,4 @@ dialog.opts h2 { margin-top: 0; }
 
 /* Verse of the day (Home): the Greek line never hyphenates, so a word is never split across lines */
 .votd-text { font-family: var(--greek); font-size: 1.2rem; line-height: 1.7; hyphens: none; -webkit-hyphens: none; }
+.startbox { gap: .45rem; } .startmore { text-align: center; }
