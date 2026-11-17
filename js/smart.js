@@ -14,11 +14,12 @@ const parseReady = () => K.settings.level != null || studiedCount('w:') > 0;
 /** Vocabulary: what is due in all, and what a session will really hold (new words and spot-checks are counted from the session, not estimated). */
 function wordsCounts() {
   const due = dueCards().length, plan = dailyPlan();
-  return { due, fresh: plan.fresh, checkins: plan.checkins, sessionDue: plan.due, total: plan.due + plan.fresh + plan.checkins, studied: studiedCount('w:') };
+  return { due, fresh: plan.fresh, checkins: plan.checkins, sessionDue: plan.due, more: Math.max(0, due - plan.due), total: plan.due + plan.fresh + plan.checkins, studied: studiedCount('w:') };      // more: due today but past this round's limit
 }
 function parseCounts() {
   const due = parseDueCount(), fresh = parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0;
-  return { due, fresh, total: due + fresh, studied: studiedCount('f:') };      // nothing to parse until you know some words (a level you chose counts)
+  const size = setting('sessionSize') || 25, sessionDue = Math.min(due, size), sessionFresh = Math.min(fresh, Math.max(0, size - sessionDue));      // a parsing round holds at most a session's worth (js/parse.js buildParseSession)
+  return { due, fresh: sessionFresh, sessionDue, more: due - sessionDue, total: sessionDue + sessionFresh, studied: studiedCount('f:') };      // nothing to parse until you know some words (a level you chose counts)
 }
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
@@ -88,14 +89,17 @@ export const CHECKIN_NOTE = 'Check-ins are quick spot-checks of words you said y
 const checkinText = (n) => plural(n, 'check-in', 'check-ins');
 /** The one breakdown line, always written the same way: "1 due · 20 new · 5 check-ins". */
 const work = (c, topic = 'words') => {
-  const due = topic === 'words' ? c.sessionDue : c.due;
+  const due = c.sessionDue;
   return [due ? due + ' due' : '', c.fresh ? c.fresh + ' new' : '', c.checkins ? checkinText(c.checkins) : ''].filter(Boolean).join(' · ');
 };
+
+/** "68 more due after this round": what is due today beyond the round the button starts (nothing when the round holds it all). */
+export const moreNote = (c) => c.more > 0 ? c.more + ' more due after this round' : '';
 
 /** The best next step for one topic: { href, label, sub, kind: 'go' | 'reinforce' | 'preview' }. */
 export function smart(topic, c = counts()[topic]) {
   const T = TOPICS[topic];
-  if (c.due || c.fresh) return { href: T.go, label: GO_LABEL(topic, c), sub: work(c, topic), kind: 'go', topic };
+  if (c.due || c.fresh) return { href: T.go, label: GO_LABEL(topic, c), sub: work(c, topic), more: moreNote(c), kind: 'go', topic };
   const prefix = { words: 'w:', parse: 'f:' }[topic];
   if (c.studied && troubleCards(prefix, 1).length) return { href: T.reinforce, label: 'Strengthen weak spots', sub: 'You’re caught up — firm up your shakiest ' + T.noun, kind: 'reinforce', topic };
   if (c.studied) return { href: T.review, label: 'Review what you’ve learned', sub: 'You’re caught up — go over the ' + T.noun + ' you’ve learned', kind: 'review', topic };

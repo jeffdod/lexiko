@@ -87,9 +87,15 @@ const startHere = (n, ci = 0) => h('div.card.stack', h('b', { style: { fontSize:
 function readyCard(cnt) {
   const w = cnt.words.total, f = cnt.parse.total; if ((!cnt.words.studied && !cnt.words.due) || (!w && !f)) return null;
   const n = (k, one, many) => fmt(k) + ' ' + (k === 1 ? one : many);
-  const text = [w ? n(w, 'word', 'words') : '', f ? n(f, 'form', 'forms') : ''].filter(Boolean).join(' and ') + (w && f || w + f > 1 ? ' are' : ' is') + ' ready.';
+  const text = [w ? n(w, 'word', 'words') : '', f ? n(f, 'form', 'forms') : ''].filter(Boolean).join(' and ') + (w && f || w + f > 1 ? ' are' : ' is') + ' ready.' + moreSentence(cnt);
   return h('div.card.stack', h('b', { style: { fontSize: '1.05rem' } }, 'Ready today'), h('p.muted.small', { style: { margin: 0 } }, text),
     h('div.row.wrap', w ? h('a.btn.primary', { href: TOPICS.words.go }, 'Study ' + n(w, 'word', 'words')) : null, f ? h('a.btn' + (w ? '' : '.primary'), { href: TOPICS.parse.go }, 'Practice ' + n(f, 'form', 'forms')) : null));
+}
+/** " 68 more words are due after this round.": what is due today beyond the round each button starts. */
+function moreSentence(cnt) {
+  const w = cnt.words.more, f = cnt.parse.more; if (!w && !f) return '';
+  const n = (k, one, many) => fmt(k) + ' more ' + (k === 1 ? one : many);
+  return ' ' + [w ? n(w, 'word', 'words') : '', f ? n(f, 'form', 'forms') : ''].filter(Boolean).join(' and ') + (w && f || w + f > 1 ? ' are' : ' is') + ' due after this round.';
 }
 /** The nudge to put lexiko on the Home Screen (see js/install.js). On an iPhone or iPad it explains how; elsewhere its button opens the browser's own install prompt. */
 function installBanner(view) {
