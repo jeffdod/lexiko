@@ -451,6 +451,11 @@ let dueCounter = null;
 export const setParseDueCounter = (fn) => { dueCounter = fn; };
 export const parseDueCount = (now = clockNow()) => dueCounter ? dueCounter(now) : parseCardsDue(now).length;
 export const parseCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && dueToday(c, now));
+/** Reviews that were due before today and are still waiting: a real backlog, unlike today's normal reviews. Only these slow new words down. */
+const wasDue = (c, now) => c.state !== 'new' && c.due < dayStart(now);
+export const overdueWords = (now = clockNow()) => { let n = 0; for (const c of K.cards.values()) if (liveWord(c) && wasDue(c, now)) n++; return n; };
+export const parseCardsOverdue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && wasDue(c, now));
+export const parseOverdueCount = (now = clockNow()) => dueCounter ? dueCounter(now, true) : parseCardsOverdue(now).length;
 /** How many new forms could be taught right now (the Parsing pool, after gates and known words). parse.js registers the real counter. */
 let freshCounter = null;
 export const setParseFreshCounter = (fn) => { freshCounter = fn; };
@@ -590,14 +595,15 @@ function paceNow(topic, now = clockNow()) {
   const out = (n, why, extra = {}) => ({ n, left: Math.max(0, n - today), due, why, auto: setting(pre + 'Pace') !== 'fixed', ...extra });
   if (setting(pre + 'Pause')) return out(0, 'New ' + noun + ' are paused.', { paused: true });
   if (setting(pre + 'Pace') === 'fixed') return out(max, '');
-  const total = dueTotal(now);
-  if (total > OVERLOAD) return out(0, 'You have ' + total + ' reviews waiting across vocabulary and parsing, so new ' + noun + ' wait until you catch up.', { slow: true, overload: true });
+  const lateW = overdueWords(now), lateP = parseOverdueCount(now), total = lateW + lateP;        // only reviews carried over from earlier days count: today's reviews are normal work, not a backlog
+  if (total > OVERLOAD) return out(0, 'You have ' + total + ' reviews overdue from earlier days across vocabulary and parsing, so new ' + noun + ' wait until you catch up.', { slow: true, overload: true });
   const cap = Math.max(10, setting('sessionSize') || 25), acc = meanOf(words ? K.wordsAcc : K.parseAcc), field = words ? 'n' : 'pn';
   const last = Object.keys(K.daily).filter((k) => (K.daily[k][field] || 0) > 0).sort().pop();
   const gap = last ? (new Date(todayKey()) - new Date(last)) / 864e5 : 99;
   let n = max, why = '', slow = false;
-  if (due > cap) { n = 0; slow = true; why = 'You have ' + due + ' ' + noun + ' due, so new ' + noun + ' wait until you catch up.'; }
-  else if (due > cap / 2) { n = Math.max(1, Math.round(max / 3)); slow = true; why = 'You have ' + due + ' ' + noun + ' due, so new ' + noun + ' are slowed until you catch up.'; }
+  const late = words ? lateW : lateP;
+  if (late > cap) { n = 0; slow = true; why = 'You have ' + late + ' ' + noun + ' overdue from earlier days, so new ' + noun + ' wait until you catch up.'; }
+  else if (late > cap / 2) { n = Math.max(1, Math.round(max / 3)); slow = true; why = 'You have ' + late + ' ' + noun + ' overdue from earlier days, so new ' + noun + ' are slowed until you catch up.'; }
   else if (acc != null && acc < 0.75) { n = Math.max(1, Math.round(max / 3)); slow = true; why = 'You’re answering ' + Math.round(acc * 100) + '% correctly, so new ' + noun + ' are slowed while these settle.'; }
   if (n === 0 && today === 0 && gap >= 3 && max > 0) { n = 1; why = 'It’s been a few days, so one new ' + noun.slice(0, -1) + ' keeps things moving. ' + why; }
   return out(Math.min(n, max), why, { acc, slow });
