@@ -2,7 +2,7 @@
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseCardsOverdue, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, sameSpelledMP, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { todayKey, redirect, h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
@@ -142,10 +142,10 @@ function candidatePool(scope, kinds) {
 }
 
 /** How many forms are due, counted exactly as a session serves them: one per form, and only forms that are still quizzed. */
-export function parseDueCount(now = clockNow()) {
+export function parseDueCount(now = clockNow(), overdueOnly = false) {
   ensureIndex();
   const seen = new Set();
-  for (const c of parseCardsDue(now)) { const id = keyMap.get(c.id); if (id != null && autoItemOf(id)) seen.add(id); }
+  for (const c of overdueOnly ? parseCardsOverdue(now) : parseCardsDue(now)) { const id = keyMap.get(c.id); if (id != null && autoItemOf(id)) seen.add(id); }
   return seen.size;
 }
 setParseDueCounter(parseDueCount);

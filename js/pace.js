@@ -15,7 +15,7 @@ export function paceOptions(prefix, noun, redraw) {
   const seg = (key, items) => h('div.seg', items.map(([v, t]) => h('button', { 'aria-pressed': String(String(setting(key)) === String(v)), onclick: async () => { await setSetting(key, v); redraw(); } }, t)));
   return [
     h('div.stack', h('b', 'New ' + noun), seg(prefix + 'Pace', [['auto', 'Automatic'], ['fixed', 'Fixed number']]),
-      h('div.muted.small', auto ? 'Automatic pace slows new ' + noun + ' when reviews pile up or you’re below about 75% correct, and holds them all back when more than about 40 reviews are waiting across vocabulary, parsing and principal parts. Your daily number is the most it will ever start.' : 'Exactly your daily number every day.')),
+      h('div.muted.small', auto ? 'Automatic pace slows new ' + noun + ' when reviews from earlier days are still waiting (a backlog, not today’s normal reviews) or you’re below about 75% correct, and holds them all back when more than about 40 reviews are overdue across vocabulary and parsing. Your daily number is the most it will ever start.' : 'Exactly your daily number every day.')),
     h('div.row.between', h('div', h('b', 'Pause new ' + noun), h('div.muted.small', 'Review only, until you turn it off.')), seg(prefix + 'Pause', [[false, 'Off'], [true, 'On']])),
   ];
 }

@@ -12,7 +12,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m); if (!c) proc
     const day = (back) => { const d = new Date(); d.setDate(d.getDate() - back); return d.toLocaleDateString('en-CA'); };
     for (let i = 1; i <= hist; i++) K.K.daily[day(i)] = { n: 6, r: 20 };
     for (const k of [...K.K.cards.keys()]) if (k.startsWith('w:') && K.K.cards.get(k).state !== 'new' && k.startsWith('w:') && K.K.cards.get(k).src === 'test') K.K.cards.delete(k);
-    if (overload) { const now = Date.now(); let n = 0; for (const L of D.lex) { if (n >= 140) break; const id = 'w:' + L.n; if (K.K.cards.has(id)) continue; K.K.cards.set(id, { ...F.newCard(id), state: 'review', stability: 12, reps: 4, last: now - 864e5 * 6, due: now - 36e5, src: 'test' }); n++; } }
+    if (overload) { const now = Date.now(); let n = 0; for (const L of D.lex) { if (n >= 140) break; const id = 'w:' + L.n; if (K.K.cards.has(id)) continue; K.K.cards.set(id, { ...F.newCard(id), state: 'review', stability: 12, reps: 4, last: now - 864e5 * 6, due: now - 864e5 * 2, src: 'test' }); n++; } }
     delete K.K.daily[new Date().toLocaleDateString('en-CA')];
     return K.goalEta(60); }, [hist, overload]);
   const a = await run(5, false); ok(a.kind === 'pace' && a.per === 6 && a.days === 10, 'five study days of 6 new words: pace 6 a day, 10 days for 60 words: ' + JSON.stringify(a));
