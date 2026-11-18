@@ -614,15 +614,18 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
       }
       if (ok) { cands = matching; setTimeout(draw, 320); }
       else {
-        const cont = h('button.btn.primary.block', { onclick: () => { cont.remove(); draw(); } }, 'Continue');
-        area.append(cont); cont.focus({ preventScroll: true });
-        keys(() => cont.click());
+        const cont = h('button.btn.primary.block', { onclick: () => { cont.remove(); urow.remove(); draw(); keys(null); } }, 'Continue');
+        const undoSlot = () => { delete answers[slot]; delete answers[slot + '_ok']; urow.remove(); cont.remove(); draw(); keys(null); };       // nothing is rated until the whole parse ends, so only this tap is taken back
+        const urow = h('div.undorow', h('button.btn.ghost.sm', { onclick: undoSlot }, '↩ Undo last answer'));
+        area.append(cont, urow); cont.focus({ preventScroll: true });
+        keys(() => cont.click(), undoSlot);
       }
     };
-    const keys = (enter) => {
+    const keys = (enter, undo) => {
       stop();
       keyHandler = (e) => {
         if (e.key === 'Enter' && enter) { e.preventDefault(); enter(); return; }
+        if ((e.key === 'u' || e.key === 'U') && undo && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); undo(); return; }
         const n = +e.key; if (!n) return; const b = area.querySelectorAll('.popt')[n - 1]; if (b && !b.disabled) b.click();
       };
       document.addEventListener('keydown', keyHandler);

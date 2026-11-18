@@ -44,6 +44,25 @@ let fails = 0; const ok = (c, m, x = '') => { console.log((c ? '  ok  ' : '  FAI
     ok(await p.locator('.pslot.cur, .vgrid').count() > 0, 'the question starts over');
   }
 
+
+  // 3b) guided: a wrong tap on one part can be taken back at once, before the parse ends
+  await setup('guided');
+  await p.goto(URL + '#/parse/run/mix/verb'); await p.reload(); await p.waitForSelector('.vgrid');
+  const a3 = await p.locator('.vgrid').getAttribute('data-answer'); await p.click('.vopt[data-n="' + a3 + '"]'); await p.waitForSelector('.pgrid .popt:not([disabled])');
+  let slotMiss = false;
+  for (let i = 0; i < 6 && !slotMiss; i++) {
+    const btns = p.locator('.pgrid .popt:not([disabled])'); const cnt = await btns.count(); if (!cnt) break;
+    await btns.nth(cnt - 1).click(); await p.waitForTimeout(450);
+    if (await p.locator('.pgrid .popt.wrong').count()) slotMiss = true;
+  }
+  if (slotMiss) {
+    const lab = await p.locator('.pslot.cur').textContent(), cards0 = await snap();
+    ok(await p.locator('.pq .undorow button').count() === 1, 'guided: undo offered right after a wrong tap on one part');
+    await p.keyboard.press('u'); await p.waitForTimeout(300);
+    ok(await p.locator('.pgrid .popt.wrong').count() === 0 && await p.locator('.pgrid .popt:not([disabled])').count() > 0 && await p.locator('.pslot.cur').textContent() === lab, 'the same part is asked again', lab);
+    ok(await p.locator('.fb').count() === 0 && (await snap()).cards === cards0.cards, 'nothing was rated by the undo');
+  } else console.log('  (no wrong tap happened; per-part undo skipped)');
+
   // 4) quick mode on nouns
   await setup('quick');
   await p.goto(URL + '#/parse/run/mix/noun'); await p.reload(); await p.waitForSelector('.srow');
