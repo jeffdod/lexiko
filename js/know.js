@@ -461,9 +461,26 @@ let freshCounter = null;
 export const setParseFreshCounter = (fn) => { freshCounter = fn; };
 export const parseFreshCount = () => (freshCounter ? freshCounter() : Infinity);
 export const parseNewToday = () => (K.daily[todayKey()] || {}).pn || 0;
+let lastParse = null;                                       // what the last parsing answer changed, so it can be taken back
+export const forgetParseUndo = () => { lastParse = null; };
+export async function undoRateParse() {
+  const u = lastParse; if (!u) return false; lastParse = null;
+  if (u.before) await saveCard(u.before); else { K.cards.delete(u.id); await store.deleteCard(u.id); }
+  const d = K.daily[u.day]; if (d) { d.pr = Math.max(0, (d.pr || 0) - 1); if (u.wasNew) d.pn = Math.max(0, (d.pn || 0) - 1); await store.set('daily', K.daily); }
+  K.parseAcc = u.parseAcc; await store.set('parseAcc', K.parseAcc);
+  K.verbAcc = u.verbAcc; await store.set('verbAcc', K.verbAcc);
+  K.nomAcc = u.nomAcc; await store.set('nomAcc', K.nomAcc);
+  K.nomChk = u.nomChk; await store.set('nomChk', K.nomChk);
+  if (u.sn) { if (u.verbParse) K.verbParse[u.sn] = u.verbParse; else delete K.verbParse[u.sn]; await store.set('verbParse', K.verbParse); }
+  if (K.settings.nomThin !== u.nomThin) await setSetting('nomThin', u.nomThin);
+  await store.dropLastLog(); return true;
+}
 export async function rateParse(id, grade, ms = 0, meta = {}) {
   const now = clockNow();
   const prev = K.cards.get(id) || F.newCard(id);
+  const sn0 = id.split(':')[2];
+  lastParse = { id, before: K.cards.has(id) ? { ...prev } : null, day: todayKey(), wasNew: prev.state === 'new', parseAcc: K.parseAcc.slice(), verbAcc: K.verbAcc.slice(), nomAcc: K.nomAcc.slice(), nomChk: K.nomChk.slice(),
+    sn: sn0, verbParse: sn0 && K.verbParse[sn0] ? K.verbParse[sn0].slice() : null, nomThin: K.settings.nomThin };
   const next = F.review(prev, grade, now, K.settings.retention);
   await saveCard(next);
   const d = (K.daily[todayKey()] ||= {}); d.pr = (d.pr || 0) + 1; if (prev.state === 'new') d.pn = (d.pn || 0) + 1;

@@ -2,7 +2,7 @@
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseCardsOverdue, parseNewToday, rateParse, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseCardsOverdue, parseNewToday, rateParse, undoRateParse, forgetParseUndo, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, sameSpelledMP, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { todayKey, redirect, h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
@@ -474,10 +474,11 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
       whyWrong(it, res),
       chartLink(it, best.d));
     const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
-    (view.querySelector('.qwrap') || view).append(fb, go);
+    const urow = res.full ? null : undoRow();
+    (view.querySelector('.qwrap') || view).append(fb, go, urow);
     go.focus({ preventScroll: true });
-    keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
-    document.addEventListener('keydown', keyHandler);
+    if (urow) withUndo(urow, advance);
+    else { keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } }; document.addEventListener('keydown', keyHandler); }
     window.scrollTo({ top: fb.offsetTop - 80, behavior: SMOOTH });
   }
 
@@ -500,10 +501,11 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
       if (!practice) next = await rateParse(cardIdFor(c.id), ok ? 2 : 1, ms, { m: 'c', w: ok ? '' : 'rescue' });             // right = Hard (recognized with help), wrong = Again
       if (first) { S.done++; if (c.type === 'new') S.fresh++; if (!ok) S.missed.push({ id: c.id, wrong: ['parsing'] }); }
       const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
-      clear(tail).append(h('div.rescue-note', 'That’s enough for this one.' + (next ? ' You’ll see this form again ' + soonText(next.due - clockNow()) + '.' : '')), chartLink(it, it.valid[0].d), go);
+      const urow = ok ? null : undoRow();
+      clear(tail).append(h('div.rescue-note', 'That’s enough for this one.' + (next ? ' You’ll see this form again ' + soonText(next.due - clockNow()) + '.' : '')), chartLink(it, it.valid[0].d), go, urow);
       go.focus({ preventScroll: true });
-      keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
-      document.addEventListener('keydown', keyHandler);
+      if (urow) withUndo(urow, advance);
+      else { keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } }; document.addEventListener('keydown', keyHandler); }
     };
     choices.forEach((o, i) => optsEl.append(h('button.opt', { onclick: () => answer(i) }, h('span', o.label), h('span.mark', ''))));
     keyHandler = (e) => { const n = +e.key; if (n >= 1 && n <= choices.length) { e.preventDefault(); answer(n - 1); } };
@@ -514,7 +516,29 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
   }
   const badStreak = () => S.hist.length >= 6 && S.hist.slice(-6).filter((x) => !x).length >= 5;      // five of the last six first tries fully missed
 
+  /* undo after a wrong answer: the session state as it was when this question appeared, put back together with the saved card */
+  let snap = null;
+  const takeSnap = (c) => { forgetParseUndo(); snap = { c, S: JSON.parse(JSON.stringify(S)), st: JSON.parse(JSON.stringify(st)), retryQ: retryQ.map((x) => ({ ...x })) }; };
+  const undoRow = () => {
+    const mine = snap;
+    const undo = async () => {
+      if (!mine || snap !== mine) return; snap = null; stop();
+      if (!practice) await undoRateParse();
+      for (const k of Object.keys(S)) delete S[k]; Object.assign(S, mine.S);
+      st = mine.st; if (!practice) await saveParseStats(st);
+      retryQ.splice(0, retryQ.length, ...mine.retryQ);
+      toast('Last answer undone'); show(mine.c);
+    };
+    const row = h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer'));
+    row.undo = undo; return row;
+  };
+  const withUndo = (row, onEnter) => {                            // Enter continues; U takes the answer back
+    keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter(); } else if ((e.key === 'u' || e.key === 'U') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); row.undo(); } };
+    document.addEventListener('keydown', keyHandler);
+  };
+
   function show(c) {
+    takeSnap(c);
     if (!c.rescue && !c.retry && !practice && badStreak()) { c = { ...c, rescue: 'streak' }; S.hist = []; }
     const it = itemFor(c.id);
     if (c.rescue) return rescueStep(c, it);
@@ -539,10 +563,10 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
         if (!practice) await saveParseStats(st);
       } else if (!c.rescue) retryQ.push({ ...c, rescue: 'twice' });
       const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
-      area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.')), go);
+      const urow = undoRow();
+      area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.')), go, urow);
       go.focus({ preventScroll: true });
-      keyHandler = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } };
-      document.addEventListener('keydown', keyHandler);
+      withUndo(urow, advance);
     };
     const pick = (o, btn) => {
       if (locked) return; locked = true;
