@@ -184,7 +184,7 @@ function runSession(view, items, { title, scope, back, practice = false }) {
         h('span.chip' + (chip[0] ? '.' + chip[0] : ''), chip[1])),
       item.rescue ? h('div.rescue-note', 'You’ve missed this twice. Pick the meaning.') : null,
       practice ? practiceBanner(item.type === 'preview', item.type === 'recent') : null, inner,
-      undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer')) : null));
+      undoState ? h('div.undorow', h('button.btn.ghost.sm', { onclick: undo }, '↩ Undo last answer (', h('span', { lang: 'grc' }, lexeme(undoState.item.n).head.split(',')[0]), ')')) : null));
   }
 
   function show(item) {
