@@ -413,6 +413,8 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
   };
 
   const retryQ = [];                                      // missed forms wait here and come back after the last one, in a retry round
+  const GAP = 3;                                          // a form missed again comes back only if at least this many other forms are still waiting; otherwise it returns on its own schedule
+  const heldAgain = () => !practice && queue.length < GAP;
   const advance = async () => {
     stop(); cur = queue.shift();
     if (!cur && retryQ.length) { queue.push(...retryQ.splice(0)); S.round = 1; S.R = queue.length; S.rk = 0; cur = queue.shift(); }
@@ -453,7 +455,8 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
       if (!practice) await recordResult(st, it, res);
     }
     if (!res.full && first) retryQ.push({ ...c, retry: true });
-    else if (!res.full && c.retry && !c.rescue) retryQ.push({ ...c, rescue: 'twice' });          // missed again on the retry: its next appearance is the easier question
+    let held = false;
+    if (!res.full && c.retry && !c.rescue) { if (heldAgain()) held = true; else retryQ.push({ ...c, rescue: 'twice' }); }          // missed again on the retry: its next appearance is the easier question, unless too few forms are left to leave a gap
     const L = D.lexByN.get(it.strongs), best = res.best;
         const others = it.valid.filter((v) => v !== best);
     const soft = Object.entries(res.perSlot).filter(([, v]) => v.soft);
@@ -472,6 +475,7 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
       h('div.pslots', chips),
       mpNote ? h('div.small.muted', mpNote) : soft.length ? h('div.small.muted', 'Accepted: the Robinson–Pierpont code marks this as ' + labelOf('voice', best.slots.voice).toLowerCase() + ' — a middle/passive form that may be read either way.') : null,
       whyWrong(it, res),
+      held ? h('div.small', 'Missed again. That’s enough for now, so you’ll see this form again later.') : null,
       chartLink(it, best.d));
     const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
     const urow = res.full ? null : undoRow();
@@ -555,16 +559,16 @@ function runSession(view, queue, { title, scope, restart, practice = false, back
     const tally = (ok) => { if (c.retry) return; for (const o of [S.slots, st.slots]) { const s = (o.verb ||= [0, 0]); s[1]++; if (ok) s[0]++; } };
     const miss = async () => {                                   // the verb was not known: no parse; the form is rated as missed and comes round again
       tally(false); stop();
-      const ms = clockNow() - t0; let next = null;
+      const ms = clockNow() - t0; let next = null, held = false;
       if (!c.retry) {
         if (!practice) next = await rateParse(cardIdFor(c.id), 1, ms, { m: 'v', w: 'verb' });
         S.missed.push({ id: c.id, wrong: ['verb'] }); S.done++; if (c.type === 'new') S.fresh++;
         retryQ.push({ ...c, retry: true }); S.hist.push(false);
         if (!practice) await saveParseStats(st);
-      } else if (!c.rescue) retryQ.push({ ...c, rescue: 'twice' });
+      } else if (!c.rescue) { if (heldAgain()) held = true; else retryQ.push({ ...c, rescue: 'twice' }); }
       const go = h('button.btn.primary.block', { onclick: advance }, queue.length || retryQ.length ? 'Continue' : 'Finish');
       const urow = undoRow();
-      area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.')), go, urow);
+      area.append(h('div.fb.bad', h('div.row.between', h('b', 'It is ' + L.head), c.retry || !next ? h('span.small.muted', 'practice only') : h('span.small.muted', 'next review in ' + fmtInterval(next.due - clockNow()))), h('div.small', L.head + ' · ' + L.brief + '. You’ll see this form again soon; parsing waits until you know the verb.'), held ? h('div.small', 'Missed again. That’s enough for now, so you’ll see this form again later.') : null), go, urow);
       go.focus({ preventScroll: true });
       withUndo(urow, advance);
     };

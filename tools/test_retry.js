@@ -12,6 +12,11 @@ process.on('unhandledRejection', (e) => { console.log('UNHANDLED', e && e.messag
     o.push(missOutcome(a, false), missOutcome(a, true), missOutcome(a, true), missOutcome(a, true), missOutcome(a, true), missOutcome(a, false));
     const b2 = {}; o.push(missOutcome(b2, true), missOutcome(b2, false)); return o; });
   ok(JSON.stringify(r) === JSON.stringify(['pass', 'retry', 'rescue', 'rescue', 'stop', 'pass', 'retry', 'pass']), 'first Again retries, the next two are rescues, the fourth stops; Hard/Good pass', JSON.stringify(r));
+  // spacing: a word missed again needs MIN_GAP other cards waiting; with fewer it is held for later today
+  const g = await p.evaluate(async () => { const { missOutcome, MIN_GAP } = await import('./js/retry.js'); const a = {}, b = {};
+    return { gap: MIN_GAP, few: [missOutcome(a, true, 1), missOutcome(a, true, MIN_GAP - 1), missOutcome(a, true, MIN_GAP - 1), missOutcome(a, true, 0)], enough: [missOutcome(b, true, 9), missOutcome(b, true, MIN_GAP), missOutcome(b, true, MIN_GAP)], flagged: !!a.rescue }; });
+  ok(JSON.stringify(g.few) === JSON.stringify(['retry', 'hold', 'hold', 'stop']) || JSON.stringify(g.few) === JSON.stringify(['retry', 'hold', 'hold', 'hold']), 'too few other cards: a second miss is held, not asked again right away', JSON.stringify(g.few));
+  ok(JSON.stringify(g.enough) === JSON.stringify(['retry', 'rescue', 'rescue']) && g.flagged === false, 'enough other cards: the rescue comes back after the gap', JSON.stringify(g.enough));
   // a vocabulary session: always answering Again
   await p.evaluate(async () => { const k = await import('./js/know.js'); const { D } = await import('./js/data.js'); await k.setSetting('mode', 'flash');
     const ns = D.lex.filter((L) => L.pos !== 'V').slice(20, 22).map((L) => L.n); for (const n of ns) await k.rate(n, 3, 'new'); });
