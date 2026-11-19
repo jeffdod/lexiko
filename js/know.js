@@ -584,14 +584,16 @@ function itemPace(topic, now = clockNow()) {
   if (d[f] == null || d[f + 'm'] !== max) { d[f] = r.n; d[f + 'm'] = max; store.set('daily', K.daily); }
   return { ...r, n: d[f], left: Math.max(0, d[f] - (words ? newToday() : parseNewToday())) };
 }
-/** What "Study more today" does to today's record for one topic: everything of that topic due now counts, and a fresh daily allowance of its new items opens on top of whatever was already learned today. The other topic is not touched. */
+/** What "Study more today" does to today's record for one topic: everything of that topic due now counts, and a third of a daily allowance of its new items opens on top of whatever was already learned today. The other topic is not touched. */
+export const MORE_SHARE = 3;                                  // each press of "Study more today" opens a third of a day's allowance of new items, so it can be pressed again for another small batch
+const moreStep = (max) => (max > 0 ? Math.max(1, Math.round(max / MORE_SHARE)) : 0);
 function applyUnlock(d, now, topic) {
   if (topic === 'parse') {
     d.mp = true;
-    if (!parsePace(now).paused) d.pc = Math.max(d.pc || 0, parseNewToday()) + Math.max(0, setting('parseNewPerDay'));
+    if (!parsePace(now).paused) d.pc = Math.max(d.pc || 0, parseNewToday()) + moreStep(setting('parseNewPerDay'));
   } else {
     d.mw = true;
-    if (!wordsPace(now).paused) d.wc = Math.max(d.wc || 0, newToday()) + Math.max(0, setting('newPerDay'));
+    if (!wordsPace(now).paused) d.wc = Math.max(d.wc || 0, newToday()) + moreStep(setting('newPerDay'));
   }
 }
 /** Press "Study more today" for a topic ('words' or 'parse'). */
