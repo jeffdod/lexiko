@@ -8,7 +8,7 @@ import { paceNote } from './pace.js';
 import { holdToday, HOLD_MIN } from './know.js';
 import { renderVerbsPage, renderVerbPage, verbsInProgress } from './verbs.js';
 import { goalDetailCard } from './home.js';
-import { missOutcome, snap, restore, MAX_MISSES } from './retry.js';
+import { missOutcome, snap, restore, MAX_MISSES, MIN_GAP } from './retry.js';
 import { redirect, todayKey, h, clear, readInContext, shuffle, fmtInterval, soonText, pct, icon, practiceBanner, fold, startButton, toast, fmt, missedBlock, backLinks, backHead } from './util.js';
 import { verbQuestion } from './gatesui.js';
 import { smart, smartAll, TOPICS, topicNote, upcoming, nextLine, comingUp, tileNext, doneCards, CHECKIN_NOTE, counts as sessionCounts } from './smart.js';
@@ -168,10 +168,11 @@ function runSession(view, items, { title, scope, back, practice = false }) {
       if (item.type === 'new') stats.fresh++;
       if (item.type === 'probe') { stats.probes++; if (g < 3) stats.probeMiss++; }
     }
-    const out = missOutcome(item, g === 1);                 // only Again is a miss; Hard is not retried
+    const out = missOutcome(item, g === 1, practice ? Infinity : queue.length);                 // only Again is a miss; Hard is not retried
     if (g >= 2) { stats.good++; stats.done++; }
-    else { stats.again++; missed.add(item); if (out === 'retry') requeue(item); else if (out === 'rescue') queue.splice(Math.min(3, queue.length), 0, item); }     // a rescue comes back a few cards later, in the same round
+    else { stats.again++; missed.add(item); if (out === 'retry') requeue(item); else if (out === 'rescue') queue.splice(Math.min(MIN_GAP, queue.length), 0, item); }     // a rescue comes back MIN_GAP cards later, in the same round
     advance();
+    if (out === 'hold' && (queue.length || retryQ.length)) toast('Missed again. You’ll see this word again in about ' + HOLD_MIN + ' minutes.', 4000);
   }
 
   function frame(item, inner) {
