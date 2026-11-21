@@ -152,6 +152,19 @@ export const assumed = (n) => !K.cards.has('w:' + n) && status(n) === 'known';
 
 async function saveCard(c) { K.cards.set(c.id, c); await store.putCards([c]); }
 
+/** Remember that a card which was due today has been answered, so the day's total of due items stays the same while the done count rises. Returns true when it was added. */
+function noteDueDone(field, id, prev) {
+  if (!prev || prev.state === 'new' || !dueToday(prev)) return false;
+  const d = (K.daily[todayKey()] ||= {}), a = (d[field] ||= []);
+  if (a.includes(id)) return false; a.push(id); return true;
+}
+const dropDueDone = (day, field, id) => { const d = K.daily[day]; if (d && d[field]) d[field] = d[field].filter((x) => x !== id); };
+/** Words due today: { total, done }. total = still due + already answered and settled; it does not change as you work. */
+export function wordsDayProgress(now = clockNow()) {
+  const due = new Set(dueCards(now).map((c) => c.id)), ids = (K.daily[todayKey(now)] || {}).dw || [];
+  const done = ids.filter((id) => !due.has(id)).length;
+  return { total: due.size + done, done };
+}
 function bumpDaily(field) {
   const d = (K.daily[todayKey()] ||= {}); d[field] = (d[field] || 0) + 1;
 }
@@ -162,6 +175,7 @@ let lastRate = null;
 export async function undoRate() {
   const u = lastRate; if (!u) return false; lastRate = null;
   if (u.before) await saveCard(u.before); else { K.cards.delete(u.id); await store.deleteCard(u.id); }
+  if (u.dueAdded) dropDueDone(u.day, 'dw', u.id);
   const d = K.daily[u.day]; if (d) { d.r = Math.max(0, (d.r || 0) - 1); if (u.wasNew) d.n = Math.max(0, (d.n || 0) - 1); if (u.grade >= 3) d.c = Math.max(0, (d.c || 0) - 1); await store.set('daily', K.daily); }
   if (u.acc) { K.wordsAcc = u.acc; await store.set('wordsAcc', K.wordsAcc); }
   await store.dropLastLog();
@@ -171,7 +185,7 @@ export async function undoRate() {
 export async function rate(n, grade, kind = 'review', ms = 0) {
   const now = clockNow();
   const prev = K.cards.get('w:' + n) || F.newCard('w:' + n);
-  lastRate = { acc: K.wordsAcc.slice(), id: 'w:' + n, before: K.cards.has('w:' + n) ? { ...K.cards.get('w:' + n) } : null, grade, wasNew: prev.state === 'new', day: todayKey() };
+  lastRate = { acc: K.wordsAcc.slice(), id: 'w:' + n, before: K.cards.has('w:' + n) ? { ...K.cards.get('w:' + n) } : null, grade, wasNew: prev.state === 'new', day: todayKey(), dueAdded: liveWord(prev) && noteDueDone('dw', 'w:' + n, prev) };
   const next = F.review(prev, grade, now, K.settings.retention);
   next.src = prev.src === 'probe' && grade < 3 ? 'review' : (prev.src || kind); if (prev.state === 'new') next.born = now;
   await saveCard(next);
@@ -450,6 +464,10 @@ export const parseId = (form) => 'f:' + form.plain + ':' + form.an[0].s;
 let dueCounter = null;
 export const setParseDueCounter = (fn) => { dueCounter = fn; };
 export const parseDueCount = (now = clockNow()) => dueCounter ? dueCounter(now) : parseCardsDue(now).length;
+/** Parsing forms due today: { total, done } (same meaning as wordsDayProgress). parse.js registers the real one. */
+let progressFn = null;
+export const setParseProgress = (fn) => { progressFn = fn; };
+export const parseDayProgress = (now = clockNow()) => progressFn ? progressFn(now) : { total: parseDueCount(now), done: 0 };
 export const parseCardsDue = (now = clockNow()) => [...K.cards.values()].filter((c) => c.id.startsWith('f:') && dueToday(c, now));
 /** Reviews that were due before today and are still waiting: a real backlog, unlike today's normal reviews. Only these slow new words down. */
 const wasDue = (c, now) => c.state !== 'new' && c.due < dayStart(now);
@@ -466,6 +484,7 @@ export const forgetParseUndo = () => { lastParse = null; };
 export async function undoRateParse() {
   const u = lastParse; if (!u) return false; lastParse = null;
   if (u.before) await saveCard(u.before); else { K.cards.delete(u.id); await store.deleteCard(u.id); }
+  if (u.dueAdded) dropDueDone(u.day, 'dp', u.id);
   const d = K.daily[u.day]; if (d) { d.pr = Math.max(0, (d.pr || 0) - 1); if (u.wasNew) d.pn = Math.max(0, (d.pn || 0) - 1); await store.set('daily', K.daily); }
   K.parseAcc = u.parseAcc; await store.set('parseAcc', K.parseAcc);
   K.verbAcc = u.verbAcc; await store.set('verbAcc', K.verbAcc);
@@ -480,7 +499,7 @@ export async function rateParse(id, grade, ms = 0, meta = {}) {
   const prev = K.cards.get(id) || F.newCard(id);
   const sn0 = id.split(':')[2];
   lastParse = { id, before: K.cards.has(id) ? { ...prev } : null, day: todayKey(), wasNew: prev.state === 'new', parseAcc: K.parseAcc.slice(), verbAcc: K.verbAcc.slice(), nomAcc: K.nomAcc.slice(), nomChk: K.nomChk.slice(),
-    sn: sn0, verbParse: sn0 && K.verbParse[sn0] ? K.verbParse[sn0].slice() : null, nomThin: K.settings.nomThin };
+    sn: sn0, verbParse: sn0 && K.verbParse[sn0] ? K.verbParse[sn0].slice() : null, nomThin: K.settings.nomThin, dueAdded: id.startsWith('f:') && noteDueDone('dp', id, prev) };
   const next = F.review(prev, grade, now, K.settings.retention);
   await saveCard(next);
   const d = (K.daily[todayKey()] ||= {}); d.pr = (d.pr || 0) + 1; if (prev.state === 'new') d.pn = (d.pn || 0) + 1;

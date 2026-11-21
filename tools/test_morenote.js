@@ -1,4 +1,4 @@
-// When more is due than one round holds, the Vocabulary page and Home say so up front ("N more due after this round").
+// When more is due than one round holds, the Vocabulary page and Home say so up front ("0 of N due done today" on the Vocabulary page; Home says "N more words are due after this round").
 const { chromium } = require('playwright');
 const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m); if (!c) process.exitCode = 1; };
 (async () => {
@@ -13,7 +13,7 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m); if (!c) proc
   ok(info.due > 30 && info.sessionDue <= 30 && info.more === info.due - info.sessionDue && info.more > 0, 'counts: ' + JSON.stringify(info));
   await p.goto(U + '#/learn'); await p.waitForTimeout(200); await p.goto(U + '#/learn/words'); await p.waitForSelector('#view a.btn.start');
   const v = await p.evaluate(() => ({ btn: document.querySelector('#view a.btn.start').textContent, more: (document.querySelector('#view .startmore') || {}).textContent || '' }));
-  ok(v.more === info.more + ' more due after this round' && v.btn.includes(info.sessionDue + ' due'), 'Vocabulary page: ' + v.btn + ' | ' + v.more);
+  ok(/^0 of \d+ due done today$/.test(v.more) && +v.more.split(' ')[2] === info.sessionDue + info.more && v.btn.includes(info.sessionDue + ' due'), 'Vocabulary page: ' + v.btn + ' | ' + v.more);
   await p.goto(U + '#/settings'); await p.waitForTimeout(200); await p.goto(U + '#/home'); await p.waitForTimeout(1200);
   const hm = await p.evaluate(() => document.querySelector('#view').innerText);
   ok(new RegExp(info.more + ' more words are due after this round').test(hm), 'Home says it too: ' + hm.replace(/\n/g, '|').slice(0, 300));

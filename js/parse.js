@@ -2,7 +2,7 @@
 // scored per part, every valid parsing accepted, FSRS-scheduled per form, with stem-change explanations.
 import { clockNow } from './clock.js';
 import { D, scopeVerses, scopeLabel, tokenPunct, tokenFlag, chapterVerses } from './data.js';
-import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseCardsOverdue, parseNewToday, rateParse, undoRateParse, forgetParseUndo, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
+import { K, status, setting, setSetting, parseId, parseCardsDue, setParseDueCounter, setParseFreshCounter, parseCardsOverdue, parseNewToday, rateParse, undoRateParse, setParseProgress, forgetParseUndo, reviewCards, recentWords, parsePace, startedVerbs, getParseStats, saveParseStats, troubleCards } from './know.js';
 import { buildItem, groupForms, mergeForms, check, gradeOf, slotOrder, slotOK, sameSpelledMP, OPTIONS, SLOT_TITLE, labelOf, describe } from './parse-model.js';
 import { todayKey, redirect, h, clear, readInContext, shuffle, pct, icon, fmtInterval, soonText, toast, practiceBanner, fold, startButton, fmt, missedBlock, backLinks, backHead, areaCard } from './util.js';
 import { ROWS, say, plan as chartPlan } from './chartdrill.js';
@@ -149,6 +149,14 @@ export function parseDueCount(now = clockNow(), overdueOnly = false) {
   return seen.size;
 }
 setParseDueCounter(parseDueCount);
+setParseProgress((now) => {                                  // forms due today: still due + answered and settled today (a form counts once however many of its cards were answered)
+  ensureIndex();
+  const due = new Set();
+  for (const c of parseCardsDue(now)) { const id = keyMap.get(c.id); if (id != null && autoItemOf(id)) due.add(id); }
+  const done = new Set();
+  for (const cid of (K.daily[todayKey(now)] || {}).dp || []) { const id = keyMap.get(cid); if (id != null && autoItemOf(id) && !due.has(id)) done.add(id); }
+  return { total: due.size + done.size, done: done.size };
+});
 let freshMemo = null;      // cached for a few seconds: building the pool is not free, and Home asks often
 setParseFreshCounter(() => {
   const key = [K.cards.size, K.settings.level, K.settings.nominals, K.settings.nomThin, JSON.stringify(K.settings.gates || null), Math.floor(clockNow() / 3000)].join('|');

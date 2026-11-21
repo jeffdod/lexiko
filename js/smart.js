@@ -1,7 +1,7 @@
 // What should "Start" do right now? Reviews that are due first, then new material, then reinforcing your shakiest
 // cards, then a preview — so the button always leads somewhere and never says there is nothing to do.
 import { clockNow } from './clock.js';
-import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, buildSession, setting, dueCards, dueToday, unlockMore, previewUnlock, newToday, parseDueCount, parseFreshCount, parseNewToday, studiedCount } from './know.js';
+import { K, liveWord, troubleCards, reviewCards, wordsPace, parsePace, dailyPlan, buildSession, setting, dueCards, dueToday, unlockMore, previewUnlock, newToday, parseDueCount, wordsDayProgress, parseDayProgress, parseFreshCount, parseNewToday, studiedCount } from './know.js';
 import { h, icon } from './util.js';
 
 export const TOPICS = {
@@ -14,12 +14,12 @@ const parseReady = () => K.settings.level != null || studiedCount('w:') > 0;
 /** Vocabulary: what is due in all, and what a session will really hold (new words and spot-checks are counted from the session, not estimated). */
 function wordsCounts() {
   const due = dueCards().length, plan = dailyPlan();
-  return { due, fresh: plan.fresh, checkins: plan.checkins, sessionDue: plan.due, more: Math.max(0, due - plan.due), total: plan.due + plan.fresh + plan.checkins, studied: studiedCount('w:') };      // more: due today but past this round's limit
+  return { due, fresh: plan.fresh, checkins: plan.checkins, sessionDue: plan.due, more: Math.max(0, due - plan.due), day: wordsDayProgress(), total: plan.due + plan.fresh + plan.checkins, studied: studiedCount('w:') };      // more: due today but past this round's limit
 }
 function parseCounts() {
   const due = parseDueCount(), fresh = parseReady() ? Math.min(parsePace().left, parseFreshCount()) : 0;
   const size = setting('sessionSize') || 25, sessionDue = Math.min(due, size), sessionFresh = Math.min(fresh, Math.max(0, size - sessionDue));      // a parsing round holds at most a session's worth (js/parse.js buildParseSession)
-  return { due, fresh: sessionFresh, sessionDue, more: due - sessionDue, total: sessionDue + sessionFresh, studied: studiedCount('f:') };      // nothing to parse until you know some words (a level you chose counts)
+  return { due, fresh: sessionFresh, sessionDue, more: due - sessionDue, day: parseDayProgress(), total: sessionDue + sessionFresh, studied: studiedCount('f:') };      // nothing to parse until you know some words (a level you chose counts)
 }
 /** Cheap counts (no heavy indexing): what's due, how many new are still allowed today, how many cards exist. */
 export function counts() {
@@ -93,8 +93,8 @@ const work = (c, topic = 'words') => {
   return [due ? due + ' due' : '', c.fresh ? c.fresh + ' new' : '', c.checkins ? checkinText(c.checkins) : ''].filter(Boolean).join(' · ');
 };
 
-/** "68 more due after this round": what is due today beyond the round the button starts (nothing when the round holds it all). */
-export const moreNote = (c) => c.more > 0 ? c.more + ' more due after this round' : '';
+/** "30 of 65 due done today": the day's total of due items (it does not change as you work) and how many are done. Only shown when more is due than the round the button starts holds. */
+export const moreNote = (c) => c.more > 0 && c.day ? c.day.done + ' of ' + c.day.total + ' due done today' : '';
 
 /** The best next step for one topic: { href, label, sub, kind: 'go' | 'reinforce' | 'preview' }. */
 export function smart(topic, c = counts()[topic]) {
