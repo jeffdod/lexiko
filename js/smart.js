@@ -135,7 +135,7 @@ export function doneCards(topic) {
   const c = counts()[topic], T = TOPICS[topic];
   if (c.due || c.fresh || !c.studied) return null;
   const one = T.noun.slice(0, -1), m = moreReady(topic), total = m.reviews + m.fresh + m.checkins;
-  const u = upcoming(), eod = new Date(clockNow()).setHours(24, 0, 0, 0), waiting = isFinite(u.all.next) && u.all.next < eod;      // words just studied that come back later today
+  const u = upcoming(), eod = new Date(clockNow()).setHours(24, 0, 0, 0), waiting = isFinite(u[topic].next) && u[topic].next < eod;      // cards of this page's own kind (words or forms) that come back later today, the same ones the next-review line below counts
   const out = [h('div.card.stack', h('b', waiting ? 'Almost done.' : 'You’re done for today.'), h('div.small.muted', waiting ? 'Cards you just studied come back soon.' : 'Everything that was due today is finished.'), nextLine(u, 0, topic))];
   if (!total) return out;
   out.push(h('div.card.stack', h('b', 'Want to keep going?'),
