@@ -157,13 +157,16 @@ let pendingRoot = null;
 export const enterTab = (root) => { pendingRoot = root; };
 const noteTrail = (cur) => {
   if (pendingRoot) { const r = pendingRoot; pendingRoot = null; if (cur !== r && !replacing) { trail.push(r, cur); if (trail.length > 60) trail.splice(0, trail.length - 60); return; } }
-  if (replacing) { replacing = false; if (trail.length) trail[trail.length - 1] = cur; else trail.push(cur); }
+  if (replacing) { replacing = false; if (trail.length) { trail[trail.length - 1] = cur; if (trail[trail.length - 2] === cur) trail.pop(); } else trail.push(cur); }      // a redirect that lands on the screen before it (a quiz with nothing to ask sending you back) leaves one entry, not two
   else if (trail[trail.length - 1] === cur) { /* same screen again */ }
   else if (trail.length >= 2 && trail[trail.length - 2] === cur) trail.pop();                // the browser's back button (or ours)
   else { trail.push(cur); if (trail.length > 60) trail.shift(); }
 };
 /** The screen before this one, when going back to it makes sense; otherwise null (the page's own fixed destination is used). */
-export const backTarget = () => { const p = trail[trail.length - 2]; return p && !NOT_RESUMABLE(p) ? p : null; };
+export const backTarget = () => {
+  const cur = trail[trail.length - 1]; let i = trail.length - 2; while (i >= 0 && trail[i] === cur) i--;      // never point at the screen you are already on (a link to the same screen does nothing)
+  const p = trail[i]; return p && !NOT_RESUMABLE(p) ? p : null;
+};
 export function noteRoute(hash) {
   const cur = hash || '#/';
   noteTrail(cur);
